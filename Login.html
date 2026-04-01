@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Akademik</title>
+<link rel="stylesheet" href="LoginStyle.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="card">
+  <div class="card-accent"></div>
+  <div class="logo-area">
+      <img src="Gambar/Logo UPH.png" alt="Logo UPH " width = 100 height = 100>
+    <h1>Portal Akademik</h1>
+    <p>Sistem Administrasi UPH</p>
+  </div>
+  <div class="divider"></div>
+  <div class="form-group">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" placeholder="Masukkan username Anda">
+  </div>
+  <div class="form-group">
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" placeholder="Masukkan password Anda">
+    <div class="forgot"><a href="#">Lupa password?</a></div>
+  </div>
+  <button class="btn-login" onclick="handleLogin()">Masuk</button>
+  <p class="footer-note">© 2026 Universitas Pelita Harapan. All rights reserved.</p>
+</div>
+
+<script>
+function handleLogin() {
+  const u = document.getElementById('username').value;
+  const p = document.getElementById('password').value;
+  if (!u || !p) {
+    alert('Mohon isi username dan password terlebih dahulu.');
+    return;
+  }
+}
+</script>
+</body>
+</html>
