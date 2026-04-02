@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  DOSEN
+  ADMIN
+}
+
+enum RpsStatus {
+  SUBMITTED
+  PENGECEKAN
+  APPROVED
+}
+
+model User {
+  id       String @id @default(cuid())
+  username String @unique
+  password String // Hashed in real scenario
+  role     Role
+  name     String
+  rps      RPS[]
+}
+
+model RPS {
+  id          String   @id @default(cuid())
+  courseName  String
+  fileUrl     String?
+  fileName    String?
+  status      RpsStatus @default(SUBMITTED)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  dosenId     String
+  dosen       User     @relation(fields: [dosenId], references: [id])
+}
