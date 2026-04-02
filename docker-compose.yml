@@ -14,5 +14,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: uph_gotenberg
+    restart: always
+    ports:
+      - "3001:3000"
+    command:
+      - "gotenberg"
+      - "--api-port=3000"
+
 volumes:
   postgres_data:
