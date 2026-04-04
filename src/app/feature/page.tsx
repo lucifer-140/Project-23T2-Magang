@@ -184,7 +184,7 @@ export default function RealFeatureSandbox() {
 
       // 7. Simpan Buffer PDF yang telah dimodifikasi
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
       
       // Render ulang secara lokal
       setPdfBlobUrl(URL.createObjectURL(blob));

@@ -8,12 +8,13 @@ export default function LoginPage() {
     "use server"
     const username = formData.get('username') as string;
     
+    const cookieStore = await cookies();
     // Quick prototype mock auth:
     if (username === 'admin') {
-      cookies().set('userRole', 'ADMIN');
+      cookieStore.set('userRole', 'ADMIN');
       redirect('/dashboard/admin');
     } else if (username === 'dosen') {
-      cookies().set('userRole', 'DOSEN');
+      cookieStore.set('userRole', 'DOSEN');
       redirect('/dashboard/dosen');
     } else {
       // In a real app we'd show an error state

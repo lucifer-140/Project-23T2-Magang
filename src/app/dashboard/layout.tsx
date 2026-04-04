@@ -4,12 +4,13 @@ import { redirect } from 'next/navigation';
 import { LayoutDashboard, FileText, LogOut, User } from 'lucide-react';
 import Image from 'next/image';
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const role = cookies().get('userRole')?.value;
+  const cookieStore = await cookies();
+  const role = cookieStore.get('userRole')?.value;
 
   if (!role) {
     redirect('/');
@@ -20,7 +21,8 @@ export default function DashboardLayout({
 
   async function handleLogout() {
     "use server"
-    cookies().delete('userRole');
+    const cookieStore = await cookies();
+    cookieStore.delete('userRole');
     redirect('/');
   }
 

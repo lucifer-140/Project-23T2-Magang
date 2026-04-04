@@ -1,13 +1,21 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-uph-blue: #1a2a4a;
+  --color-uph-red: #b40a1e;
+  --color-uph-redHover: #950818;
+  --color-uph-grayBg: #f7f9fc;
+  --color-uph-border: #dde3ef;
+  
+  --font-sans: var(--font-source-sans), sans-serif;
+  --font-playfair: var(--font-playfair), serif;
+}
 
 @layer base {
   body {
-    @apply bg-uph-blue text-uph-blue font-sans antialiased min-h-screen relative overflow-x-hidden;
+    @apply bg-uph-grayBg text-uph-blue font-sans antialiased min-h-screen relative overflow-x-hidden;
   }
 }
-
 
 @layer utilities {
   .text-balance {
