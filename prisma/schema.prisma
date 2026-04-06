@@ -7,33 +7,74 @@ datasource db {
 }
 
 enum Role {
-  DOSEN
+  MASTER
   ADMIN
+  KAPRODI
+  KOORDINATOR
+  DOSEN
 }
 
 enum RpsStatus {
+  UNSUBMITTED
   SUBMITTED
   PENGECEKAN
+  REVISION
   APPROVED
 }
 
+enum ChangeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
-  id       String @id @default(cuid())
-  username String @unique
-  password String // Hashed in real scenario
-  role     Role
-  name     String
-  rps      RPS[]
+  id                  String   @id @default(cuid())
+  username            String   @unique
+  password            String
+  role                Role
+  name                String
+  rps                 RPS[]
+  dosenMatkuls        Matkul[] @relation("DosenMatkul")
+  koordinatorMatkuls  Matkul[] @relation("KoordinatorMatkul")
+}
+
+model Matkul {
+  id              String               @id @default(cuid())
+  code            String               @unique
+  name            String
+  sks             Int
+  dosens          User[]               @relation("DosenMatkul")
+  koordinators    User[]               @relation("KoordinatorMatkul")
+  rps             RPS[]
+  changeRequests  MatkulChangeRequest[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+}
+
+model MatkulChangeRequest {
+  id            String              @id @default(cuid())
+  matkulId      String
+  matkul        Matkul              @relation(fields: [matkulId], references: [id])
+  proposedName  String?
+  proposedCode  String?
+  proposedSks   Int?
+  reason        String?
+  status        ChangeRequestStatus @default(PENDING)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 }
 
 model RPS {
-  id          String   @id @default(cuid())
-  courseName  String
+  id          String    @id @default(cuid())
+  matkulId    String
+  matkul      Matkul    @relation(fields: [matkulId], references: [id])
   fileUrl     String?
   fileName    String?
-  status      RpsStatus @default(SUBMITTED)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      RpsStatus @default(UNSUBMITTED)
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   dosenId     String
-  dosen       User     @relation(fields: [dosenId], references: [id])
+  dosen       User      @relation(fields: [dosenId], references: [id])
 }

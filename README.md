@@ -1,24 +1,38 @@
 # UPH Lecturer Administration Dashboard
 
+![Version](https://img.shields.io/badge/version-0.5.0-blue)
+
 Sistem Informasi Dasbor Administrasi terpadu untuk Dosen dan Kaprodi Universitas Pelita Harapan (UPH). Aplikasi ini dirancang untuk mendigitalisasi dan memusatkan berbagai manajemen berkas akademis dengan antarmuka yang modern, cepat, dan berorientasi pada penyelesaian tindakan (action-oriented).
 
-## Fitur Utama Rencana Pengembangan
-*   ✅ **Verifikasi RPS** (Rencana Pembelajaran Semester)
-*   ⏳ **Verifikasi SOAL** (UTS dan UAS)
-*   ⏳ **Verifikasi LPP** (Beserta Fitur Tindak Lanjut oleh Kaprodi dari hasil LPP)
-*   ⏳ **Verifikasi EPP** (Beserta Fitur Tindak Lanjut oleh Kaprodi dari hasil EPP)
-*   ⏳ **Berita Acara Perwalian**
+## ✅ Fitur Utama Selesai
+*   **Dashboards:** Admin, Kaprodi, Koordinator, Dosen, dan Master (System Master).
+*   **Verifikasi RPS:** Alur kerja lengkap dari pengajuan Dosen hingga persetujuan Kaprodi.
+*   **Manajemen Matkul:** Penugasan Dosen (Assign Dosen) dengan sinkronisasi instan.
+*   **Manajemen Pengguna (Admin):** RBAC (Role-Based Access Control) dengan perlindungan akun Master.
+*   **Manajemen Pengguna (Master):** Full CRUD (Create, Read, Update, Delete) akun seluruh sistem.
+*   **System Logs & Monitor:** Audit trail transaksi sistem dan status kesehatan server.
+*   **UI Library:** Komponen standar (DataTable, Modal, NumberInput, StatusBadge) yang konsisten.
 
-## Status Proyek Saat Ini
-> **Saat Ini Selesai:** Purwarupa (Mockup) **UI and UX** ekstensif untuk sistem **Verifikasi RPS**. 
+## ⏳ Pengembangan Selanjutnya (Roadmap)
+*   Verifikasi SOAL (UTS dan UAS)
+*   Verifikasi LPP (Beserta Fitur Tindak Lanjut oleh Kaprodi)
+*   Verifikasi EPP (Beserta Fitur Tindak Lanjut oleh Kaprodi)
+*   Berita Acara Perwalian
 
-Aktor Dosen dapat mengeklaim lembar RPS dan mengajukannya. Aktor Admin (Kaprodi) memiliki 4-Workspace Prioritas (Needs Review, Menunggu Revisi, Direktori Dosen, Arsip) lengkap dengan *interactive Pop-out Modal* untuk melakukan ulasan (Tolak/Revisi/Bantu Dokumen).
+## 🏗️ Stack Teknologi
+*   **Frontend:** Next.js 16, Tailwind CSS 4, React 19, Lucide Icons.
+*   **Database:** PostgreSQL (Docker) + Prisma ORM 7.
+*   **Tools:** PDF-lib (Signatures), PDF.js.
 
-## Stack Teknologi
-*   **Frontend:** Next.js 14, Tailwind CSS, React Lucide Icons.
-*   **Database:** PostgreSQL (berbasis Docker) + Prisma ORM.
+## 📌 Versioning & SemVer
+Proyek ini mengikuti [Semantic Versioning](https://semver.org/).
+*   **MAJOR (x.0.0):** Perubahan besar yang tidak kompatibel ke belakang.
+*   **MINOR (0.x.0):** Penambahan fitur baru yang kompatibel ke belakang.
+*   **PATCH (0.0.x):** Perbaikan bug yang kompatibel ke belakang.
 
-## Panduan Lokal & Instalasi
-1. Menghidupkan *database container*: `docker compose up -d`
-2. Menerapkan skema dan sampel ke dalam tabel (jika ada simulasi non-statis): `npx prisma db push`
-3. Menjalankan lingkungan pengembangan: `npm run dev`
+**Current Version:** `v0.5.0` (Development Phase - Core workflows and Master-tier integration).
+
+## 🚀 Panduan Lokal
+1. Hidupkan database: `docker compose up -d`
+2. Sync schema: `npx prisma db push`
+3. Jalankan aplikasi: `npm run dev`
