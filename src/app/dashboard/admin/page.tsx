@@ -5,7 +5,7 @@ import Link from 'next/link';
 export default async function AdminDashboard() {
   const [totalMatkul, totalUsers, pendingRequests] = await Promise.all([
     prisma.matkul.count(),
-    prisma.user.count({ where: { role: { in: ['DOSEN', 'KOORDINATOR'] } } }),
+    prisma.user.count({ where: { roles: { hasSome: ['DOSEN', 'KOORDINATOR'] } } }),
     prisma.matkulChangeRequest.count({ where: { status: 'PENDING' } }),
   ]);
 

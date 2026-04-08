@@ -21,7 +21,7 @@ export async function PATCH(
   const user = await prisma.user.update({
     where: { id },
     data,
-    select: { id: true, name: true, username: true, role: true },
+    select: { id: true, name: true, username: true, roles: true },
   });
 
   return NextResponse.json(user);
@@ -40,9 +40,9 @@ export async function DELETE(
   const { id } = await params;
 
   // Safety: Prevent deleting MASTER accounts via this API
-  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  const target = await prisma.user.findUnique({ where: { id }, select: { roles: true } });
   if (!target) return NextResponse.json({ error: 'User not found.' }, { status: 404 });
-  if (target.role === 'MASTER') {
+  if (target.roles.includes('MASTER')) {
     return NextResponse.json({ error: 'Cannot delete a MASTER account.' }, { status: 403 });
   }
 

@@ -14,10 +14,14 @@ export default async function MasterDashboard() {
     _count: { status: true },
   });
 
-  const userStats = await prisma.user.groupBy({
-    by: ['role'],
-    _count: { role: true },
+  const allUsers = await prisma.user.findMany({ select: { roles: true } });
+  const roleCount: Record<string, number> = {};
+  allUsers.forEach(u => {
+    u.roles.forEach(r => {
+      roleCount[r] = (roleCount[r] || 0) + 1;
+    });
   });
+  const userStats = Object.entries(roleCount).map(([role, count]) => ({ role, count }));
 
   const recentActivity = await prisma.rPS.findMany({
     include: { matkul: { select: { name: true } }, dosen: { select: { name: true } } },
@@ -78,7 +82,7 @@ export default async function MasterDashboard() {
             {userStats.map(stat => (
               <div key={stat.role} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                 <span className="text-sm font-mono text-gray-600">{stat.role}</span>
-                <span className="text-sm font-bold bg-gray-100 px-2 py-0.5 rounded">{stat._count.role}</span>
+                <span className="text-sm font-bold bg-gray-100 px-2 py-0.5 rounded">{stat.count}</span>
               </div>
             ))}
           </div>

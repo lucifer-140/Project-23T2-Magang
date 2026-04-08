@@ -17,13 +17,29 @@ type RoleConfig = {
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
-  const role = cookieStore.get('userRole')?.value;
+  const roleStr = cookieStore.get('userRole')?.value;
   const userName = cookieStore.get('userName')?.value ?? 'User';
 
-  if (!role) redirect('/');
+  if (!roleStr) redirect('/');
+  // Safely decode cookie value
+  let decodedRoleStr = roleStr || '';
+  try { decodedRoleStr = decodeURIComponent(decodedRoleStr); } catch(e) {}
 
-  const roleConfigs: Record<string, RoleConfig> = {
-    MASTER: {
+  // Parse roles array
+  let roles: string[] = [];
+  try {
+    const parsed = JSON.parse(decodedRoleStr);
+    if (Array.isArray(parsed)) roles = parsed;
+    else roles = [parsed]; // fallback if it was a scalar
+  } catch (e) {
+    roles = [decodedRoleStr]; // fallback
+  }
+
+  let config: RoleConfig;
+
+  // MASTER gets exclusive config
+  if (roles.includes('MASTER')) {
+    config = {
       label: 'Developer',
       subtitle: 'System Master',
       basePath: '/dashboard/master',
@@ -33,8 +49,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: '/dashboard/master/users', icon: <Users size={18} />, label: 'Kelola Pengguna' },
         { href: '/dashboard/master/logs', icon: <FileText size={18} />, label: 'Application Logs' },
       ],
-    },
-    ADMIN: {
+    };
+  } 
+  // ADMIN gets exclusive config
+  else if (roles.includes('ADMIN')) {
+    config = {
       label: 'Admin',
       subtitle: 'Administrator',
       basePath: '/dashboard/admin',
@@ -44,40 +63,35 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: '/dashboard/admin/matkul', icon: <BookOpen size={18} />, label: 'Kelola Matkul' },
         { href: '/dashboard/admin/users', icon: <Users size={18} />, label: 'Kelola Pengguna' },
       ],
-    },
-    KAPRODI: {
-      label: 'Kaprodi',
-      subtitle: 'Kepala Program Studi',
-      basePath: '/dashboard/kaprodi',
-      accentColor: 'bg-uph-red',
-      navItems: [
-        { href: '/dashboard/kaprodi', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-        { href: '/dashboard/kaprodi/rps', icon: <FileText size={18} />, label: 'Review RPS' },
-        { href: '/dashboard/kaprodi/requests', icon: <Bell size={18} />, label: 'Permintaan Perubahan' },
-      ],
-    },
-    KOORDINATOR: {
-      label: 'Koordinator',
-      subtitle: 'Koordinator Prodi',
-      basePath: '/dashboard/koordinator',
-      accentColor: 'bg-teal-600',
-      navItems: [
-        { href: '/dashboard/koordinator', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-      ],
-    },
-    DOSEN: {
-      label: 'Dosen',
-      subtitle: 'Tenaga Pengajar',
+    };
+  } 
+  // Combinable roles (KAPRODI, KOORDINATOR, DOSEN)
+  else {
+    const combinedNavItems = [
+      { href: '/dashboard/dosen', icon: <LayoutDashboard size={18} />, label: 'Dashboard' }
+    ];
+
+    if (roles.includes('KAPRODI')) {
+      combinedNavItems.push({ href: '/dashboard/kaprodi/rps', icon: <FileText size={18} />, label: 'Review RPS' });
+      combinedNavItems.push({ href: '/dashboard/kaprodi/requests', icon: <Bell size={18} />, label: 'Permintaan Perubahan' });
+    }
+    
+    // Base DOSEN item
+    combinedNavItems.push({ href: '/dashboard/dosen/rps', icon: <FileText size={18} />, label: 'Kelola RPS' });
+
+    let labelStr = 'Dosen';
+    if (roles.includes('KAPRODI') && roles.includes('KOORDINATOR')) labelStr = 'Kaprodi & Koordinator';
+    else if (roles.includes('KAPRODI')) labelStr = 'Kaprodi';
+    else if (roles.includes('KOORDINATOR')) labelStr = 'Koordinator';
+
+    config = {
+      label: labelStr,
+      subtitle: 'Portal Akademik',
       basePath: '/dashboard/dosen',
       accentColor: 'bg-uph-blue',
-      navItems: [
-        { href: '/dashboard/dosen', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-        { href: '/dashboard/dosen/rps', icon: <FileText size={18} />, label: 'Kelola RPS' },
-      ],
-    },
-  };
-
-  const config = roleConfigs[role] ?? roleConfigs['DOSEN'];
+      navItems: combinedNavItems,
+    };
+  }
 
   async function handleLogout() {
     "use server"

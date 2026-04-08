@@ -1,15 +1,19 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { Users, Edit2, X, ShieldCheck, Search, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { Users, Edit2, X, Search, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 
 type User = {
   id: string; name: string; username: string;
-  role: string;
+  roles: string[];
 };
 
-const ROLE_OPTIONS = ['MASTER', 'ADMIN', 'KAPRODI', 'KOORDINATOR', 'DOSEN'] as const;
 const ALL_ROLES_LABEL = 'SEMUA';
+// Only roles that an Admin can realistically see/filter by
+const ROLE_OPTIONS = ['ADMIN', 'KAPRODI', 'KOORDINATOR', 'DOSEN'] as const;
+
+// Roles that an Admin can assign to someone else
+const ASSIGNABLE_ROLES = ['KAPRODI', 'KOORDINATOR'];
 
 const ROLE_COLORS: Record<string, string> = {
   MASTER: 'bg-purple-100 text-purple-700',
@@ -26,7 +30,9 @@ type Props = { users: User[]; allMatkuls: { id: string; code: string; name: stri
 export function UsersClientPage({ users: initialUsers }: Props) {
   const [users, setUsers] = useState(initialUsers);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editRole, setEditRole] = useState('');
+  
+  // Now tracks an array of strings
+  const [editRoles, setEditRoles] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Search & filter state
@@ -36,21 +42,32 @@ export function UsersClientPage({ users: initialUsers }: Props) {
 
   function startEdit(user: User) {
     setEditingUser(user);
-    setEditRole(user.role);
+    setEditRoles([...user.roles]);
+  }
+
+  function handleToggleEditRole(r: string, checked: boolean) {
+    if (r === 'DOSEN') return; // Cannot change DOSEN base role
+    setEditRoles(prev => 
+      checked ? [...prev, r] : prev.filter(role => role !== r)
+    );
   }
 
   async function handleSaveRole(e: React.FormEvent) {
     e.preventDefault();
     if (!editingUser) return;
     setIsSaving(true);
+
     const res = await fetch(`/api/users/${editingUser.id}/role`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: editRole }),
+      body: JSON.stringify({ roles: editRoles }),
     });
+
     if (res.ok) {
-      setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, role: editRole } : u));
+      setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, roles: editRoles } : u));
       setEditingUser(null);
+    } else {
+      alert('Gagal menyimpan role. Pastikan Anda memiliki izin.');
     }
     setIsSaving(false);
   }
@@ -59,10 +76,10 @@ export function UsersClientPage({ users: initialUsers }: Props) {
   const filteredUsers = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return users.filter(u => {
-      const matchesRole = activeRoleTab === ALL_ROLES_LABEL || u.role === activeRoleTab;
+      const matchesRole = activeRoleTab === ALL_ROLES_LABEL || u.roles.includes(activeRoleTab);
       const matchesSearch = u.name.toLowerCase().includes(q) ||
         u.username.toLowerCase().includes(q) ||
-        u.role.toLowerCase().includes(q);
+        u.roles.join(' ').toLowerCase().includes(q);
       return matchesRole && matchesSearch;
     });
   }, [users, searchQuery, activeRoleTab]);
@@ -78,7 +95,7 @@ export function UsersClientPage({ users: initialUsers }: Props) {
   const roleTabs = [ALL_ROLES_LABEL, ...ROLE_OPTIONS];
   const roleCounts = useMemo(() => {
     const counts: Record<string, number> = { [ALL_ROLES_LABEL]: users.length };
-    ROLE_OPTIONS.forEach(r => { counts[r] = users.filter(u => u.role === r).length; });
+    ROLE_OPTIONS.forEach(r => { counts[r] = users.filter(u => u.roles.includes(r)).length; });
     return counts;
   }, [users]);
 
@@ -86,7 +103,7 @@ export function UsersClientPage({ users: initialUsers }: Props) {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-playfair font-bold text-uph-blue mb-1">Kelola Pengguna</h1>
-        <p className="text-gray-500">Lihat semua akun dan ubah peran (role) pengguna di sistem.</p>
+        <p className="text-gray-500">Lihat semua akun dan ubah peran (roles) akademis pengguna di sistem.</p>
       </div>
 
       {/* Role Filter Tabs */}
@@ -132,20 +149,20 @@ export function UsersClientPage({ users: initialUsers }: Props) {
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nama</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Username</th>
-                {/* REMOVED: "Matkul Diampu" column per requirement */}
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Roles</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {pagedUsers.length > 0 ? pagedUsers.map(user => {
-                // RBAC: Master role cannot be edited by Admin
-                const isMaster = user.role === 'MASTER';
+                const isAdmin = user.roles.includes('ADMIN');
+                const primaryColor = user.roles[0] ? ROLE_COLORS[user.roles[0]] : 'bg-gray-100 text-gray-600';
+                
                 return (
                   <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="py-3 px-6">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${ROLE_COLORS[user.role] ?? 'bg-gray-100 text-gray-600'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${primaryColor}`}>
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <span className="font-semibold text-gray-800">{user.name}</span>
@@ -153,14 +170,17 @@ export function UsersClientPage({ users: initialUsers }: Props) {
                     </td>
                     <td className="py-3 px-6 text-sm text-gray-500 font-mono">@{user.username}</td>
                     <td className="py-3 px-6">
-                      <span className={`inline-block px-2.5 py-1 text-xs font-bold rounded-full uppercase tracking-wider ${ROLE_COLORS[user.role] ?? 'bg-gray-100 text-gray-700'}`}>
-                        {user.role}
-                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {user.roles.map(r => (
+                          <span key={r} className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider ${ROLE_COLORS[r] ?? 'bg-gray-100 text-gray-700'}`}>
+                            {r}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="py-3 px-6 text-center">
-                      {isMaster ? (
-                        // RBAC: Show a locked state for MASTER - Admin cannot edit this role
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-400 text-xs font-bold rounded-lg cursor-not-allowed" title="Role Master tidak dapat diubah oleh Admin">
+                      {isAdmin ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-400 text-xs font-bold rounded-lg cursor-not-allowed" title="Role Admin tidak dapat diubah">
                           <Lock size={11} /> Terlindungi
                         </span>
                       ) : (
@@ -230,45 +250,46 @@ export function UsersClientPage({ users: initialUsers }: Props) {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Ubah Role</h2>
+                <h2 className="text-lg font-bold text-gray-800">Ubah Role Akademis</h2>
                 <p className="text-sm text-gray-500">{editingUser.name} (@{editingUser.username})</p>
               </div>
               <button onClick={() => setEditingUser(null)} className="p-1 hover:bg-gray-200 rounded-full"><X size={18} /></button>
             </div>
             <form onSubmit={handleSaveRole} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Role Baru</label>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Pilih Role</label>
                 <div className="grid grid-cols-1 gap-2">
-                  {ROLE_OPTIONS.map(r => {
-                    // RBAC: Admin cannot assign MASTER role either
-                    const isRestricted = r === 'MASTER';
+                  
+                  {/* Basic DOSEN Role (Immutable) */}
+                  <label className="flex items-center gap-3 p-3 rounded-xl border bg-gray-50 border-gray-200 cursor-not-allowed opacity-80">
+                    <input type="checkbox" checked={true} readOnly disabled className="accent-uph-blue w-4 h-4 cursor-not-allowed" />
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${ROLE_COLORS['DOSEN']}`}>DOSEN</span>
+                    <span className="ml-auto text-[10px] text-gray-500 font-medium italic">Base Role</span>
+                  </label>
+
+                  {ASSIGNABLE_ROLES.map(r => {
+                    const isChecked = editRoles.includes(r);
                     return (
                       <label
                         key={r}
-                        className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${isRestricted
-                            ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-100'
-                            : editRole === r
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${isChecked
                               ? 'bg-uph-blue/10 border-uph-blue cursor-pointer'
                               : 'bg-white border-gray-200 hover:bg-gray-50 cursor-pointer'
                           }`}
                       >
                         <input
-                          type="radio"
-                          name="role"
-                          value={r}
-                          checked={editRole === r}
-                          onChange={() => !isRestricted && setEditRole(r)}
-                          disabled={isRestricted}
-                          className="accent-uph-blue"
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => handleToggleEditRole(r, e.target.checked)}
+                          className="accent-uph-blue w-4 h-4"
                         />
                         <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${ROLE_COLORS[r]}`}>{r}</span>
-                        {isRestricted && <span className="ml-auto text-[10px] text-gray-400 flex items-center gap-1"><Lock size={10} /> Terlindungi</span>}
                       </label>
                     );
                   })}
                 </div>
               </div>
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setEditingUser(null)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">Batal</button>
                 <button type="submit" disabled={isSaving} className="flex-1 py-2.5 bg-uph-blue text-white text-sm font-bold rounded-lg hover:bg-[#111c33] disabled:opacity-50">
                   {isSaving ? 'Menyimpan...' : 'Simpan'}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   FileText, Clock, CheckCircle, Mail, Download, Inbox,
   ChevronDown, ChevronUp, AlertCircle, FileArchive, Activity, X, XCircle
@@ -12,20 +12,43 @@ type Submission = {
   notes: string | null; createdAt: string; updatedAt: string;
 };
 
+type Assignment = { dosenName: string; matkulName: string; rpsId: string | null; defaultStatus: string };
+
 type DosenGroup = {
   name: string; totalMatkul: number; approved: number; progress: number;
   courses: { matkulName: string; status: string }[];
 };
 
-type Props = { submissions: Submission[]; dosenGroups: DosenGroup[] };
+type Props = { submissions: Submission[]; assignments: Assignment[] };
 
-export function KaprodiRPSClient({ submissions: initialData, dosenGroups }: Props) {
+export function KaprodiRPSClient({ submissions: initialData, assignments }: Props) {
   const [submissions, setSubmissions] = useState(initialData);
   const [activeTab, setActiveTab] = useState('review');
   const [expandedDosen, setExpandedDosen] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [revisionNote, setRevisionNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Dynamically compute dosenGroups so they update immediately when submissions state changes
+  const dosenGroups: DosenGroup[] = useMemo(() => {
+    const dosenMap = new Map<string, { name: string; matkuls: { matkulName: string; status: string }[] }>();
+    for (const a of assignments) {
+      const dosenName = a.dosenName;
+      if (!dosenMap.has(dosenName)) dosenMap.set(dosenName, { name: dosenName, matkuls: [] });
+      
+      const liveSubmission = a.rpsId ? submissions.find(s => s.id === a.rpsId) : null;
+      const status = liveSubmission ? liveSubmission.status : a.defaultStatus;
+      
+      dosenMap.get(dosenName)!.matkuls.push({ matkulName: a.matkulName, status });
+    }
+    return Array.from(dosenMap.values()).map(d => ({
+      name: d.name,
+      totalMatkul: d.matkuls.length,
+      approved: d.matkuls.filter(m => m.status === 'APPROVED').length,
+      progress: Math.round((d.matkuls.filter(m => m.status === 'APPROVED').length / d.matkuls.length) * 100) || 0,
+      courses: d.matkuls,
+    }));
+  }, [submissions, assignments]);
 
   const needsReview = submissions.filter(s => s.status === 'SUBMITTED');
   const pendingRevision = submissions.filter(s => s.status === 'REVISION');
@@ -34,7 +57,7 @@ export function KaprodiRPSClient({ submissions: initialData, dosenGroups }: Prop
 
   function getStatusBadge(status: string) {
     switch (status) {
-      case 'UNSUBMITTED': return <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs font-bold">BELUM SUBMIT</span>;
+      case 'UNSUBMITTED': return <span className="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">BELUM SUBMIT</span>;
       case 'SUBMITTED': return <span className="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs font-bold">NEEDS REVIEW</span>;
       case 'PENGECEKAN': return <span className="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs font-bold">IN REVIEW</span>;
       case 'REVISION': return <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded text-xs font-bold">REVISION</span>;
@@ -212,7 +235,7 @@ export function KaprodiRPSClient({ submissions: initialData, dosenGroups }: Prop
                             </thead>
                             <tbody>
                               {dosen.courses.map((c, i) => (
-                                <tr key={i} className="border-b border-gray-100/50 last:border-0 hover:bg-white">
+                                <tr key={i} className={`border-b border-gray-100/50 last:border-0 ${c.status === 'UNSUBMITTED' ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-white'}`}>
                                   <td className="py-3 px-4 font-semibold text-gray-700">{c.matkulName}</td>
                                   <td className="py-3 px-4">{getStatusBadge(c.status)}</td>
                                 </tr>

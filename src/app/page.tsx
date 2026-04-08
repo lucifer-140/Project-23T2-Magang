@@ -19,17 +19,17 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       redirect('/?error=invalid');
     }
 
-    cookieStore.set('userRole', user.role);
+    cookieStore.set('userRole', JSON.stringify(user.roles)); // store as JSON array
     cookieStore.set('userId', user.id);
     cookieStore.set('userName', user.name);
 
-    switch (user.role) {
-      case 'MASTER':      redirect('/dashboard/master');
-      case 'ADMIN':       redirect('/dashboard/admin');
-      case 'KAPRODI':     redirect('/dashboard/kaprodi');
-      case 'KOORDINATOR': redirect('/dashboard/koordinator');
-      case 'DOSEN':       redirect('/dashboard/dosen');
-      default:            redirect('/');
+    if (user.roles.includes('MASTER')) {
+      redirect('/dashboard/master');
+    } else if (user.roles.includes('ADMIN')) {
+      redirect('/dashboard/admin');
+    } else {
+      // KAPRODI, KOORDINATOR, and DOSEN share the same page
+      redirect('/dashboard/dosen');
     }
   }
 

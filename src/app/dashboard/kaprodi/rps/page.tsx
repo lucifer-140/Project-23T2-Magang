@@ -10,13 +10,28 @@ export default async function KaprodiRPSPage() {
     orderBy: { updatedAt: 'desc' },
   });
 
-  // Group by dosen
-  const dosenMap = new Map<string, { name: string; matkuls: { matkulName: string; status: string }[] }>();
-  for (const rps of submissions) {
-    const dosenName = rps.dosen.name;
-    if (!dosenMap.has(dosenName)) dosenMap.set(dosenName, { name: dosenName, matkuls: [] });
-    dosenMap.get(dosenName)!.matkuls.push({ matkulName: rps.matkul.name, status: rps.status });
-  }
+  const dosensWithMatkuls = await prisma.user.findMany({
+    where: { dosenMatkuls: { some: {} } },
+    include: {
+      dosenMatkuls: {
+        include: { rps: true }
+      }
+    }
+  });
+
+  const initialAssignments: { dosenName: string; matkulName: string; rpsId: string | null; defaultStatus: string }[] = [];
+  
+  dosensWithMatkuls.forEach(d => {
+    d.dosenMatkuls.forEach(m => {
+      const rpsForDosen = m.rps.find(r => r.dosenId === d.id);
+      initialAssignments.push({
+        dosenName: d.name,
+        matkulName: m.name,
+        rpsId: rpsForDosen?.id || null,
+        defaultStatus: rpsForDosen?.status || 'UNSUBMITTED'
+      });
+    });
+  });
 
   return (
     <KaprodiRPSClient
@@ -32,13 +47,7 @@ export default async function KaprodiRPSPage() {
         createdAt: s.createdAt.toISOString(),
         updatedAt: s.updatedAt.toISOString(),
       }))}
-      dosenGroups={Array.from(dosenMap.values()).map(d => ({
-        name: d.name,
-        totalMatkul: d.matkuls.length,
-        approved: d.matkuls.filter(m => m.status === 'APPROVED').length,
-        progress: Math.round((d.matkuls.filter(m => m.status === 'APPROVED').length / d.matkuls.length) * 100),
-        courses: d.matkuls,
-      }))}
+      assignments={initialAssignments}
     />
   );
 }

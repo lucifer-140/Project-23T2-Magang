@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Lock, AlertTriangle, Check
 } from 'lucide-react';
 
-type User = { id: string; name: string; username: string; role: string };
+type User = { id: string; name: string; username: string; roles: string[] };
 
 const ROLE_OPTIONS = ['MASTER', 'ADMIN', 'KAPRODI', 'KOORDINATOR', 'DOSEN'] as const;
 const ALL_ROLES_LABEL = 'SEMUA';
@@ -22,7 +22,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 type Props = { users: User[] };
 
-const EMPTY_ADD = { name: '', username: '', password: '', role: 'DOSEN' };
+const EMPTY_ADD = { name: '', username: '', password: '', roles: ['DOSEN'] };
 const EMPTY_EDIT = { name: '', username: '', password: '' };
 
 export function UsersManageClientPage({ users: initialUsers }: Props) {
@@ -41,6 +41,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [editRoles, setEditRoles] = useState<string[]>([]);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +51,21 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
   function showSuccess(msg: string) {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(''), 3000);
+  }
+
+  function handleToggleAddRole(r: string, checked: boolean) {
+    if (r === 'DOSEN') return; // Cannot change DOSEN base role
+    setAddForm(prev => ({
+      ...prev,
+      roles: checked ? [...prev.roles, r] : prev.roles.filter(role => role !== r)
+    }));
+  }
+
+  function handleToggleEditRole(r: string, checked: boolean) {
+    if (r === 'DOSEN') return; // Cannot change DOSEN base role
+    setEditRoles(prev => 
+      checked ? [...prev, r] : prev.filter(role => role !== r)
+    );
   }
 
   // ── ADD USER ──────────────────────────────────────────────────────────────
@@ -75,6 +91,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
   function startEdit(user: User) {
     setEditingUser(user);
     setEditForm({ name: user.name, username: user.username, password: '' });
+    setEditRoles([...user.roles]);
     setEditError('');
   }
 
@@ -83,21 +100,41 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
     if (!editingUser) return;
     setEditError('');
     setIsSaving(true);
+    
+    // First update roles
+    const roleRes = await fetch(`/api/users/${editingUser.id}/role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roles: editRoles }),
+    });
+
+    if (!roleRes.ok) {
+       setEditError('Gagal memperbarui role.'); 
+       setIsSaving(false); 
+       return; 
+    }
+
     const payload: Record<string, string> = {};
     if (editForm.name && editForm.name !== editingUser.name) payload.name = editForm.name;
     if (editForm.username && editForm.username !== editingUser.username) payload.username = editForm.username;
     if (editForm.password) payload.password = editForm.password;
 
-    const res = await fetch(`/api/users/${editingUser.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) { setEditError(data.error ?? 'Gagal memperbarui pengguna.'); setIsSaving(false); return; }
-    setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...data } : u));
+    let finalData = { ...editingUser, roles: editRoles };
+
+    if (Object.keys(payload).length > 0) {
+      const res = await fetch(`/api/users/${editingUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) { setEditError(data.error ?? 'Gagal memperbarui pengguna.'); setIsSaving(false); return; }
+      finalData = { ...finalData, ...data };
+    }
+
+    setUsers(prev => prev.map(u => u.id === editingUser.id ? finalData : u));
     setEditingUser(null);
-    showSuccess(`Pengguna "${data.name}" berhasil diperbarui.`);
+    showSuccess(`Pengguna berhasil diperbarui.`);
     setIsSaving(false);
   }
 
@@ -118,10 +155,10 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
   const filteredUsers = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return users.filter(u => {
-      const matchesRole = activeRoleTab === ALL_ROLES_LABEL || u.role === activeRoleTab;
+      const matchesRole = activeRoleTab === ALL_ROLES_LABEL || u.roles.includes(activeRoleTab);
       const matchesSearch = u.name.toLowerCase().includes(q) ||
         u.username.toLowerCase().includes(q) ||
-        u.role.toLowerCase().includes(q);
+        u.roles.join(' ').toLowerCase().includes(q);
       return matchesRole && matchesSearch;
     });
   }, [users, searchQuery, activeRoleTab]);
@@ -136,7 +173,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
   const roleTabs = [ALL_ROLES_LABEL, ...ROLE_OPTIONS];
   const roleCounts = useMemo(() => {
     const counts: Record<string, number> = { [ALL_ROLES_LABEL]: users.length };
-    ROLE_OPTIONS.forEach(r => { counts[r] = users.filter(u => u.role === r).length; });
+    ROLE_OPTIONS.forEach(r => { counts[r] = users.filter(u => u.roles.includes(r)).length; });
     return counts;
   }, [users]);
 
@@ -206,18 +243,20 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nama</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Username</th>
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Roles</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {pagedUsers.length > 0 ? pagedUsers.map(user => {
-                const isMaster = user.role === 'MASTER';
+                const isMaster = user.roles.includes('MASTER');
+                const primaryColor = user.roles[0] ? ROLE_COLORS[user.roles[0]] : 'bg-gray-100 text-gray-600';
+
                 return (
                   <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="py-3 px-6">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${ROLE_COLORS[user.role] ?? 'bg-gray-100 text-gray-600'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${primaryColor}`}>
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <span className="font-semibold text-gray-800">{user.name}</span>
@@ -225,9 +264,13 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
                     </td>
                     <td className="py-3 px-6 text-sm text-gray-500 font-mono">@{user.username}</td>
                     <td className="py-3 px-6">
-                      <span className={`inline-block px-2.5 py-1 text-xs font-bold rounded-full uppercase tracking-wider ${ROLE_COLORS[user.role] ?? 'bg-gray-100 text-gray-700'}`}>
-                        {user.role}
-                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {user.roles.map(r => (
+                          <span key={r} className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider ${ROLE_COLORS[r] ?? 'bg-gray-100 text-gray-700'}`}>
+                            {r}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="py-3 px-6 text-center">
                       <div className="flex items-center justify-center gap-2">
@@ -322,11 +365,15 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
                   placeholder="Min. 6 karakter" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Role</label>
-                <div className="grid grid-cols-1 gap-2">
-                  {ROLE_OPTIONS.map(r => (
-                    <label key={r} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer border transition-colors ${addForm.role === r ? 'bg-purple-50 border-purple-300' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
-                      <input type="radio" name="add-role" value={r} checked={addForm.role === r} onChange={() => setAddForm(p => ({ ...p, role: r }))} className="accent-purple-600" />
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Pilih Roles</label>
+                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+                  <label className="flex items-center gap-3 p-2.5 rounded-xl border bg-gray-50 border-gray-200 cursor-not-allowed opacity-80">
+                    <input type="checkbox" checked={true} readOnly disabled className="accent-purple-600 cursor-not-allowed" />
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${ROLE_COLORS['DOSEN']}`}>DOSEN</span>
+                  </label>
+                  {ROLE_OPTIONS.filter(r => r !== 'DOSEN').map(r => (
+                    <label key={r} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer border transition-colors ${addForm.roles.includes(r) ? 'bg-purple-50 border-purple-300' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                      <input type="checkbox" checked={addForm.roles.includes(r)} onChange={(e) => handleToggleAddRole(r, e.target.checked)} className="accent-purple-600" />
                       <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${ROLE_COLORS[r]}`}>{r}</span>
                     </label>
                   ))}
@@ -375,7 +422,21 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
                 <input type="password" value={editForm.password} onChange={e => setEditForm(p => ({ ...p, password: e.target.value }))}
                   placeholder="••••••••" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
               </div>
-              <p className="text-xs text-gray-400">Untuk mengubah role, gunakan panel Admin → Kelola Pengguna.</p>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Edit Roles</label>
+                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+                  <label className="flex items-center gap-3 p-2.5 rounded-xl border bg-gray-50 border-gray-200 cursor-not-allowed opacity-80">
+                    <input type="checkbox" checked={true} readOnly disabled className="accent-uph-blue cursor-not-allowed" />
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${ROLE_COLORS['DOSEN']}`}>DOSEN</span>
+                  </label>
+                  {ROLE_OPTIONS.filter(r => r !== 'DOSEN').map(r => (
+                    <label key={r} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer border transition-colors ${editRoles.includes(r) ? 'bg-uph-blue/10 border-uph-blue' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                      <input type="checkbox" checked={editRoles.includes(r)} onChange={(e) => handleToggleEditRole(r, e.target.checked)} className="accent-uph-blue" />
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${ROLE_COLORS[r]}`}>{r}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditingUser(null)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">Batal</button>
                 <button type="submit" disabled={isSaving} className="flex-1 py-2.5 bg-uph-blue text-white text-sm font-bold rounded-lg hover:bg-[#111c33] disabled:opacity-50">
@@ -403,7 +464,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
                 <AlertTriangle size={20} className="text-red-500 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-bold text-gray-800">{deletingUser.name}</p>
-                  <p className="text-xs text-gray-500">@{deletingUser.username} · {deletingUser.role}</p>
+                  <p className="text-xs text-gray-500">@{deletingUser.username} · {deletingUser.roles[0]}</p>
                 </div>
               </div>
               <p className="text-sm text-gray-600 mb-5">
