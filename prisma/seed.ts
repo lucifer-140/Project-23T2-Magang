@@ -11,22 +11,22 @@ async function main() {
 
   // Users
   await client.query(`
-    INSERT INTO "User" (id, username, password, role, name)
+    INSERT INTO "User" (id, email, password, roles, name)
     VALUES
-      (gen_random_uuid()::text, 'master', 'master123', 'MASTER', 'System Developer'),
-      (gen_random_uuid()::text, 'admin', 'admin123', 'ADMIN', 'Admin Akademik'),
-      (gen_random_uuid()::text, 'kaprodi', 'kaprodi123', 'KAPRODI', 'Dr. Kaprodi Utama'),
-      (gen_random_uuid()::text, 'koordinator', 'koordinator123', 'KOORDINATOR', 'Koordinator Prodi'),
-      (gen_random_uuid()::text, 'dosen', 'dosen123', 'DOSEN', 'Dr. Budi Santoso'),
-      (gen_random_uuid()::text, 'dosen2', 'dosen123', 'DOSEN', 'Siti Aminah, M.Kom')
-    ON CONFLICT (username) DO NOTHING
+      (gen_random_uuid()::text, 'master@test.com', 'master123', ARRAY['MASTER']::"Role"[], 'System Developer'),
+      (gen_random_uuid()::text, 'admin@test.com', 'admin123', ARRAY['ADMIN']::"Role"[], 'Admin Akademik'),
+      (gen_random_uuid()::text, 'kaprodi@test.com', 'kaprodi123', ARRAY['KAPRODI', 'DOSEN']::"Role"[], 'Dr. Kaprodi Utama'),
+      (gen_random_uuid()::text, 'koordinator@test.com', 'koordinator123', ARRAY['KOORDINATOR', 'DOSEN']::"Role"[], 'Koordinator Prodi'),
+      (gen_random_uuid()::text, 'dosen@test.com', 'dosen123', ARRAY['DOSEN']::"Role"[], 'Dr. Budi Santoso'),
+      (gen_random_uuid()::text, 'dosen2@test.com', 'dosen123', ARRAY['DOSEN']::"Role"[], 'Siti Aminah, M.Kom')
+    ON CONFLICT (email) DO NOTHING
   `);
   console.log('✅ Users seeded');
 
   // Get user IDs
-  const { rows: users } = await client.query(`SELECT id, username FROM "User" WHERE username IN ('dosen', 'dosen2')`);
-  const dosen1Id = users.find((u: any) => u.username === 'dosen')?.id;
-  const dosen2Id = users.find((u: any) => u.username === 'dosen2')?.id;
+  const { rows: users } = await client.query(`SELECT id, email FROM "User" WHERE email IN ('dosen@test.com', 'dosen2@test.com')`);
+  const dosen1Id = users.find((u: any) => u.email === 'dosen@test.com')?.id;
+  const dosen2Id = users.find((u: any) => u.email === 'dosen2@test.com')?.id;
 
   // Matkul
   await client.query(`
@@ -80,8 +80,8 @@ async function main() {
   console.log('✅ Change request seeded');
 
   console.log('\n🎉 Seed complete!');
-  console.log('Test accounts: master | admin | kaprodi | koordinator | dosen | dosen2');
-  console.log('Passwords: [username]123 (dosen2 uses dosen123)');
+  console.log('Test accounts: master@test.com | admin@test.com | kaprodi@test.com | koordinator@test.com | dosen@test.com | dosen2@test.com');
+  console.log('Passwords: [email prefix]123 (dosen2 uses dosen123)');
 }
 
 main()

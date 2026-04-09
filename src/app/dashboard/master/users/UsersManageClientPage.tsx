@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Lock, AlertTriangle, Check
 } from 'lucide-react';
 
-type User = { id: string; name: string; username: string; roles: string[] };
+type User = { id: string; name: string; email: string; roles: string[] };
 
 const ROLE_OPTIONS = ['MASTER', 'ADMIN', 'KAPRODI', 'KOORDINATOR', 'DOSEN'] as const;
 const ALL_ROLES_LABEL = 'SEMUA';
@@ -22,8 +22,8 @@ const ROLE_COLORS: Record<string, string> = {
 
 type Props = { users: User[] };
 
-const EMPTY_ADD = { name: '', username: '', password: '', roles: ['DOSEN'] };
-const EMPTY_EDIT = { name: '', username: '', password: '' };
+const EMPTY_ADD = { name: '', email: '', password: '', roles: ['DOSEN'] };
+const EMPTY_EDIT = { name: '', email: '', password: '' };
 
 export function UsersManageClientPage({ users: initialUsers }: Props) {
   const [users, setUsers] = useState(initialUsers);
@@ -90,7 +90,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
   // ── EDIT USER ─────────────────────────────────────────────────────────────
   function startEdit(user: User) {
     setEditingUser(user);
-    setEditForm({ name: user.name, username: user.username, password: '' });
+    setEditForm({ name: user.name, email: user.email, password: '' });
     setEditRoles([...user.roles]);
     setEditError('');
   }
@@ -116,7 +116,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
 
     const payload: Record<string, string> = {};
     if (editForm.name && editForm.name !== editingUser.name) payload.name = editForm.name;
-    if (editForm.username && editForm.username !== editingUser.username) payload.username = editForm.username;
+    if (editForm.email && editForm.email !== editingUser.email) payload.email = editForm.email;
     if (editForm.password) payload.password = editForm.password;
 
     let finalData = { ...editingUser, roles: editRoles };
@@ -157,7 +157,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
     return users.filter(u => {
       const matchesRole = activeRoleTab === ALL_ROLES_LABEL || u.roles.includes(activeRoleTab);
       const matchesSearch = u.name.toLowerCase().includes(q) ||
-        u.username.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
         u.roles.join(' ').toLowerCase().includes(q);
       return matchesRole && matchesSearch;
     });
@@ -229,7 +229,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input
               type="text"
-              placeholder="Cari nama, username, atau role..."
+              placeholder="Cari nama, email, atau role..."
               value={searchQuery}
               onChange={e => handleSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400"
@@ -242,7 +242,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nama</th>
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Username</th>
+                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Roles</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Aksi</th>
               </tr>
@@ -262,7 +262,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
                         <span className="font-semibold text-gray-800">{user.name}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-6 text-sm text-gray-500 font-mono">@{user.username}</td>
+                    <td className="py-3 px-6 text-sm text-gray-500 font-mono">{user.email}</td>
                     <td className="py-3 px-6">
                       <div className="flex flex-wrap gap-1.5">
                         {user.roles.map(r => (
@@ -355,9 +355,9 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
                   placeholder="Cth: Dr. Budi Santoso" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Username</label>
-                <input required value={addForm.username} onChange={e => setAddForm(p => ({ ...p, username: e.target.value }))}
-                  placeholder="Cth: budisantoso" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400" />
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Email</label>
+                <input required type="email" value={addForm.email} onChange={e => setAddForm(p => ({ ...p, email: e.target.value }))}
+                  placeholder="Cth: dosen@test.com" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Password</label>
@@ -397,7 +397,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <div>
                 <h2 className="text-lg font-bold text-gray-800">Edit Pengguna</h2>
-                <p className="text-sm text-gray-500">{editingUser.name} (@{editingUser.username})</p>
+                <p className="text-sm text-gray-500">{editingUser.name} ({editingUser.email})</p>
               </div>
               <button onClick={() => setEditingUser(null)} className="p-1 hover:bg-gray-200 rounded-full"><X size={18} /></button>
             </div>
@@ -413,9 +413,9 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
                   placeholder={editingUser.name} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Username</label>
-                <input value={editForm.username} onChange={e => setEditForm(p => ({ ...p, username: e.target.value }))}
-                  placeholder={editingUser.username} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Email</label>
+                <input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
+                  placeholder={editingUser.email} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Password Baru <span className="text-gray-400 normal-case font-medium">(kosongkan jika tidak diubah)</span></label>
@@ -464,7 +464,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
                 <AlertTriangle size={20} className="text-red-500 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-bold text-gray-800">{deletingUser.name}</p>
-                  <p className="text-xs text-gray-500">@{deletingUser.username} · {deletingUser.roles[0]}</p>
+                  <p className="text-xs text-gray-500">{deletingUser.email} · {deletingUser.roles[0]}</p>
                 </div>
               </div>
               <p className="text-sm text-gray-600 mb-5">

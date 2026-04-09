@@ -5,19 +5,19 @@ export default async function MatkulPage() {
   const [matkuls, dosens, koordinators] = await Promise.all([
     prisma.matkul.findMany({
       include: { 
-        dosens: { select: { id: true, name: true, username: true } },
-        koordinators: { select: { id: true, name: true, username: true } }
+        dosens: { select: { id: true, name: true, email: true } },
+        koordinators: { select: { id: true, name: true, email: true } }
       },
       orderBy: { code: 'asc' },
     }),
     prisma.user.findMany({
       where: { roles: { has: 'DOSEN' } },
-      select: { id: true, name: true, username: true },
+      select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     }),
     prisma.user.findMany({
       where: { roles: { has: 'KOORDINATOR' } },
-      select: { id: true, name: true, username: true },
+      select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     }),
   ]);

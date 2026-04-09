@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Users, Edit2, X, Search, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 
 type User = {
-  id: string; name: string; username: string;
+  id: string; name: string; email: string;
   roles: string[];
 };
 
@@ -78,7 +78,7 @@ export function UsersClientPage({ users: initialUsers }: Props) {
     return users.filter(u => {
       const matchesRole = activeRoleTab === ALL_ROLES_LABEL || u.roles.includes(activeRoleTab);
       const matchesSearch = u.name.toLowerCase().includes(q) ||
-        u.username.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
         u.roles.join(' ').toLowerCase().includes(q);
       return matchesRole && matchesSearch;
     });
@@ -134,7 +134,7 @@ export function UsersClientPage({ users: initialUsers }: Props) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input
               type="text"
-              placeholder="Cari nama, username, atau role..."
+              placeholder="Cari nama, email, atau role..."
               value={searchQuery}
               onChange={e => handleSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue"
@@ -148,7 +148,7 @@ export function UsersClientPage({ users: initialUsers }: Props) {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nama</th>
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Username</th>
+                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Roles</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Aksi</th>
               </tr>
@@ -168,7 +168,7 @@ export function UsersClientPage({ users: initialUsers }: Props) {
                         <span className="font-semibold text-gray-800">{user.name}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-6 text-sm text-gray-500 font-mono">@{user.username}</td>
+                    <td className="py-3 px-6 text-sm text-gray-500 font-mono">{user.email}</td>
                     <td className="py-3 px-6">
                       <div className="flex flex-wrap gap-1.5">
                         {user.roles.map(r => (
@@ -251,7 +251,7 @@ export function UsersClientPage({ users: initialUsers }: Props) {
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <div>
                 <h2 className="text-lg font-bold text-gray-800">Ubah Role Akademis</h2>
-                <p className="text-sm text-gray-500">{editingUser.name} (@{editingUser.username})</p>
+                <p className="text-sm text-gray-500">{editingUser.name} ({editingUser.email})</p>
               </div>
               <button onClick={() => setEditingUser(null)} className="p-1 hover:bg-gray-200 rounded-full"><X size={18} /></button>
             </div>

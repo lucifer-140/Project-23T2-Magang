@@ -9,7 +9,7 @@ export async function GET() {
   const isMasterCaller = callerRoleStr.includes('MASTER');
 
   let users = await prisma.user.findMany({
-    select: { id: true, name: true, username: true, roles: true },
+    select: { id: true, name: true, email: true, roles: true },
     orderBy: { name: 'asc' },
   });
 
@@ -23,10 +23,10 @@ export async function GET() {
 
 // POST /api/users - Create a new user
 export async function POST(req: NextRequest) {
-  const { name, username, password, role, roles: passedRoles } = await req.json();
+  const { name, email, password, role, roles: passedRoles } = await req.json();
 
-  if (!name || !username || !password) {
-    return NextResponse.json({ error: 'Name, username, and password are required.' }, { status: 400 });
+  if (!name || !email || !password) {
+    return NextResponse.json({ error: 'Name, email, and password are required.' }, { status: 400 });
   }
 
   let rolesArray = ['DOSEN'];
@@ -51,15 +51,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized to create MASTER or ADMIN accounts.' }, { status: 403 });
   }
 
-  const existing = await prisma.user.findUnique({ where: { username } });
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    return NextResponse.json({ error: 'Username sudah digunakan.' }, { status: 409 });
+    return NextResponse.json({ error: 'Email sudah digunakan.' }, { status: 409 });
   }
 
   // NOTE: In production, hash the password before storing it.
   const user = await prisma.user.create({
-    data: { name, username, password, roles: rolesArray as any },
-    select: { id: true, name: true, username: true, roles: true },
+    data: { name, email, password, roles: rolesArray as any },
+    select: { id: true, name: true, email: true, roles: true },
   });
 
   return NextResponse.json(user, { status: 201 });

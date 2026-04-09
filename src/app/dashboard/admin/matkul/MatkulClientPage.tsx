@@ -4,8 +4,8 @@ import { useState, useMemo } from 'react';
 import { BookOpen, Plus, Edit2, Users, AlertTriangle, X, Trash2, Search, GraduationCap } from 'lucide-react';
 
 // Types
-type Dosen = { id: string; name: string; username: string };
-type Koordinator = { id: string; name: string; username: string };
+type Dosen = { id: string; name: string; email: string };
+type Koordinator = { id: string; name: string; email: string };
 type Matkul = {
   id: string; code: string; name: string; sks: number;
   dosens: Dosen[];
@@ -43,11 +43,11 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
 
   // Filtered Lists for Assignment
   const filteredDosens = useMemo(() => {
-    return dosens.filter(d => d.name.toLowerCase().includes(dosenSearch.toLowerCase()) || d.username.toLowerCase().includes(dosenSearch.toLowerCase()));
+    return dosens.filter(d => d.name.toLowerCase().includes(dosenSearch.toLowerCase()) || d.email.toLowerCase().includes(dosenSearch.toLowerCase()));
   }, [dosens, dosenSearch]);
 
   const filteredKoordinators = useMemo(() => {
-    return koordinators.filter(k => k.name.toLowerCase().includes(koordSearch.toLowerCase()) || k.username.toLowerCase().includes(koordSearch.toLowerCase()));
+    return koordinators.filter(k => k.name.toLowerCase().includes(koordSearch.toLowerCase()) || k.email.toLowerCase().includes(koordSearch.toLowerCase()));
   }, [koordinators, koordSearch]);
 
   async function handleAddMatkul(e: React.FormEvent) {
@@ -318,7 +318,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
             <div className="px-6 py-3 border-b border-gray-100">
                <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                  <input type="text" placeholder="Cari nama dosen..." value={dosenSearch} onChange={e => setDosenSearch(e.target.value)}
+                  <input type="text" placeholder="Cari nama dosen atau email..." value={dosenSearch} onChange={e => setDosenSearch(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-uph-blue"
                   />
                </div>
@@ -330,7 +330,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
                   <label key={d.id} className={`flex items-center justify-between p-3 rounded-xl cursor-pointer border transition-colors ${isAssigned ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
                     <div>
                       <p className="font-semibold text-sm text-gray-800">{d.name}</p>
-                      <p className="text-xs text-gray-500">@{d.username}</p>
+                      <p className="text-xs text-gray-500">{d.email}</p>
                     </div>
                     <input type="checkbox" checked={isAssigned} onChange={e => handleAssignDosen(d.id, e.target.checked)} className="w-4 h-4 accent-teal-600" />
                   </label>
@@ -355,7 +355,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
             <div className="px-6 py-3 border-b border-gray-100">
                <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                  <input type="text" placeholder="Cari koordinator..." value={koordSearch} onChange={e => setKoordSearch(e.target.value)}
+                  <input type="text" placeholder="Cari koordinator atau email..." value={koordSearch} onChange={e => setKoordSearch(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-uph-blue"
                   />
                </div>
@@ -367,7 +367,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
                   <label key={k.id} className={`flex items-center justify-between p-3 rounded-xl cursor-pointer border transition-colors ${isAssigned ? 'bg-uph-blue/10 border-uph-blue' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
                     <div>
                       <p className="font-semibold text-sm text-gray-800">{k.name}</p>
-                      <p className="text-xs text-gray-500">@{k.username}</p>
+                      <p className="text-xs text-gray-500">{k.email}</p>
                     </div>
                     <input type="checkbox" checked={isAssigned} onChange={e => handleAssignKoordinator(k.id, e.target.checked)} className="w-4 h-4 accent-uph-blue" />
                   </label>

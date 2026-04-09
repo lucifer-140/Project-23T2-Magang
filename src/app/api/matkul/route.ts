@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const { code, name, sks } = await req.json();
     const matkul = await prisma.matkul.create({
       data: { code, name, sks: parseInt(sks) },
-      include: { dosens: { select: { id: true, name: true, username: true } } },
+      include: { dosens: { select: { id: true, name: true, email: true } } },
     });
     return NextResponse.json(matkul, { status: 201 });
   } catch (e: any) {
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 // GET /api/matkul - List all Matkul
 export async function GET() {
   const matkuls = await prisma.matkul.findMany({
-    include: { dosens: { select: { id: true, name: true, username: true } } },
+    include: { dosens: { select: { id: true, name: true, email: true } } },
     orderBy: { code: 'asc' },
   });
   return NextResponse.json(matkuls);

@@ -17,7 +17,7 @@ export async function POST(
           ? { connect: { id: dosenId } }
           : { disconnect: { id: dosenId } },
       },
-      include: { dosens: { select: { id: true, name: true, username: true } } },
+      include: { dosens: { select: { id: true, name: true, email: true } } },
     });
     return NextResponse.json(matkul);
   } catch (e: any) {

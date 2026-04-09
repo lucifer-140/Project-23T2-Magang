@@ -7,21 +7,21 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { name, username, password } = await req.json();
+  const { name, email, password } = await req.json();
 
-  if (!name && !username && !password) {
+  if (!name && !email && !password) {
     return NextResponse.json({ error: 'At least one field is required.' }, { status: 400 });
   }
 
-  const data: { name?: string; username?: string; password?: string } = {};
+  const data: { name?: string; email?: string; password?: string } = {};
   if (name) data.name = name;
-  if (username) data.username = username;
+  if (email) data.email = email;
   if (password) data.password = password; // NOTE: Hash in production
 
   const user = await prisma.user.update({
     where: { id },
     data,
-    select: { id: true, name: true, username: true, roles: true },
+    select: { id: true, name: true, email: true, roles: true },
   });
 
   return NextResponse.json(user);

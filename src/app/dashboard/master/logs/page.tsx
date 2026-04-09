@@ -22,7 +22,7 @@ export default async function ApplicationLogsPage() {
   const rpsLogs = await prisma.rPS.findMany({
     include: {
       matkul: { select: { code: true, name: true } },
-      dosen: { select: { name: true, username: true } },
+      dosen: { select: { name: true, email: true } },
     },
     orderBy: { updatedAt: 'desc' },
     take: 100,

@@ -8,10 +8,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   async function handleLogin(formData: FormData) {
     "use server"
-    const username = formData.get('username') as string;
+    const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const user = await prisma.user.findUnique({ where: { username } });
+    const user = await prisma.user.findUnique({ where: { email } });
 
     const cookieStore = await cookies();
 
@@ -62,20 +62,20 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
           {error === 'invalid' && (
             <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 font-medium text-center">
-              Username atau password salah.
+              Email atau password salah.
             </div>
           )}
 
           <form action={handleLogin} className="space-y-5">
             <div>
-              <label htmlFor="username" className="block text-xs font-semibold text-uph-blue tracking-wider uppercase mb-2">
-                Username
+              <label htmlFor="email" className="block text-xs font-semibold text-uph-blue tracking-wider uppercase mb-2">
+                Email
               </label>
               <input
-                type="text"
-                id="username"
-                name="username"
-                placeholder="master | admin | kaprodi | dosen"
+                type="email"
+                id="email"
+                name="email"
+                placeholder="dosen@test.com"
                 required
                 className="w-full px-3.5 py-2.5 text-[15px] font-sans border-2 border-uph-border rounded-lg text-uph-blue bg-uph-grayBg focus:outline-none focus:border-uph-blue focus:bg-white transition-colors"
               />
@@ -94,7 +94,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 className="w-full px-3.5 py-2.5 text-[15px] font-sans border-2 border-uph-border rounded-lg text-uph-blue bg-uph-grayBg focus:outline-none focus:border-uph-blue focus:bg-white transition-colors"
               />
               <div className="text-right mt-1.5">
-                <a href="#" className="text-xs text-uph-red hover:underline">
+                <a href="/forgot-password" className="text-xs text-uph-red hover:underline">
                   Lupa password?
                 </a>
               </div>
@@ -108,15 +108,24 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </button>
           </form>
 
+          <div className="mt-5 text-center">
+            <p className="text-[13px] text-gray-500">
+              Belum punya akun?{' '}
+              <a href="/signup" className="text-uph-blue font-semibold hover:underline">
+                Daftar sekarang
+              </a>
+            </p>
+          </div>
+
           <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-            <p className="text-[11px] text-gray-400 text-center font-semibold uppercase tracking-wider mb-1">Akun Test</p>
-            <div className="grid grid-cols-2 gap-x-4 text-[11px] text-gray-500">
-              <span>master / master123</span>
-              <span>kaprodi / kaprodi123</span>
-              <span>admin / admin123</span>
-              <span>dosen / dosen123</span>
-              <span>koordinator / koordinator123</span>
-              <span>dosen2 / dosen123</span>
+            <p className="text-[11px] text-gray-400 text-center font-semibold uppercase tracking-wider mb-2">Akun Test (Selalu gunakan password: [nama]123)</p>
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-gray-500">
+              <span>master@test.com</span>
+              <span>kaprodi@test.com</span>
+              <span>admin@test.com</span>
+              <span>dosen@test.com</span>
+              <span>koordinator@test.com</span>
+              <span>dosen2@test.com (dosen123)</span>
             </div>
           </div>
 

@@ -7,10 +7,10 @@ async function main() {
   for (const u of users) {
     if (!u.roles || u.roles.length === 0) {
       let rolesToAssign = ['DOSEN'];
-      if (u.username === 'master') rolesToAssign = ['MASTER'];
-      if (u.username === 'admin') rolesToAssign = ['ADMIN'];
-      if (u.username === 'kaprodi') rolesToAssign = ['KAPRODI', 'DOSEN'];
-      if (u.username === 'koordinator') rolesToAssign = ['KOORDINATOR', 'DOSEN'];
+      if (u.email === 'master@uph.edu') rolesToAssign = ['MASTER'];
+      if (u.email === 'admin@uph.edu') rolesToAssign = ['ADMIN'];
+      if (u.email === 'kaprodi@uph.edu') rolesToAssign = ['KAPRODI', 'DOSEN'];
+      if (u.email === 'koordinator@uph.edu') rolesToAssign = ['KOORDINATOR', 'DOSEN'];
       // In Prisma, enum arrays are mapped to standard TS arrays
       await p.user.update({
         where: { id: u.id },
