@@ -2,6 +2,50 @@
 
 All notable changes to this project are documented here.
 
+## [0.6.1] - 2026-04-10
+
+### Added
+- **SWR Auto-Refresh**: Implemented client-side polling for real-time data updates on all dashboard pages
+  - 5-second polling interval for all RPS, logs, and change request pages
+  - No manual refresh needed — data updates automatically in the background
+- **GET API Endpoints**: New read-only endpoints for SWR polling
+  - `GET /api/rps` — Role-scoped RPS data (returns MatkulRps[] for dosen, RpsApiResponse for reviewers)
+  - `GET /api/logs` — Master system audit logs (merged RPS + change request logs)
+  - `GET /api/change-requests` — Kaprodi change request list
+- **Sync Status Indicator**: Floating "Memperbarui..." indicator appears during background polls, error indicator on network failures
+- **Shared API Types**: Centralized TypeScript types (`src/lib/api-types.ts`) for type-safe API responses across all endpoints
+
+### Changed
+- **Data Fetching Strategy**: Hybrid SSR + SWR approach
+  - Server Components continue to provide initial data (fast first paint)
+  - Data passed as `fallbackData` to SWR hooks (no loading spinner flash)
+  - Client Components poll via GET endpoints every 5 seconds for updates
+- **Client Components Updated**:
+  - `KaprodiRPSClient`: Now uses SWR polling instead of setState on mutations
+  - `KoordinatorRPSClient`: Automatic updates when new submissions arrive
+  - `DosenRPSClient`: Added smart data normalization to handle multi-role access
+  - `ChangeRequestsClient`: Real-time change request status updates
+- **Logs Page**: Split into server component (`page.tsx`) + client component (`LogsClient.tsx`) with SWR polling
+
+### Technical
+- **Dependencies**: Added `swr@^2.0.0` for client-side data fetching and caching
+- **Multi-Role Data Handling**: GET /api/rps intelligently returns different formats based on user role
+  - DOSEN (no reviewer roles) → MatkulRps[] (flat array)
+  - KAPRODI (exclusive) → RpsApiResponse (submissions + assignments)
+  - KOORDINATOR (with or without DOSEN) → RpsApiResponse or MatkulRps[] depending on context
+- **Revalidation**: After mutations (PATCH/POST), `mutate()` triggers immediate SWR revalidation instead of manual state updates
+- **Focus Handling**: SWR configured with `revalidateOnFocus: false` to avoid spurious refetches when users switch browser tabs
+
+### Bug Fixes
+- Fixed DosenRPSClient crash when KAPRODI/KOORDINATOR accounts access `/dashboard/dosen/rps`
+  - Added `normalizeData()` helper to gracefully handle different API response formats
+  - When reviewers visit dosen page, endpoint returns empty matkul list (expected behavior)
+
+### Performance
+- Eliminated loading states on every page navigation (instant initial paint from SSR)
+- Network requests only fire when needed (every 5 seconds on active page)
+- Reduced unnecessary refetches with smart caching and fallback data
+
 ## [0.6.0] - 2026-04-10
 
 ### Added

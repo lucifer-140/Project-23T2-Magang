@@ -1,26 +1,27 @@
 "use client";
 
 import { useState } from 'react';
+import useSWR from 'swr';
 import { Bell, CheckCircle, XCircle, ArrowRight, Clock } from 'lucide-react';
-
-type ChangeRequest = {
-  id: string;
-  matkulId: string;
-  matkulName: string;
-  matkulCode: string;
-  currentSks: number;
-  proposedName: string | null;
-  proposedCode: string | null;
-  proposedSks: number | null;
-  reason: string | null;
-  status: string;
-  createdAt: string;
-};
+import type { ChangeRequest } from '@/lib/api-types';
+import { SyncIndicator } from '@/components/SyncIndicator';
 
 type Props = { requests: ChangeRequest[] };
 
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
 export function ChangeRequestsClient({ requests: initialRequests }: Props) {
-  const [requests, setRequests] = useState(initialRequests);
+  const { data, mutate, isValidating, error } = useSWR<ChangeRequest[]>(
+    '/api/change-requests',
+    fetcher,
+    {
+      fallbackData: initialRequests,
+      refreshInterval: 5000,
+      revalidateOnFocus: false,
+    }
+  );
+
+  const requests = data ?? initialRequests;
   const [isSaving, setIsSaving] = useState<string | null>(null);
 
   const pending = requests.filter(r => r.status === 'PENDING');
@@ -34,8 +35,7 @@ export function ChangeRequestsClient({ requests: initialRequests }: Props) {
       body: JSON.stringify({ action }),
     });
     if (res.ok) {
-      const updated = await res.json();
-      setRequests(prev => prev.map(r => r.id === id ? { ...r, status: updated.status } : r));
+      mutate();
     }
     setIsSaving(null);
   }
@@ -141,6 +141,8 @@ export function ChangeRequestsClient({ requests: initialRequests }: Props) {
           </div>
         </div>
       )}
+
+      <SyncIndicator isValidating={isValidating} error={error} />
     </div>
   );
 }

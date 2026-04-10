@@ -19,6 +19,7 @@ export default async function KoordinatorRPSPage() {
     include: {
       matkul: { select: { name: true, code: true } },
       dosen: { select: { name: true } },
+      koordinator: { select: { name: true } },
     },
     orderBy: { updatedAt: 'desc' },
   });
@@ -52,6 +53,7 @@ export default async function KoordinatorRPSPage() {
         matkulName: s.matkul.name,
         matkulCode: s.matkul.code,
         dosenName: s.dosen.name,
+        koordinatorName: s.koordinator?.name ?? null,
         status: s.status,
         isKoordinatorApproved: s.isKoordinatorApproved,
         fileName: s.fileName,

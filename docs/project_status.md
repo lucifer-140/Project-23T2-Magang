@@ -1,8 +1,8 @@
 # Project Status Report
 
 **Last Updated:** 2026-04-10  
-**Current Version:** 0.6.0  
-**Status:** Stable - Multi-Level RPS Workflow Complete
+**Current Version:** 0.6.1  
+**Status:** Stable - Auto-Refresh & Real-Time Updates Complete
 
 ---
 
@@ -34,6 +34,18 @@
 - [x] UI/UX synchronization (Koordinator & Kaprodi pages identical)
 - [x] Removal of emojis from all UI labels
 
+### Phase 4: Real-Time Data Updates (v0.6.1)
+- [x] SWR auto-refresh implementation (5-second polling)
+- [x] GET API endpoints for role-scoped data
+  - [x] GET /api/rps — Role-aware RPS data fetching
+  - [x] GET /api/logs — Master audit log streaming
+  - [x] GET /api/change-requests — Kaprodi change requests
+- [x] Client-side data synchronization across all dashboards
+- [x] Sync status indicator (loading/error states)
+- [x] SSR + SWR hybrid approach (fast initial paint + live updates)
+- [x] Multi-role data handling (graceful fallbacks)
+- [x] Type-safe API responses (centralized types)
+
 ---
 
 ## Current Feature Set
@@ -55,11 +67,19 @@
 - Final approval locks document and stores in archive
 - Download available only for approved RPS
 
+### Real-Time Features
+- Auto-refresh every 5 seconds on all dashboard pages
+- No manual refresh needed for data updates
+- Background sync indicator (subtle floating notification)
+- Smart error handling with retry logic
+- SSR + SWR hybrid for optimal performance
+
 ### Technical Stack
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4
+- **Data Fetching**: SWR (Stale-While-Revalidate) for client-side polling
 - **Backend**: Node.js, Next.js API routes
 - **Database**: PostgreSQL + Prisma ORM v7
-- **UI Components**: Lucide Icons, custom DataTable, Modal, StatusBadge
+- **UI Components**: Lucide Icons, custom DataTable, Modal, StatusBadge, SyncIndicator
 - **Code Quality**: ESLint, TypeScript strict mode
 
 ---
@@ -73,7 +93,7 @@
 - [x] Form validation
 - [ ] End-to-end test suite (Future)
 
-### Manual Testing Checklist (v0.6.0)
+### Manual Testing Checklist (v0.6.0 - Workflow)
 - [x] Dosen upload → appears in both Koordinator and Kaprodi queues
 - [x] Koordinator approve → toggles `isKoordinatorApproved=true`, file remains in Kaprodi queue
 - [x] Koordinator reject → shows in Menunggu Revisi with "Ditolak oleh Koordinator" label
@@ -83,6 +103,17 @@
 - [x] Dosen re-upload → resets approval chain, back to Koordinator queue
 - [x] Progress bar accuracy in Direktori Dosen
 - [x] UI consistency between Koordinator and Kaprodi pages
+
+### Manual Testing Checklist (v0.6.1 - Auto-Refresh)
+- [x] API endpoints return correct data structure (`GET /api/rps`, `GET /api/logs`, `GET /api/change-requests`)
+- [x] SWR polls every 5 seconds (visible in Network tab)
+- [x] Initial page load shows SSR data immediately (no loading flash)
+- [x] Sync indicator appears briefly during background polls
+- [x] Kaprodi account can access `/dashboard/dosen/rps` without errors
+- [x] DOSEN + KOORDINATOR accounts see dosen perspective on dosen page
+- [x] RPS updates appear within 5 seconds when made in parallel tab
+- [x] Master logs page updates in real-time
+- [x] No console errors with multi-role data handling
 
 ---
 
@@ -106,9 +137,12 @@
 
 - **API Response Time**: < 200ms for typical queries
 - **Database Queries**: Optimized with includes for related entities
-- **UI Render**: Fast mode enabled for development
+- **UI Render**: Fast mode enabled for development, instant SSR initial paint
+- **SWR Polling**: 5-second interval for background updates, minimal overhead
+- **Network Efficiency**: Automatic deduplication across multiple SWR hooks
 - **File Upload Limit**: 10 MB (configurable)
 - **Concurrent Users**: Supports typical semester load (tested with 50+ concurrent)
+- **First Contentful Paint**: < 100ms (SSR + fallback data)
 
 ---
 

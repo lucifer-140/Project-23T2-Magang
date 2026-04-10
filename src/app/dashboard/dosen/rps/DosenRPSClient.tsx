@@ -1,28 +1,43 @@
 "use client";
 
 import { useState, useRef } from 'react';
+import useSWR from 'swr';
 import { FileUp, Clock, CheckCircle, AlertCircle, UploadCloud, XCircle, BookOpen, Download } from 'lucide-react';
-
-type MatkulRps = {
-  matkulId: string;
-  matkulCode: string;
-  matkulName: string;
-  sks: number;
-  rpsId: string | null;
-  status: string;
-  isKoordinatorApproved: boolean;
-  fileName: string | null;
-  fileUrl: string | null;
-  notes: string | null;
-  koordinatorNotes: string | null;
-  kaprodiNotes: string | null;
-  updatedAt: string | null;
-};
+import type { MatkulRps } from '@/lib/api-types';
+import { SyncIndicator } from '@/components/SyncIndicator';
 
 type Props = { matkulRpsData: MatkulRps[]; userId: string };
 
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+// Helper to normalize data to MatkulRps[] format
+// Handles both MatkulRps[] and RpsApiResponse (when KAPRODI/KOORDINATOR visit this page)
+function normalizeData(data: any): MatkulRps[] {
+  if (!data) return [];
+  // If it's already an array (MatkulRps[]), return it
+  if (Array.isArray(data)) {
+    return data;
+  }
+  // If it's an object with submissions property (RpsApiResponse from reviewer role),
+  // return empty array since reviewers viewing the dosen page don't have matkuls
+  if (data.submissions !== undefined && data.assignments !== undefined) {
+    return [];
+  }
+  return [];
+}
+
 export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
-  const [data, setData] = useState(initialData);
+  const { data, mutate, isValidating, error } = useSWR<any>(
+    '/api/rps',
+    fetcher,
+    {
+      fallbackData: initialData,
+      refreshInterval: 5000,
+      revalidateOnFocus: false,
+    }
+  );
+
+  const data_ = normalizeData(data ?? initialData);
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -36,14 +51,11 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
 
     const res = await fetch('/api/rps/upload', { method: 'POST', body: formData });
     if (res.ok) {
-      const updated = await res.json();
-      setData(prev => prev.map(d =>
-        d.matkulId === matkulId
-          ? { ...d, rpsId: updated.id, status: updated.status, fileName: updated.fileName, fileUrl: updated.fileUrl }
-          : d
-      ));
+      setUploading(null);
+      mutate();
+    } else {
+      setUploading(null);
     }
-    setUploading(null);
   }
 
   function getStatusBadge(status: string, isKoordinatorApproved: boolean) {
@@ -73,7 +85,7 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
         Daftar mata kuliah yang Anda ampuh. Unggah dokumen RPS untuk setiap mata kuliah yang ditugaskan.
       </p>
 
-      {data.length === 0 ? (
+      {data_.length === 0 ? (
         <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
           <BookOpen size={32} className="text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">Belum ada mata kuliah yang ditugaskan kepada Anda.</p>
@@ -91,7 +103,7 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {data.map(rps => (
+              {data_.map(rps => (
                 <tr key={rps.matkulId} className="hover:bg-gray-50/50 transition-colors">
                   <td className="py-4 px-6 align-top">
                     <h3 className="font-bold text-gray-800 mb-0.5">{rps.matkulName}</h3>
@@ -167,6 +179,8 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
           </table>
         </div>
       )}
+
+      <SyncIndicator isValidating={isValidating} error={error} />
     </div>
   );
 }

@@ -3,18 +3,45 @@
 ## High-Level Overview
 
 ```
-Client Layer (Next.js 16 + React 19)
-    ├── Dosen: RPS Upload & Status View
-    ├── Koordinator: RPS First-Level Review
-    └── Kaprodi: RPS Final Review
+UI Layer (Next.js 16 + React 19)
+    ├── Server Component (SSR)
+    │   └── Fetches initial data from Prisma
+    │       └── Passes as fallbackData to Client Component
+    │
+    ├── Client Component (React)
+    │   ├── Dosen: RPS Upload & Status View
+    │   ├── Koordinator: RPS First-Level Review
+    │   └── Kaprodi: RPS Final Review
+    │       └── Renders immediately with SSR data (no loading)
+    │
+    └── SWR Polling Layer (Every 5 seconds)
+        └── Fetches fresh data via GET endpoints
+            └── Automatic sync on background (fallback + revalidate)
             ↓
-    API Routes (Next.js App Router)
-    ├── /api/rps/upload (Dosen file upload)
-    ├── /api/rps/[id]/review (Koordinator & Kaprodi approval)
-    └── Other routes...
+GET API Routes (Read-only data fetching)
+    ├── GET /api/rps (role-scoped RPS list)
+    ├── GET /api/logs (Master audit trail)
+    ├── GET /api/change-requests (Kaprodi change queue)
+    └── Returns type-safe JSON
             ↓
-    Database (PostgreSQL + Prisma ORM)
+Mutation API Routes (Write operations)
+    ├── POST /api/rps/upload (Dosen file upload)
+    ├── PATCH /api/rps/[id]/review (Review approval/rejection)
+    └── PATCH /api/change-requests/[id] (Change request decision)
+            ↓
+Database Layer (PostgreSQL + Prisma ORM)
+    └── Persistent storage & state management
 ```
+
+## Data Flow (v0.6.1 - SSR + SWR Hybrid)
+
+1. **Page Load**: Server Component renders → fetches Prisma data → passes to Client Component
+2. **First Paint**: Client Component renders immediately with SSR data (no loading state)
+3. **Background Sync**: SWR hook initialized with `fallbackData: ssrData` and `refreshInterval: 5000`
+4. **Polling**: Every 5 seconds, SWR fetches from GET endpoint
+5. **Revalidation**: If data changes, UI updates automatically (no manual refresh)
+6. **Mutations**: PATCH/POST operations → `mutate()` triggers immediate SWR revalidation
+7. **Errors**: Sync indicator shows error state, retries automatically
 
 ## RPS State Machine (v0.6.0)
 
@@ -41,12 +68,38 @@ Two-tier approval workflow:
 
 Both Koordinator and Kaprodi pages use identical UI and tab structure.
 
-## API Flow
+## API Flow (v0.6.1)
 
-POST /api/rps/upload → Creates/updates RPS, resets chain on re-upload
+### Read Endpoints (SWR Polling)
 
-PATCH /api/rps/[id]/review → Koordinator or Kaprodi approve/reject
-Body: { reviewer: "koordinator"|"kaprodi", action: "approve"|"reject", notes?: string }
+**GET /api/rps** — Role-scoped RPS data
+- DOSEN (no reviewer roles) → MatkulRps[] (flat array of assigned matkuls + their RPS)
+- KAPRODI (exclusive) → RpsApiResponse { submissions: [], assignments: [] } (all RPS)
+- KOORDINATOR (±DOSEN) → RpsApiResponse scoped to coordinator's matkuls
+- Multi-role handling: Returns MatkulRps[] if user has DOSEN, else RpsApiResponse
+
+**GET /api/logs** — Master audit log
+- MASTER only (403 if not MASTER)
+- Returns LogEntry[] (merged RPS status changes + change request actions)
+- Sorted by timestamp, limited to 120 most recent
+
+**GET /api/change-requests** — Kaprodi change request queue
+- KAPRODI only (403 if not KAPRODI)
+- Returns ChangeRequest[]
+
+### Write Endpoints (Mutations)
+
+**POST /api/rps/upload** → Creates/updates RPS, resets chain on re-upload
+- Body: { file, matkulId, dosenId, rpsId? }
+- Triggers: SWR revalidation after successful upload
+
+**PATCH /api/rps/[id]/review** → Koordinator or Kaprodi approve/reject
+- Body: { reviewer: "koordinator"|"kaprodi", action: "approve"|"reject", notes?: string }
+- Triggers: SWR revalidation after review decision
+
+**PATCH /api/change-requests/[id]** → Admin approve/reject change request
+- Body: { action: "approve"|"reject" }
+- Triggers: SWR revalidation after decision
 
 ## Performance
 

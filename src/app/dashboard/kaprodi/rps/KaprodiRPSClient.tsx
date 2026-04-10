@@ -1,28 +1,16 @@
 "use client";
 
 import { useState, useMemo } from 'react';
+import useSWR from 'swr';
 import {
   FileText, CheckCircle, Mail, Download, Inbox,
   ChevronDown, ChevronUp, AlertCircle, FileArchive, Activity, X, XCircle, Lock
 } from 'lucide-react';
+import type { RpsSubmission, RpsAssignment, RpsApiResponse } from '@/lib/api-types';
+import { SyncIndicator } from '@/components/SyncIndicator';
 
-type Submission = {
-  id: string;
-  matkulName: string;
-  matkulCode: string;
-  dosenName: string;
-  koordinatorName: string | null;
-  status: string;
-  isKoordinatorApproved: boolean;
-  fileName: string | null;
-  fileUrl: string | null;
-  koordinatorNotes: string | null;
-  kaprodiNotes: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type Assignment = { dosenName: string; matkulName: string; rpsId: string | null; defaultStatus: string; isKoordinatorApproved?: boolean };
+type Submission = RpsSubmission;
+type Assignment = RpsAssignment;
 
 type DosenGroup = {
   name: string; totalMatkul: number; approved: number; progress: number;
@@ -30,6 +18,8 @@ type DosenGroup = {
 };
 
 type Props = { submissions: Submission[]; assignments: Assignment[] };
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 // What kaprodi sees based on state matrix
 function getKaprodiView(status: string, isKoordinatorApproved: boolean) {
@@ -41,8 +31,18 @@ function getKaprodiView(status: string, isKoordinatorApproved: boolean) {
   return status; // UNSUBMITTED
 }
 
-export function KaprodiRPSClient({ submissions: initialData, assignments }: Props) {
-  const [submissions, setSubmissions] = useState(initialData);
+export function KaprodiRPSClient({ submissions: initialSubmissions, assignments }: Props) {
+  const { data, mutate, isValidating, error } = useSWR<RpsApiResponse>(
+    '/api/rps',
+    fetcher,
+    {
+      fallbackData: { submissions: initialSubmissions, assignments },
+      refreshInterval: 5000,
+      revalidateOnFocus: false,
+    }
+  );
+
+  const submissions = data?.submissions ?? initialSubmissions;
   const [activeTab, setActiveTab] = useState('review');
   const [expandedDosen, setExpandedDosen] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -101,10 +101,9 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
       body: JSON.stringify({ reviewer: 'kaprodi', action, notes: revisionNote }),
     });
     if (res.ok) {
-      const updated = await res.json();
-      setSubmissions(prev => prev.map(s => s.id === reviewingId ? { ...s, ...updated } : s));
       setReviewingId(null);
       setRevisionNote('');
+      mutate();
     }
     setIsSaving(false);
   }
@@ -400,6 +399,8 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
           </div>
         </div>
       )}
+
+      <SyncIndicator isValidating={isValidating} error={error} />
     </>
   );
 }

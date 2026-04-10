@@ -1,8 +1,8 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import type { LogEntry } from '@/lib/api-types';
-import { LogsClient } from './LogsClient';
 
-// Map RPS status to a log-style severity
 function getStatusMeta(status: string): { label: string; color: string } {
   switch (status) {
     case 'APPROVED':
@@ -19,24 +19,42 @@ function getStatusMeta(status: string): { label: string; color: string } {
   }
 }
 
-export default async function ApplicationLogsPage() {
-  const rpsLogs = await prisma.rPS.findMany({
-    include: {
-      matkul: { select: { code: true, name: true } },
-      dosen: { select: { name: true, email: true } },
-    },
-    orderBy: { updatedAt: 'desc' },
-    take: 100,
-  });
+export async function GET(_req: NextRequest) {
+  const cookieStore = await cookies();
+  const roleRaw = cookieStore.get('userRole')?.value;
 
-  const changeRequestLogs = await prisma.matkulChangeRequest.findMany({
-    include: { matkul: { select: { code: true, name: true } } },
-    orderBy: { updatedAt: 'desc' },
-    take: 50,
-  });
+  let roles: string[] = [];
+  try {
+    if (roleRaw) {
+      const decoded = decodeURIComponent(roleRaw);
+      const parsed = JSON.parse(decoded);
+      roles = Array.isArray(parsed) ? parsed : [parsed];
+    }
+  } catch (e) {
+    roles = roleRaw ? [roleRaw] : [];
+  }
 
-  // Merge and sort logs by timestamp
-  const logs: LogEntry[] = [
+  if (!roles.includes('MASTER')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const [rpsLogs, changeRequestLogs] = await Promise.all([
+    prisma.rPS.findMany({
+      include: {
+        matkul: { select: { code: true, name: true } },
+        dosen: { select: { name: true, email: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 100,
+    }),
+    prisma.matkulChangeRequest.findMany({
+      include: { matkul: { select: { code: true, name: true } } },
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+    }),
+  ]);
+
+  const entries: LogEntry[] = [
     ...rpsLogs.map((r) => {
       const meta = getStatusMeta(r.status);
       return {
@@ -67,5 +85,5 @@ export default async function ApplicationLogsPage() {
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
     .slice(0, 120);
 
-  return <LogsClient initialLogs={logs} />;
+  return NextResponse.json(entries);
 }
