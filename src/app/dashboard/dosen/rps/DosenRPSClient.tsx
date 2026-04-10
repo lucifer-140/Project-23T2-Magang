@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from 'react';
-import { FileUp, Clock, CheckCircle, AlertCircle, UploadCloud, XCircle, BookOpen } from 'lucide-react';
+import { FileUp, Clock, CheckCircle, AlertCircle, UploadCloud, XCircle, BookOpen, Download } from 'lucide-react';
 
 type MatkulRps = {
   matkulId: string;
@@ -10,9 +10,12 @@ type MatkulRps = {
   sks: number;
   rpsId: string | null;
   status: string;
+  isKoordinatorApproved: boolean;
   fileName: string | null;
   fileUrl: string | null;
   notes: string | null;
+  koordinatorNotes: string | null;
+  kaprodiNotes: string | null;
   updatedAt: string | null;
 };
 
@@ -43,20 +46,22 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
     setUploading(null);
   }
 
-  function getStatusBadge(status: string) {
-    switch (status) {
-      case 'UNSUBMITTED':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500">Belum Submit</span>;
-      case 'SUBMITTED':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600"><Clock size={12} className="mr-1.5" /> Submitted</span>;
-      case 'PENGECEKAN':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-50 text-yellow-600"><AlertCircle size={12} className="mr-1.5" /> Pengecekan</span>;
-      case 'APPROVED':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-600"><CheckCircle size={12} className="mr-1.5" /> Disetujui</span>;
-      case 'REVISION':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600"><XCircle size={12} className="mr-1.5" /> Perlu Revisi</span>;
-      default: return null;
-    }
+  function getStatusBadge(status: string, isKoordinatorApproved: boolean) {
+    if (status === 'UNSUBMITTED')
+      return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500">Belum Submit</span>;
+    if (status === 'SUBMITTED' && !isKoordinatorApproved)
+      return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600"><Clock size={12} className="mr-1.5" />Menunggu Koordinator</span>;
+    if (status === 'PENGECEKAN' && !isKoordinatorApproved)
+      return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-50 text-yellow-600"><AlertCircle size={12} className="mr-1.5" />Pengecekan Koordinator</span>;
+    if (status === 'SUBMITTED' && isKoordinatorApproved)
+      return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700"><Clock size={12} className="mr-1.5" />Menunggu Kaprodi</span>;
+    if (status === 'PENGECEKAN' && isKoordinatorApproved)
+      return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-50 text-yellow-700"><AlertCircle size={12} className="mr-1.5" />Pengecekan Kaprodi</span>;
+    if (status === 'APPROVED')
+      return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-600"><CheckCircle size={12} className="mr-1.5" />Disetujui</span>;
+    if (status === 'REVISION')
+      return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-600"><XCircle size={12} className="mr-1.5" />Perlu Revisi</span>;
+    return null;
   }
 
   const canUpload = (status: string) => status === 'UNSUBMITTED' || status === 'REVISION';
@@ -107,17 +112,28 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
                   </td>
                   <td className="py-4 px-6 align-top">
                     <div className="flex flex-col gap-1.5">
-                      {getStatusBadge(rps.status)}
-                      {rps.status === 'REVISION' && rps.notes && (
+                      {getStatusBadge(rps.status, rps.isKoordinatorApproved)}
+                      {rps.status === 'REVISION' && (rps.kaprodiNotes || rps.koordinatorNotes) && (
                         <div className="mt-1">
-                          <span className="text-[11px] text-red-500 font-bold block">Catatan Kaprodi:</span>
-                          <span className="text-[11px] text-gray-500 leading-snug">{rps.notes}</span>
+                          <span className="text-[11px] text-orange-500 font-bold block">
+                            Catatan {rps.kaprodiNotes ? 'Kaprodi' : 'Koordinator'}:
+                          </span>
+                          <span className="text-[11px] text-gray-500 leading-snug">
+                            {rps.kaprodiNotes ?? rps.koordinatorNotes}
+                          </span>
                         </div>
                       )}
                     </div>
                   </td>
                   <td className="py-4 px-6 align-top text-center">
-                    {canUpload(rps.status) ? (
+                    {rps.status === 'APPROVED' ? (
+                      <a
+                        href={rps.fileUrl ?? '#'}
+                        className="inline-flex items-center shrink-0 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg transition-colors"
+                      >
+                        <Download size={14} className="mr-1.5" /> Download PDF
+                      </a>
+                    ) : canUpload(rps.status) ? (
                       <label className={`inline-flex items-center shrink-0 px-3 py-1.5 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer ${uploading === rps.matkulId ? 'bg-gray-400' : 'bg-uph-red hover:bg-uph-redHover'}`}>
                         {uploading === rps.matkulId ? (
                           <span className="animate-pulse">Mengunggah...</span>

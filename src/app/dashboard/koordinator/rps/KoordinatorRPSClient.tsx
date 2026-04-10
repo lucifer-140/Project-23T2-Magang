@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import {
-  FileText, CheckCircle, Mail, Download, Inbox,
-  ChevronDown, ChevronUp, AlertCircle, FileArchive, Activity, X, XCircle, Lock
+  FileText, Clock, CheckCircle, Download, Inbox,
+  ChevronDown, ChevronUp, AlertCircle, FileArchive, Activity, X, XCircle, Mail
 } from 'lucide-react';
 
 type Submission = {
@@ -11,7 +11,6 @@ type Submission = {
   matkulName: string;
   matkulCode: string;
   dosenName: string;
-  koordinatorName: string | null;
   status: string;
   isKoordinatorApproved: boolean;
   fileName: string | null;
@@ -22,7 +21,7 @@ type Submission = {
   updatedAt: string;
 };
 
-type Assignment = { dosenName: string; matkulName: string; rpsId: string | null; defaultStatus: string; isKoordinatorApproved?: boolean };
+type Assignment = { dosenName: string; matkulName: string; rpsId: string | null; defaultStatus: string };
 
 type DosenGroup = {
   name: string; totalMatkul: number; approved: number; progress: number;
@@ -31,17 +30,17 @@ type DosenGroup = {
 
 type Props = { submissions: Submission[]; assignments: Assignment[] };
 
-// What kaprodi sees based on state matrix
-function getKaprodiView(status: string, isKoordinatorApproved: boolean) {
-  if (!isKoordinatorApproved && (status === 'SUBMITTED' || status === 'PENGECEKAN')) return 'WAITING_KOOR';
-  if (status === 'SUBMITTED' && isKoordinatorApproved) return 'NEEDS_REVIEW';
-  if (status === 'PENGECEKAN' && isKoordinatorApproved) return 'IN_REVIEW';
+// Derive what the koordinator sees for a given RPS
+function getKoordinatorView(status: string, isKoordinatorApproved: boolean) {
+  if (status === 'SUBMITTED' && !isKoordinatorApproved) return 'NEEDS_REVIEW';
+  if (status === 'PENGECEKAN' && !isKoordinatorApproved) return 'IN_REVIEW';
+  if ((status === 'SUBMITTED' || status === 'PENGECEKAN') && isKoordinatorApproved) return 'KOOR_APPROVED';
   if (status === 'REVISION') return 'REVISION';
-  if (status === 'APPROVED') return 'COMPLETED';
-  return status; // UNSUBMITTED
+  if (status === 'APPROVED' && isKoordinatorApproved) return 'COMPLETED';
+  return status; // UNSUBMITTED etc.
 }
 
-export function KaprodiRPSClient({ submissions: initialData, assignments }: Props) {
+export function KoordinatorRPSClient({ submissions: initialData, assignments }: Props) {
   const [submissions, setSubmissions] = useState(initialData);
   const [activeTab, setActiveTab] = useState('review');
   const [expandedDosen, setExpandedDosen] = useState<string | null>(null);
@@ -57,7 +56,7 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
       dosenMap.get(a.dosenName)!.matkuls.push({
         matkulName: a.matkulName,
         status: live ? live.status : a.defaultStatus,
-        isKoordinatorApproved: live ? live.isKoordinatorApproved : (a.isKoordinatorApproved ?? false),
+        isKoordinatorApproved: live ? live.isKoordinatorApproved : false,
       });
     }
     return Array.from(dosenMap.values()).map(d => ({
@@ -69,18 +68,18 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
     }));
   }, [submissions, assignments]);
 
-  // All SUBMITTED docs are visible to Kaprodi; those without Koordinator approval are locked
-  const needsReview = submissions.filter(s => s.status === 'SUBMITTED');
+  // Koordinator queue: all SUBMITTED docs not yet approved by koordinator
+  const needsReview = submissions.filter(s => s.status === 'SUBMITTED' && !s.isKoordinatorApproved);
   const pendingRevision = submissions.filter(s => s.status === 'REVISION');
-  const archived = submissions.filter(s => s.status === 'APPROVED');
+  const archived = submissions.filter(s => s.status === 'APPROVED' && s.isKoordinatorApproved);
   const reviewingObj = submissions.find(s => s.id === reviewingId);
 
   function getStatusBadge(status: string, isKoordinatorApproved: boolean) {
-    const view = getKaprodiView(status, isKoordinatorApproved);
+    const view = getKoordinatorView(status, isKoordinatorApproved);
     switch (view) {
-      case 'WAITING_KOOR': return <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs font-bold flex items-center gap-1"><Lock size={10} />Menunggu Koordinator</span>;
       case 'NEEDS_REVIEW': return <span className="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">Needs Review</span>;
       case 'IN_REVIEW': return <span className="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs font-bold">In Review</span>;
+      case 'KOOR_APPROVED': return <span className="px-2 py-1 bg-green-100 text-green-600 rounded text-xs font-bold">Disetujui Koordinator</span>;
       case 'REVISION': return <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded text-xs font-bold">Revisi</span>;
       case 'COMPLETED': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">Selesai</span>;
       case 'UNSUBMITTED': return <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs font-bold">Belum Submit</span>;
@@ -98,7 +97,7 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
     const res = await fetch(`/api/rps/${reviewingId}/review`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewer: 'kaprodi', action, notes: revisionNote }),
+      body: JSON.stringify({ reviewer: 'koordinator', action, notes: revisionNote }),
     });
     if (res.ok) {
       const updated = await res.json();
@@ -112,8 +111,8 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
   return (
     <>
       <div>
-        <h1 className="text-3xl font-playfair font-bold text-uph-blue mb-2">Evaluasi RPS</h1>
-        <p className="text-gray-500 mb-8">Pantau dan verifikasi pengajuan RPS dari para dosen yang telah disetujui Koordinator.</p>
+        <h1 className="text-3xl font-playfair font-bold text-uph-blue mb-2">Kelola RPS</h1>
+        <p className="text-gray-500 mb-8">Periksa dan verifikasi dokumen RPS dari dosen sebelum diteruskan ke Kaprodi.</p>
 
         {/* Tabs */}
         <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200">
@@ -135,7 +134,7 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {/* Tab: Needs Review */}
+          {/* Tab: Needs Review - all SUBMITTED docs awaiting Koordinator */}
           {activeTab === 'review' && (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -143,43 +142,29 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
                   <tr className="bg-gray-50 border-b border-gray-100">
                     <th className="py-4 px-6 text-xs font-semibold text-gray-500 tracking-wider uppercase">Mata Kuliah</th>
                     <th className="py-4 px-6 text-xs font-semibold text-gray-500 tracking-wider uppercase">Dosen Pengampu</th>
-                    <th className="py-4 px-6 text-xs font-semibold text-gray-500 tracking-wider uppercase">Koordinator</th>
                     <th className="py-4 px-6 text-xs font-semibold text-gray-500 tracking-wider uppercase">Status</th>
                     <th className="py-4 px-6 text-xs font-semibold text-gray-500 tracking-wider uppercase text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {needsReview.map(rps => (
-                    <tr key={rps.id} className={`transition-colors ${rps.isKoordinatorApproved ? 'hover:bg-blue-50/30' : 'hover:bg-gray-50/50 opacity-80'}`}>
+                    <tr key={rps.id} className="hover:bg-blue-50/30 transition-colors">
                       <td className="py-4 px-6">
                         <span className="font-bold text-gray-800">{rps.matkulName}</span>
                         <span className="ml-2 text-xs text-uph-blue bg-uph-blue/10 px-1.5 py-0.5 rounded uppercase">{rps.matkulCode}</span>
                       </td>
                       <td className="py-4 px-6 font-medium text-gray-600">{rps.dosenName}</td>
-                      <td className="py-4 px-6">
-                        {rps.koordinatorName ? (
-                          <span className="text-sm font-medium text-gray-700">{rps.koordinatorName}</span>
-                        ) : (
-                          <span className="text-sm text-gray-400 italic">Belum diverifikasi</span>
-                        )}
-                      </td>
                       <td className="py-4 px-6">{getStatusBadge(rps.status, rps.isKoordinatorApproved)}</td>
                       <td className="py-4 px-6 text-center">
-                        {rps.isKoordinatorApproved ? (
-                          <button onClick={() => { setReviewingId(rps.id); setRevisionNote(''); }}
-                            className="inline-flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm">
-                            <FileText size={14} className="mr-1.5" /> Review Dokumen
-                          </button>
-                        ) : (
-                          <span className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-400 text-xs font-bold rounded-lg cursor-not-allowed">
-                            <Lock size={14} className="mr-1.5" /> Menunggu Koordinator
-                          </span>
-                        )}
+                        <button onClick={() => { setReviewingId(rps.id); setRevisionNote(''); }}
+                          className="inline-flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm">
+                          <FileText size={14} className="mr-1.5" /> Review Dokumen
+                        </button>
                       </td>
                     </tr>
                   ))}
                   {needsReview.length === 0 && (
-                    <tr><td colSpan={5} className="py-8 text-center text-gray-400">Tidak ada dokumen yang diajukan.</td></tr>
+                    <tr><td colSpan={4} className="py-8 text-center text-gray-400">Tidak ada dokumen baru untuk direview.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -292,6 +277,9 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
                     </div>
                   );
                 })}
+                {dosenGroups.length === 0 && (
+                  <p className="text-center text-gray-400 py-8">Tidak ada dosen yang terkoordinasi.</p>
+                )}
               </div>
             </div>
           )}
@@ -320,14 +308,14 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
                       <td className="py-4 px-6 text-center">
                         {rps.fileUrl && (
                           <a href={rps.fileUrl} className="inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition-colors">
-                            <Download size={14} className="mr-1.5" /> Download PDF
+                            <Download size={14} className="mr-1.5" /> Download
                           </a>
                         )}
                       </td>
                     </tr>
                   ))}
                   {archived.length === 0 && (
-                    <tr><td colSpan={3} className="py-8 text-center text-gray-400">Belum ada dokumen yang disetujui.</td></tr>
+                    <tr><td colSpan={3} className="py-8 text-center text-gray-400">Belum ada dokumen yang selesai.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -341,7 +329,7 @@ export function KaprodiRPSClient({ submissions: initialData, assignments }: Prop
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800">Review Dokumen RPS</h2>
+              <h2 className="text-xl font-bold text-gray-800">Review Dokumen RPS (Koordinator)</h2>
               <button onClick={() => setReviewingId(null)} className="p-1 hover:bg-gray-200 rounded-full transition-colors"><X size={20} className="text-gray-500" /></button>
             </div>
 

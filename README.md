@@ -6,7 +6,10 @@ Sistem Informasi Dasbor Administrasi terpadu untuk Dosen dan Kaprodi Universitas
 
 ## ✅ Fitur Utama Selesai
 *   **Dashboards:** Admin, Kaprodi, Koordinator, Dosen, dan Master (System Master).
-*   **Verifikasi RPS:** Alur kerja lengkap dari pengajuan Dosen hingga persetujuan Kaprodi.
+*   **Verifikasi RPS (Multi-Level):** Alur kerja dua tingkat persetujuan: Dosen → Koordinator → Kaprodi dengan status tracking real-time.
+*   **Koordinator Page:** Dashboard khusus Koordinator (`/dashboard/koordinator/rps`) untuk verifikasi RPS pertama tingkat dengan UI identik Kaprodi.
+*   **Approval Workflow:** Backend enforce sekuensial—Kaprodi hanya bisa review jika Koordinator sudah setuju.
+*   **Rejection Attribution:** Sistem capai nama reviewer yang menolak dan catatan spesifik (Koordinator atau Kaprodi).
 *   **Manajemen Matkul:** Penugasan Dosen (Assign Dosen) dengan sinkronisasi instan.
 *   **Manajemen Pengguna (Admin):** RBAC (Role-Based Access Control) dengan perlindungan akun Master.
 *   **Manajemen Pengguna (Master):** Full CRUD (Create, Read, Update, Delete) akun seluruh sistem.

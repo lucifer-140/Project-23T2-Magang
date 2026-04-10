@@ -28,10 +28,17 @@ export async function POST(req: NextRequest) {
 
   let rps;
   if (rpsId) {
-    // Update existing RPS
+    // Update existing RPS — reset approval chain so it goes through Koordinator again
     rps = await prisma.rPS.update({
       where: { id: rpsId },
-      data: { fileName: file.name, fileUrl, status: 'SUBMITTED' },
+      data: {
+        fileName: file.name,
+        fileUrl,
+        status: 'SUBMITTED',
+        isKoordinatorApproved: false,
+        koordinatorNotes: null,
+        kaprodiNotes: null,
+      },
     });
   } else {
     // Create new RPS

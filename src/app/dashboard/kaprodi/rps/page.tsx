@@ -6,6 +6,7 @@ export default async function KaprodiRPSPage() {
     include: {
       matkul: { select: { name: true, code: true, sks: true } },
       dosen: { select: { name: true } },
+      koordinator: { select: { name: true } },
     },
     orderBy: { updatedAt: 'desc' },
   });
@@ -40,14 +41,20 @@ export default async function KaprodiRPSPage() {
         matkulName: s.matkul.name,
         matkulCode: s.matkul.code,
         dosenName: s.dosen.name,
+        koordinatorName: s.koordinator?.name ?? null,
         status: s.status,
+        isKoordinatorApproved: s.isKoordinatorApproved,
         fileName: s.fileName,
         fileUrl: s.fileUrl,
-        notes: s.notes,
+        koordinatorNotes: s.koordinatorNotes,
+        kaprodiNotes: s.kaprodiNotes,
         createdAt: s.createdAt.toISOString(),
         updatedAt: s.updatedAt.toISOString(),
       }))}
-      assignments={initialAssignments}
+      assignments={initialAssignments.map(a => ({
+        ...a,
+        isKoordinatorApproved: submissions.find(s => s.id === a.rpsId)?.isKoordinatorApproved ?? false,
+      }))}
     />
   );
 }

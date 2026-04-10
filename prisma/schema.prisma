@@ -34,9 +34,10 @@ model User {
   password            String
   roles               Role[]   @default([DOSEN])
   name                String
-  rps                 RPS[]
-  dosenMatkuls        Matkul[] @relation("DosenMatkul")
-  koordinatorMatkuls  Matkul[] @relation("KoordinatorMatkul")
+  rps                    RPS[]    @relation("DosenRPS")
+  koordinatorReviews     RPS[]    @relation("KoordinatorReview")
+  dosenMatkuls           Matkul[] @relation("DosenMatkul")
+  koordinatorMatkuls     Matkul[] @relation("KoordinatorMatkul")
 }
 
 model Matkul {
@@ -66,15 +67,21 @@ model MatkulChangeRequest {
 }
 
 model RPS {
-  id          String    @id @default(cuid())
-  matkulId    String
-  matkul      Matkul    @relation(fields: [matkulId], references: [id])
-  fileUrl     String?
-  fileName    String?
-  status      RpsStatus @default(UNSUBMITTED)
-  notes       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  dosenId     String
-  dosen       User      @relation(fields: [dosenId], references: [id])
+  id                      String    @id @default(cuid())
+  matkulId                String
+  matkul                  Matkul    @relation(fields: [matkulId], references: [id])
+  fileUrl                 String?
+  fileName                String?
+  status                  RpsStatus @default(UNSUBMITTED)
+  notes                   String?
+  isKoordinatorApproved   Boolean   @default(false)
+  koordinatorId           String?
+  koordinator             User?     @relation("KoordinatorReview", fields: [koordinatorId], references: [id])
+  koordinatorNotes        String?
+  kaprodiNotes            String?
+  finalPdfUrl             String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  dosenId                 String
+  dosen                   User      @relation("DosenRPS", fields: [dosenId], references: [id])
 }

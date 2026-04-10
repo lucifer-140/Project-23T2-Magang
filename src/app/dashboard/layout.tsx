@@ -75,9 +75,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
       combinedNavItems.push({ href: '/dashboard/kaprodi/rps', icon: <FileText size={18} />, label: 'Review RPS' });
       combinedNavItems.push({ href: '/dashboard/kaprodi/requests', icon: <Bell size={18} />, label: 'Permintaan Perubahan' });
     }
-    
+
+    if (roles.includes('KOORDINATOR')) {
+      combinedNavItems.push({ href: '/dashboard/koordinator/rps', icon: <FileText size={18} />, label: 'Kelola RPS' });
+    }
+
     // Base DOSEN item
-    combinedNavItems.push({ href: '/dashboard/dosen/rps', icon: <FileText size={18} />, label: 'Kelola RPS' });
+    combinedNavItems.push({ href: '/dashboard/dosen/rps', icon: <FileText size={18} />, label: 'RPS Saya' });
 
     let labelStr = 'Dosen';
     if (roles.includes('KAPRODI') && roles.includes('KOORDINATOR')) labelStr = 'Kaprodi & Koordinator';
