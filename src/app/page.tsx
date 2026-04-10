@@ -19,6 +19,14 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       redirect('/?error=invalid');
     }
 
+    if (user.status === 'PENDING') {
+      redirect('/?error=pending');
+    }
+
+    if (user.status === 'REJECTED') {
+      redirect('/?error=rejected');
+    }
+
     cookieStore.set('userRole', JSON.stringify(user.roles)); // store as JSON array
     cookieStore.set('userId', user.id);
     cookieStore.set('userName', user.name);
@@ -63,6 +71,16 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           {error === 'invalid' && (
             <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 font-medium text-center">
               Email atau password salah.
+            </div>
+          )}
+          {error === 'pending' && (
+            <div className="mb-5 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700 font-medium text-center">
+              Akun Anda sedang menunggu persetujuan admin. Silakan coba lagi nanti.
+            </div>
+          )}
+          {error === 'rejected' && (
+            <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 font-medium text-center">
+              Akun Anda telah ditolak. Hubungi administrator untuk informasi lebih lanjut.
             </div>
           )}
 

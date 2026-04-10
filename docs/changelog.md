@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented here.
 
+## [0.7.0] - 2026-04-10
+
+### Added
+- **Account Approval Flow**: New registration workflow requiring admin/master approval before access is granted
+  - New `UserStatus` enum (`PENDING`, `ACTIVE`, `REJECTED`) added to schema
+  - `status` field added to `User` model (`@default(PENDING)`)
+  - Migration `20260410150830_add_user_status` applied
+- **Lobby Page** (`/lobby`): Public waiting room shown after registration; displays rejection info when `?status=rejected`
+- **Approval API** (`PATCH /api/users/[id]/approve`): Approve or reject PENDING accounts with role assignment
+  - Only `ADMIN` or `MASTER` can call this endpoint
+  - Only `MASTER` can assign `ADMIN` or `MASTER` roles during approval
+- **Approval Dashboards**:
+  - `/dashboard/admin/approvals` — Admin can approve with KAPRODI/KOORDINATOR/DOSEN roles or reject
+  - `/dashboard/master/approvals` — Master can additionally assign ADMIN role
+- **"Persetujuan Akun" nav item** added to Admin and Master sidebars (`UserCheck` icon)
+
+### Changed
+- **Signup flow**: New users are saved with `status: PENDING` and `roles: ['DOSEN']`; redirected to `/lobby` instead of login page
+- **Login**: Blocks `PENDING` users (shows yellow warning) and `REJECTED` users (shows red error) — no cookies set, no dashboard access
+- **`GET /api/users`**: Accepts `?status=pending` query param to return PENDING users (admin/master only); default now returns only `ACTIVE` users
+- **All seed accounts**: Set to `status: ACTIVE` so test logins continue to work
+
+### Bug Fixes
+- Fixed `server_error` on signup caused by stale `NEXT_REDIRECT` message check; replaced with `isRedirectError()` (Next.js 16 compatibility)
+
 ## [0.6.1] - 2026-04-10
 
 ### Added

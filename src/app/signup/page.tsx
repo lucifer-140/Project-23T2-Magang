@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { UserPlus } from 'lucide-react';
@@ -29,24 +30,22 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         redirect('/signup?error=email_taken');
       }
 
-      // Create new user with base DOSEN role
+      // Create new user with base DOSEN role and PENDING status
       await prisma.user.create({
         data: {
           name,
           email,
           password, // NOTE: In a real app, hash this password here using bcrypt!
           roles: ['DOSEN'],
+          status: 'PENDING',
         }
       });
-      
-      // Auto-redirect to login after successful registration
-      redirect('/?success=registered');
-    } catch (e: any) {
-      if (e.message !== 'NEXT_REDIRECT') {
-        redirect('/signup?error=server_error');
-      } else {
-        throw e; // Let Next.js handle the expected redirect
-      }
+
+      // Redirect to lobby to wait for admin approval
+      redirect('/lobby');
+    } catch (e: unknown) {
+      if (isRedirectError(e)) throw e;
+      redirect('/signup?error=server_error');
     }
   }
 

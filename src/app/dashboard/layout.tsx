@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   LayoutDashboard, FileText, LogOut, User, BookOpen,
-  Users, Settings, Shield, Terminal, Bell
+  Users, Settings, Shield, Terminal, Bell, UserCheck
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -47,6 +47,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       navItems: [
         { href: '/dashboard/master', icon: <Terminal size={18} />, label: 'System Monitor' },
         { href: '/dashboard/master/users', icon: <Users size={18} />, label: 'Kelola Pengguna' },
+        { href: '/dashboard/master/approvals', icon: <UserCheck size={18} />, label: 'Persetujuan Akun' },
         { href: '/dashboard/master/logs', icon: <FileText size={18} />, label: 'Application Logs' },
       ],
     };
@@ -62,6 +63,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: '/dashboard/admin', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
         { href: '/dashboard/admin/matkul', icon: <BookOpen size={18} />, label: 'Kelola Matkul' },
         { href: '/dashboard/admin/users', icon: <Users size={18} />, label: 'Kelola Pengguna' },
+        { href: '/dashboard/admin/approvals', icon: <UserCheck size={18} />, label: 'Persetujuan Akun' },
       ],
     };
   } 

@@ -11,14 +11,14 @@ async function main() {
 
   // Users
   await client.query(`
-    INSERT INTO "User" (id, email, password, roles, name)
+    INSERT INTO "User" (id, email, password, roles, name, status)
     VALUES
-      (gen_random_uuid()::text, 'master@test.com', 'master123', ARRAY['MASTER']::"Role"[], 'System Developer'),
-      (gen_random_uuid()::text, 'admin@test.com', 'admin123', ARRAY['ADMIN']::"Role"[], 'Admin Akademik'),
-      (gen_random_uuid()::text, 'kaprodi@test.com', 'kaprodi123', ARRAY['KAPRODI', 'DOSEN']::"Role"[], 'Dr. Kaprodi Utama'),
-      (gen_random_uuid()::text, 'koordinator@test.com', 'koordinator123', ARRAY['KOORDINATOR', 'DOSEN']::"Role"[], 'Koordinator Prodi'),
-      (gen_random_uuid()::text, 'dosen@test.com', 'dosen123', ARRAY['DOSEN']::"Role"[], 'Dr. Budi Santoso'),
-      (gen_random_uuid()::text, 'dosen2@test.com', 'dosen123', ARRAY['DOSEN']::"Role"[], 'Siti Aminah, M.Kom')
+      (gen_random_uuid()::text, 'master@test.com', 'master123', ARRAY['MASTER']::"Role"[], 'System Developer', 'ACTIVE'::"UserStatus"),
+      (gen_random_uuid()::text, 'admin@test.com', 'admin123', ARRAY['ADMIN']::"Role"[], 'Admin Akademik', 'ACTIVE'::"UserStatus"),
+      (gen_random_uuid()::text, 'kaprodi@test.com', 'kaprodi123', ARRAY['KAPRODI', 'DOSEN']::"Role"[], 'Dr. Kaprodi Utama', 'ACTIVE'::"UserStatus"),
+      (gen_random_uuid()::text, 'koordinator@test.com', 'koordinator123', ARRAY['KOORDINATOR', 'DOSEN']::"Role"[], 'Koordinator Prodi', 'ACTIVE'::"UserStatus"),
+      (gen_random_uuid()::text, 'dosen@test.com', 'dosen123', ARRAY['DOSEN']::"Role"[], 'Dr. Budi Santoso', 'ACTIVE'::"UserStatus"),
+      (gen_random_uuid()::text, 'dosen2@test.com', 'dosen123', ARRAY['DOSEN']::"Role"[], 'Siti Aminah, M.Kom', 'ACTIVE'::"UserStatus")
     ON CONFLICT (email) DO NOTHING
   `);
   console.log('✅ Users seeded');

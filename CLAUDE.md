@@ -141,7 +141,6 @@ DATABASE_URL=postgresql://postgres:password@localhost:5432/uph_admin?schema=publ
 - **Commit Messages:** Follow conventional commits format without Co-Authored-By lines
 - **Pull Requests:** Require review and all checks passing
 - **Merging:** Squash commits for clean history
+- **Tagging & Releases:** Use Semantic Versioning (e.g., `v1.0.0`, `v1.1.0`) when tagging milestones. Create a formal GitHub Release for these tags to attach release notes and compiled assets alongside the automatically packaged source code.
 
 **IMPORTANT:** When creating commits, do NOT include "Co-Authored-By: Claude" or similar attribution lines in commit messages.
-
-This instruction in your project's CLAUDE.md file will override Claude Code's default behavior and prevent the automatic addition of the Co-Authored-By line in future commits.

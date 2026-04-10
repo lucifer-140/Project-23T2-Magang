@@ -1,8 +1,8 @@
 # Project Status Report
 
 **Last Updated:** 2026-04-10  
-**Current Version:** 0.6.1  
-**Status:** Stable - Auto-Refresh & Real-Time Updates Complete
+**Current Version:** 0.7.0  
+**Status:** Stable - Account Approval Flow Complete
 
 ---
 
@@ -34,6 +34,19 @@
 - [x] UI/UX synchronization (Koordinator & Kaprodi pages identical)
 - [x] Removal of emojis from all UI labels
 
+### Phase 5: Account Approval Flow (v0.7.0)
+- [x] `UserStatus` enum (`PENDING`, `ACTIVE`, `REJECTED`) added to schema
+- [x] Registration creates PENDING account, redirects to `/lobby`
+- [x] Login blocks PENDING/REJECTED users with informative error messages
+- [x] `/lobby` waiting room page for new registrants
+- [x] `PATCH /api/users/[id]/approve` — approve/reject with role assignment
+- [x] Admin approval dashboard (`/dashboard/admin/approvals`)
+- [x] Master approval dashboard (`/dashboard/master/approvals`)
+- [x] Role elevation (KAPRODI/KOORDINATOR) only assignable during approval by admin/master
+- [x] ADMIN role only assignable by MASTER during approval
+- [x] Sidebar nav links for both Admin and Master
+- [x] Fixed Next.js 16 redirect compatibility in signup
+
 ### Phase 4: Real-Time Data Updates (v0.6.1)
 - [x] SWR auto-refresh implementation (5-second polling)
 - [x] GET API endpoints for role-scoped data
@@ -53,8 +66,8 @@
 ### Dashboards
 | Role | Features | Status |
 |---|---|---|
-| **MASTER** | System monitoring, audit logs, user management | Complete |
-| **ADMIN** | Matkul CRUD, user management, change requests | Complete |
+| **MASTER** | System monitoring, audit logs, user management, account approvals | Complete |
+| **ADMIN** | Matkul CRUD, user management, change requests, account approvals | Complete |
 | **KAPRODI** | RPS review queue, approval workflow, dosen directory | Complete |
 | **KOORDINATOR** | RPS first-level review, dosen directory | Complete (v0.6.0) |
 | **DOSEN** | Upload RPS, track status, download approved files | Complete |

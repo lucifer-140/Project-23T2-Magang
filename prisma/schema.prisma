@@ -14,6 +14,12 @@ enum Role {
   DOSEN
 }
 
+enum UserStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
 enum RpsStatus {
   UNSUBMITTED
   SUBMITTED
@@ -29,11 +35,12 @@ enum ChangeRequestStatus {
 }
 
 model User {
-  id                  String   @id @default(cuid())
-  email               String   @unique
+  id                  String     @id @default(cuid())
+  email               String     @unique
   password            String
-  roles               Role[]   @default([DOSEN])
+  roles               Role[]     @default([DOSEN])
   name                String
+  status              UserStatus @default(PENDING)
   rps                    RPS[]    @relation("DosenRPS")
   koordinatorReviews     RPS[]    @relation("KoordinatorReview")
   dosenMatkuls           Matkul[] @relation("DosenMatkul")

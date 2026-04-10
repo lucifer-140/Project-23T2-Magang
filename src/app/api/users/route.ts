@@ -3,17 +3,32 @@ import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 
 // GET /api/users - List all users
-export async function GET() {
+// Query params:
+//   ?status=pending  → return only PENDING users (for approval dashboard)
+//   (default)        → return only ACTIVE users
+export async function GET(req: NextRequest) {
   const cookieStore = await cookies();
   const callerRoleStr = cookieStore.get('userRole')?.value || '';
   const isMasterCaller = callerRoleStr.includes('MASTER');
+  const isAdminCaller = callerRoleStr.includes('ADMIN');
+
+  const { searchParams } = new URL(req.url);
+  const statusFilter = searchParams.get('status');
+
+  // Only ADMIN or MASTER can view PENDING users
+  if (statusFilter === 'pending' && !isMasterCaller && !isAdminCaller) {
+    return NextResponse.json({ error: 'Unauthorized.' }, { status: 403 });
+  }
+
+  const whereStatus = statusFilter === 'pending' ? 'PENDING' : 'ACTIVE';
 
   let users = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, roles: true },
+    where: { status: whereStatus as any },
+    select: { id: true, name: true, email: true, roles: true, status: true },
     orderBy: { name: 'asc' },
   });
 
-  // HIDE MASTER from non-master admins
+  // HIDE MASTER from non-master callers
   if (!isMasterCaller) {
     users = users.filter(u => !u.roles.includes('MASTER'));
   }
