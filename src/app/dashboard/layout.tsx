@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
+import { SWRProvider } from '@/components/SWRProvider';
 import { redirect } from 'next/navigation';
 import {
   LayoutDashboard, FileText, LogOut, User, BookOpen,
@@ -160,7 +161,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* Main Content */}
       <main className="flex-1 ml-64 p-8">
         <div className="max-w-5xl mx-auto">
-          {children}
+          <SWRProvider>{children}</SWRProvider>
         </div>
       </main>
     </div>

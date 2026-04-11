@@ -47,7 +47,6 @@ export function KaprodiRPSClient({ submissions: initialSubmissions, assignments 
     {
       fallbackData: { submissions: initialSubmissions, assignments },
       refreshInterval: 5000,
-      revalidateOnFocus: false,
     }
   );
 

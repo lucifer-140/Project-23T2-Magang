@@ -47,7 +47,6 @@ export function KoordinatorRPSClient({ submissions: initialSubmissions, assignme
     {
       fallbackData: { submissions: initialSubmissions, assignments },
       refreshInterval: 5000,
-      revalidateOnFocus: false,
     }
   );
 
@@ -137,12 +136,14 @@ export function KoordinatorRPSClient({ submissions: initialSubmissions, assignme
   }
 
   async function handleSaveSignature(dataUrl: string) {
-    await fetch('/api/users/me/signature', {
+    const res = await fetch('/api/users/me/signature', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ savedSignature: dataUrl }),
     });
-    setSavedSignature(dataUrl);
+    if (res.ok) {
+      setSavedSignature(dataUrl);
+    }
   }
 
   async function handleStampAndApprove() {
@@ -170,14 +171,14 @@ export function KoordinatorRPSClient({ submissions: initialSubmissions, assignme
       // disappears from the "Needs Review" list without waiting for the next poll.
       mutate(
         (prev: import('@/lib/api-types').RpsApiResponse | undefined) =>
-          prev
+          prev?.submissions
             ? {
                 ...prev,
                 submissions: prev.submissions.map(s =>
                   s.id === approvedId ? { ...s, isKoordinatorApproved: true } : s
                 ),
               }
-            : undefined,
+            : prev,
         { revalidate: true }
       );
     } else {

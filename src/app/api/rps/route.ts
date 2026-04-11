@@ -22,7 +22,7 @@ export async function GET(_req: NextRequest) {
   // ── DOSEN branch ────────────────────────────────────────────────────────────
   // Only return DOSEN view if user is pure DOSEN (no reviewer roles)
   // OR has DOSEN + KOORDINATOR but NOT KAPRODI
-  if (roles.includes('DOSEN') && !roles.includes('KAPRODI')) {
+  if (roles.includes('DOSEN') && !roles.includes('KAPRODI') && !roles.includes('KOORDINATOR')) {
     const assignedMatkuls = await prisma.matkul.findMany({
       where: { dosens: { some: { id: userId } } },
       include: {

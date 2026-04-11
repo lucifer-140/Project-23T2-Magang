@@ -1,8 +1,8 @@
 # Project Status Report
 
 **Last Updated:** 2026-04-11  
-**Current Version:** 0.8.0  
-**Status:** Stable - Digital Signature & Document Conversion Flow Complete
+**Current Version:** 0.8.1  
+**Status:** Stable - Koordinator Bug Fixes Applied
 
 ---
 
@@ -33,6 +33,14 @@
 - [x] Approval locking (Kaprodi can't review until Koordinator approves)
 - [x] UI/UX synchronization (Koordinator & Kaprodi pages identical)
 - [x] Removal of emojis from all UI labels
+
+### Phase 6: Bug Fixes — Koordinator Role (v0.8.1)
+- [x] Fixed `/api/rps` role-branch ordering: KOORDINATOR+DOSEN users now correctly receive `RpsApiResponse` (not DOSEN-format array)
+- [x] Fixed `handleSaveSignature`: `setSavedSignature` now only called when PATCH succeeds (`res.ok`)
+- [x] Added global `SWRProvider` to dashboard layout with `revalidateOnFocus: true` and `revalidateOnReconnect: true`
+- [x] Removed per-hook `revalidateOnFocus: false` overrides from all three RPS client components
+- [x] Fixed `SignaturePad` tab hydration: `useEffect` now switches to `'saved'` tab when `savedSignature` loads asynchronously
+- [x] Fixed optimistic mutate `TypeError`: optional-chaining guard on `prev?.submissions` prevents crash when cache shape is unexpected
 
 ### Phase 6: Digital Signature & Document Conversion (v0.8.0)
 - [x] DOCX → PDF conversion via Gotenberg (Docker), LibreOffice CLI fallback, puppeteer/mammoth last resort

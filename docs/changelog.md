@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## [0.8.1] - 2026-04-11
+
+### Bug Fixes
+- **Koordinator auto-refresh broken for KOORDINATOR+DOSEN users**: `GET /api/rps` DOSEN branch was firing before the KOORDINATOR branch for users holding both roles, returning a `MatkulRps[]` array instead of the expected `RpsApiResponse`. `KoordinatorRPSClient` silently fell back to stale SSR data on every poll. Fixed by adding `!roles.includes('KOORDINATOR')` guard to the DOSEN branch so mixed-role users always receive the correct `{ submissions, assignments }` shape.
+- **Koordinator signature not persisting**: `handleSaveSignature` in `KoordinatorRPSClient` called `setSavedSignature` unconditionally, causing the UI to report success even when the PATCH to `/api/users/me/signature` failed. The saved state was lost on next page load. Fixed by gating `setSavedSignature` on `res.ok`.
+- **Global SWR revalidation on focus/reconnect disabled**: All dashboard SWR hooks explicitly set `revalidateOnFocus: false`, overriding any global config. Fixed by creating a `SWRProvider` client wrapper with `revalidateOnFocus: true` and `revalidateOnReconnect: true`, wrapping the dashboard layout children, and removing the per-hook overrides.
+- **SignaturePad saved-tab not auto-selected after async load**: `useState` computed `defaultTab` once at mount when `savedSignature` was still `null` (fetch pending). Added a `useEffect` in `SignaturePad` to switch `activeTab` to `'saved'` when the prop transitions from `null` to a non-null value.
+- **Optimistic mutate crash** (`TypeError: prev.submissions is undefined`): Koordinator `handleStampAndApprove` mutate callback checked `prev` truthiness but not `prev.submissions`, crashing when SWR cache held a different shape. Fixed with optional-chaining guard: `prev?.submissions ? { ...prev, submissions: ... } : prev`.
+
 ## [0.8.0] - 2026-04-11
 
 ### Added

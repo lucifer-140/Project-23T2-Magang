@@ -33,6 +33,13 @@ export function SignaturePad({
   const isDrawingRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
 
+  // Switch to saved tab when savedSignature loads after mount
+  useEffect(() => {
+    if (savedSignature && activeTab === 'draw') {
+      setActiveTab('saved');
+    }
+  }, [savedSignature]);
+
   // Initialize canvas — transparent background (no white fill)
   useEffect(() => {
     const canvas = canvasRef.current;

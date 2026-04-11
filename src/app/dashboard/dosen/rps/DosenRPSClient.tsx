@@ -33,7 +33,6 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
     {
       fallbackData: initialData,
       refreshInterval: 5000,
-      revalidateOnFocus: false,
     }
   );
 
