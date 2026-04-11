@@ -48,6 +48,8 @@ export default async function KaprodiRPSPage() {
         fileUrl: s.fileUrl,
         koordinatorNotes: s.koordinatorNotes,
         kaprodiNotes: s.kaprodiNotes,
+        koordinatorSignedPdfUrl: s.koordinatorSignedPdfUrl,
+        finalPdfUrl: s.finalPdfUrl,
         createdAt: s.createdAt.toISOString(),
         updatedAt: s.updatedAt.toISOString(),
       }))}

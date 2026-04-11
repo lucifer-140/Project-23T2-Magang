@@ -41,6 +41,7 @@ model User {
   roles               Role[]     @default([DOSEN])
   name                String
   status              UserStatus @default(PENDING)
+  savedSignature      String?    // base64 PNG data URL of saved signature
   rps                    RPS[]    @relation("DosenRPS")
   koordinatorReviews     RPS[]    @relation("KoordinatorReview")
   dosenMatkuls           Matkul[] @relation("DosenMatkul")
@@ -86,7 +87,20 @@ model RPS {
   koordinator             User?     @relation("KoordinatorReview", fields: [koordinatorId], references: [id])
   koordinatorNotes        String?
   kaprodiNotes            String?
-  finalPdfUrl             String?
+  // Koordinator digital signature fields
+  koordinatorSigUrl       String?   // stored signature image URL
+  koordinatorSigX         Float?    // X position as % of page width (0–100)
+  koordinatorSigY         Float?    // Y position as % of page height (0–100)
+  koordinatorSigPage      Int?      // 1-based page number
+  koordinatorSigWidth     Float?    // signature width as % of page width
+  koordinatorSignedPdfUrl String?   // PDF after koordinator stamps signature
+  // Kaprodi digital signature fields
+  kaprodiSigUrl           String?
+  kaprodiSigX             Float?
+  kaprodiSigY             Float?
+  kaprodiSigPage          Int?
+  kaprodiSigWidth         Float?
+  finalPdfUrl             String?   // fully signed PDF (after kaprodi stamps)
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
   dosenId                 String

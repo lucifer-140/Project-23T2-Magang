@@ -140,7 +140,7 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
                   <td className="py-4 px-6 align-top text-center">
                     {rps.status === 'APPROVED' ? (
                       <a
-                        href={rps.fileUrl ?? '#'}
+                        href={rps.finalPdfUrl ?? rps.fileUrl ?? '#'}
                         className="inline-flex items-center shrink-0 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg transition-colors"
                       >
                         <Download size={14} className="mr-1.5" /> Download PDF

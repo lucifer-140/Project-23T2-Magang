@@ -2,6 +2,40 @@
 
 All notable changes to this project are documented here.
 
+## [0.8.0] - 2026-04-11
+
+### Added
+- **Multi-Step Document Conversion & Digital Signature Flow**: Full end-to-end PDF signing pipeline across three roles
+  - **DOCX → PDF conversion** on upload via Gotenberg (primary, Docker-hosted LibreOffice-powered API), LibreOffice CLI (fallback), and puppeteer/mammoth (last resort)
+  - **In-browser PDF viewer** (`PdfSignatureOverlay`) with drag-to-position and resize handle for placing signatures
+  - **Signature canvas** (`SignaturePad`) with draw and upload modes; canvas exports transparent PNG
+  - **Koordinator signing step**: two-step modal (review → place signature → stamp PDF with pdf-lib)
+  - **Kaprodi signing step**: signs the Koordinator-stamped PDF, producing `finalPdfUrl`
+  - **POST `/api/rps/[id]/sign`**: stamps PNG signature onto PDF at percentage coordinates using pdf-lib; saves output to `/public/uploads/`
+  - **Saved Signature** (profile-level): users can save their signature to their profile (`savedSignature` field on `User`); `SignaturePad` shows a "Tersimpan" tab for one-click reuse
+  - **GET/PATCH `/api/users/me/signature`**: read and persist calling user's saved signature
+  - `pdf.worker.min.js` served statically to avoid CDN dependency for react-pdf
+
+### Changed
+- **`POST /api/rps/upload`**: now attempts DOCX → PDF conversion before saving; on failure keeps DOCX with fallback UI warning; resets all signature fields on re-upload
+- **`PdfSignatureOverlay`**: fully responsive — measures container width via `ResizeObserver` and renders PDF at that width instead of fixed 680px
+- **Koordinator and Kaprodi modals**: show amber warning (with download link) when file is not a PDF; "Stamp & Setujui" button disabled for non-PDF
+- **`SignaturePad`**: transparent canvas (no white fill); new `savedSignature` + `onSaveSignature` props; "Simpan ke Profil" button in draw/upload tabs
+
+### Bug Fixes
+- **Download bug (Dosen + Arsip)**: APPROVED download button now serves `finalPdfUrl ?? fileUrl` instead of always the original unsigned file
+- **Stale SWR after Koordinator signs**: `handleStampAndApprove` now applies an optimistic SWR update that immediately removes the signed item from the "Needs Review" list without waiting for the next poll
+- **Transparent signatures**: canvas `init` and `clearCanvas` use `clearRect` (transparent) instead of `fillRect` white, so stamped signatures have no solid background
+
+### Technical
+- **New Prisma fields on `RPS`**: `koordinatorSigUrl`, `koordinatorSigX/Y/Page/Width`, `koordinatorSignedPdfUrl`, `kaprodiSigUrl`, `kaprodiSigX/Y/Page/Width`, `finalPdfUrl`
+- **New Prisma field on `User`**: `savedSignature String?` (migration `20260411031301_add_saved_signature`)
+- **New components**: `src/components/PdfSignatureOverlay.tsx`, `src/components/SignaturePad.tsx`
+- **New API routes**: `src/app/api/rps/[id]/sign/route.ts`, `src/app/api/users/me/signature/route.ts`
+- **Dependencies**: `pdf-lib`, `react-pdf`, `pdfjs-dist`, `mammoth`, `puppeteer` added to `serverExternalPackages`
+- **`next.config.mjs`**: `serverExternalPackages` updated to include `puppeteer` and `mammoth`
+- **`GOTENBERG_URL`** env var (default `http://localhost:3001`) controls Gotenberg service endpoint
+
 ## [0.7.0] - 2026-04-10
 
 ### Added

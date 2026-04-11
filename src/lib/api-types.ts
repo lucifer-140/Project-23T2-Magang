@@ -11,6 +11,8 @@ export type RpsSubmission = {
   fileUrl: string | null;
   koordinatorNotes: string | null;
   kaprodiNotes: string | null;
+  koordinatorSignedPdfUrl: string | null;
+  finalPdfUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -44,6 +46,7 @@ export type MatkulRps = {
   notes: string | null;
   koordinatorNotes: string | null;
   kaprodiNotes: string | null;
+  finalPdfUrl: string | null;
   updatedAt: string | null;
 };
 

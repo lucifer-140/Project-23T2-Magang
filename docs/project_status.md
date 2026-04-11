@@ -1,8 +1,8 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-10  
-**Current Version:** 0.7.0  
-**Status:** Stable - Account Approval Flow Complete
+**Last Updated:** 2026-04-11  
+**Current Version:** 0.8.0  
+**Status:** Stable - Digital Signature & Document Conversion Flow Complete
 
 ---
 
@@ -33,6 +33,21 @@
 - [x] Approval locking (Kaprodi can't review until Koordinator approves)
 - [x] UI/UX synchronization (Koordinator & Kaprodi pages identical)
 - [x] Removal of emojis from all UI labels
+
+### Phase 6: Digital Signature & Document Conversion (v0.8.0)
+- [x] DOCX → PDF conversion via Gotenberg (Docker), LibreOffice CLI fallback, puppeteer/mammoth last resort
+- [x] In-browser PDF viewer with drag-and-drop signature placement (`PdfSignatureOverlay`)
+- [x] Signature canvas with draw/upload modes; exports transparent PNG (`SignaturePad`)
+- [x] Koordinator two-step signing modal (review → stamp → approve)
+- [x] Kaprodi signs Koordinator-stamped PDF producing `finalPdfUrl`
+- [x] `POST /api/rps/[id]/sign` — pdf-lib stamp at percentage coordinates
+- [x] Saved signature on user profile (`savedSignature` field) with "Tersimpan" quick-select tab
+- [x] `GET/PATCH /api/users/me/signature` — read/persist saved signature
+- [x] Responsive PDF viewer (ResizeObserver-based width measurement)
+- [x] Graceful DOCX fallback UI (amber warning + download link)
+- [x] Bug fix: Download button serves `finalPdfUrl` for approved RPS
+- [x] Bug fix: Optimistic SWR update removes signed item from Koordinator queue instantly
+- [x] Bug fix: Canvas transparent background (no white fill behind signatures)
 
 ### Phase 5: Account Approval Flow (v0.7.0)
 - [x] `UserStatus` enum (`PENDING`, `ACTIVE`, `REJECTED`) added to schema
@@ -69,8 +84,8 @@
 | **MASTER** | System monitoring, audit logs, user management, account approvals | Complete |
 | **ADMIN** | Matkul CRUD, user management, change requests, account approvals | Complete |
 | **KAPRODI** | RPS review queue, approval workflow, dosen directory | Complete |
-| **KOORDINATOR** | RPS first-level review, dosen directory | Complete (v0.6.0) |
-| **DOSEN** | Upload RPS, track status, download approved files | Complete |
+| **KOORDINATOR** | RPS first-level review, digital signature stamping, dosen directory | Complete (v0.8.0) |
+| **DOSEN** | Upload RPS (DOCX/PDF), track status, download signed final PDF | Complete (v0.8.0) |
 
 ### RPS Workflow
 - Dosen upload → visible to both Koordinator and Kaprodi
@@ -133,7 +148,6 @@
 ## Known Issues & Limitations
 
 ### In Scope (Planned)
-- [ ] Digital signature integration (on hold per requirements)
 - [ ] Email notifications for reviewers
 - [ ] Bulk operations (multiple file reviews)
 - [ ] Advanced filtering/search on RPS queues

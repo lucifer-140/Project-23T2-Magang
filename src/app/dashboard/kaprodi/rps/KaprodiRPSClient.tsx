@@ -1,13 +1,23 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import useSWR from 'swr';
 import {
   FileText, CheckCircle, Mail, Download, Inbox,
-  ChevronDown, ChevronUp, AlertCircle, FileArchive, Activity, X, XCircle, Lock
+  ChevronDown, ChevronUp, AlertCircle, FileArchive, Activity, X, XCircle, Lock,
+  PenLine, Stamp,
 } from 'lucide-react';
 import type { RpsSubmission, RpsAssignment, RpsApiResponse } from '@/lib/api-types';
 import { SyncIndicator } from '@/components/SyncIndicator';
+import { SignaturePad } from '@/components/SignaturePad';
+import type { SignaturePosition } from '@/components/PdfSignatureOverlay';
+
+// Disable SSR for PdfSignatureOverlay — pdfjs-dist requires browser APIs
+const PdfSignatureOverlay = dynamic(
+  () => import('@/components/PdfSignatureOverlay').then(m => m.PdfSignatureOverlay),
+  { ssr: false, loading: () => <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Memuat viewer PDF…</div> }
+);
 
 type Submission = RpsSubmission;
 type Assignment = RpsAssignment;
@@ -21,14 +31,13 @@ type Props = { submissions: Submission[]; assignments: Assignment[] };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-// What kaprodi sees based on state matrix
 function getKaprodiView(status: string, isKoordinatorApproved: boolean) {
   if (!isKoordinatorApproved && (status === 'SUBMITTED' || status === 'PENGECEKAN')) return 'WAITING_KOOR';
   if (status === 'SUBMITTED' && isKoordinatorApproved) return 'NEEDS_REVIEW';
   if (status === 'PENGECEKAN' && isKoordinatorApproved) return 'IN_REVIEW';
   if (status === 'REVISION') return 'REVISION';
   if (status === 'APPROVED') return 'COMPLETED';
-  return status; // UNSUBMITTED
+  return status;
 }
 
 export function KaprodiRPSClient({ submissions: initialSubmissions, assignments }: Props) {
@@ -48,6 +57,19 @@ export function KaprodiRPSClient({ submissions: initialSubmissions, assignments 
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [revisionNote, setRevisionNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  // Signature state
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [sigPosition, setSigPosition] = useState<SignaturePosition>({ x: 60, y: 75, page: 1, width: 22 });
+  const [signStep, setSignStep] = useState<'review' | 'sign'>('review');
+  // Saved signature from user profile
+  const [savedSignature, setSavedSignature] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/users/me/signature')
+      .then(r => r.json())
+      .then((d: { savedSignature: string | null }) => setSavedSignature(d.savedSignature))
+      .catch(() => {});
+  }, []);
 
   const dosenGroups: DosenGroup[] = useMemo(() => {
     const dosenMap = new Map<string, { name: string; matkuls: { matkulName: string; status: string; isKoordinatorApproved: boolean }[] }>();
@@ -69,11 +91,28 @@ export function KaprodiRPSClient({ submissions: initialSubmissions, assignments 
     }));
   }, [submissions, assignments]);
 
-  // All SUBMITTED docs are visible to Kaprodi; those without Koordinator approval are locked
   const needsReview = submissions.filter(s => s.status === 'SUBMITTED');
   const pendingRevision = submissions.filter(s => s.status === 'REVISION');
   const archived = submissions.filter(s => s.status === 'APPROVED');
   const reviewingObj = submissions.find(s => s.id === reviewingId);
+
+  // The PDF to display and sign is the koordinator-signed PDF (if available), else the original
+  const reviewPdfUrl = reviewingObj?.koordinatorSignedPdfUrl ?? reviewingObj?.fileUrl ?? null;
+  const isPdf = reviewPdfUrl?.toLowerCase().endsWith('.pdf');
+
+  function openReviewModal(rpsId: string) {
+    setReviewingId(rpsId);
+    setRevisionNote('');
+    setSignatureDataUrl(null);
+    setSigPosition({ x: 60, y: 75, page: 1, width: 22 });
+    setSignStep('review');
+  }
+
+  function closeModal() {
+    setReviewingId(null);
+    setSignatureDataUrl(null);
+    setSignStep('review');
+  }
 
   function getStatusBadge(status: string, isKoordinatorApproved: boolean) {
     const view = getKaprodiView(status, isKoordinatorApproved);
@@ -88,22 +127,52 @@ export function KaprodiRPSClient({ submissions: initialSubmissions, assignments 
     }
   }
 
-  async function handleAction(action: 'approve' | 'reject') {
+  async function handleReject() {
     if (!reviewingId) return;
-    if (action === 'reject' && !revisionNote.trim()) {
-      alert('Harap isi catatan revisi sebelum menolak.');
-      return;
-    }
+    if (!revisionNote.trim()) { alert('Harap isi catatan revisi sebelum menolak.'); return; }
     setIsSaving(true);
     const res = await fetch(`/api/rps/${reviewingId}/review`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewer: 'kaprodi', action, notes: revisionNote }),
+      body: JSON.stringify({ reviewer: 'kaprodi', action: 'reject', notes: revisionNote }),
+    });
+    if (res.ok) { closeModal(); mutate(); }
+    setIsSaving(false);
+  }
+
+  async function handleSaveSignature(dataUrl: string) {
+    await fetch('/api/users/me/signature', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ savedSignature: dataUrl }),
+    });
+    setSavedSignature(dataUrl);
+  }
+
+  async function handleStampAndApprove() {
+    if (!reviewingId || !signatureDataUrl) {
+      alert('Harap buat tanda tangan terlebih dahulu.');
+      return;
+    }
+    setIsSaving(true);
+    const res = await fetch(`/api/rps/${reviewingId}/sign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reviewer: 'kaprodi',
+        sigData: signatureDataUrl,
+        sigX: sigPosition.x,
+        sigY: sigPosition.y,
+        sigPage: sigPosition.page,
+        sigWidth: sigPosition.width,
+      }),
     });
     if (res.ok) {
-      setReviewingId(null);
-      setRevisionNote('');
+      closeModal();
       mutate();
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      alert(`Gagal: ${errData.error ?? 'Terjadi kesalahan saat menandatangani.'}`);
     }
     setIsSaving(false);
   }
@@ -157,7 +226,10 @@ export function KaprodiRPSClient({ submissions: initialSubmissions, assignments 
                       <td className="py-4 px-6 font-medium text-gray-600">{rps.dosenName}</td>
                       <td className="py-4 px-6">
                         {rps.koordinatorName ? (
-                          <span className="text-sm font-medium text-gray-700">{rps.koordinatorName}</span>
+                          <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                            {rps.isKoordinatorApproved && <CheckCircle size={12} className="text-green-500" />}
+                            {rps.koordinatorName}
+                          </span>
                         ) : (
                           <span className="text-sm text-gray-400 italic">Belum diverifikasi</span>
                         )}
@@ -165,9 +237,9 @@ export function KaprodiRPSClient({ submissions: initialSubmissions, assignments 
                       <td className="py-4 px-6">{getStatusBadge(rps.status, rps.isKoordinatorApproved)}</td>
                       <td className="py-4 px-6 text-center">
                         {rps.isKoordinatorApproved ? (
-                          <button onClick={() => { setReviewingId(rps.id); setRevisionNote(''); }}
+                          <button onClick={() => openReviewModal(rps.id)}
                             className="inline-flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm">
-                            <FileText size={14} className="mr-1.5" /> Review Dokumen
+                            <FileText size={14} className="mr-1.5" /> Review & Tanda Tangan
                           </button>
                         ) : (
                           <span className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-400 text-xs font-bold rounded-lg cursor-not-allowed">
@@ -199,7 +271,7 @@ export function KaprodiRPSClient({ submissions: initialSubmissions, assignments 
                 <tbody className="divide-y divide-gray-100">
                   {pendingRevision.map(rps => {
                     const rejectedBy = rps.kaprodiNotes ? 'Kaprodi' : rps.koordinatorNotes ? 'Koordinator' : null;
-                    const revisionNote = rps.kaprodiNotes ?? rps.koordinatorNotes ?? null;
+                    const note = rps.kaprodiNotes ?? rps.koordinatorNotes ?? null;
                     return (
                       <tr key={rps.id} className="hover:bg-orange-50/30 transition-colors">
                         <td className="py-4 px-6">
@@ -207,16 +279,12 @@ export function KaprodiRPSClient({ submissions: initialSubmissions, assignments 
                           <span className="text-sm text-gray-500">{rps.dosenName}</span>
                         </td>
                         <td className="py-4 px-6">
-                          {rejectedBy && revisionNote ? (
+                          {rejectedBy && note ? (
                             <div className="bg-orange-50 border border-orange-100 rounded-md p-2.5">
-                              <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider mb-1">
-                                Ditolak oleh {rejectedBy}
-                              </p>
-                              <p className="text-xs text-orange-800 italic">"{revisionNote}"</p>
+                              <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider mb-1">Ditolak oleh {rejectedBy}</p>
+                              <p className="text-xs text-orange-800 italic">"{note}"</p>
                             </div>
-                          ) : (
-                            <span className="text-sm text-gray-400 italic">Tidak ada catatan.</span>
-                          )}
+                          ) : <span className="text-sm text-gray-400 italic">Tidak ada catatan.</span>}
                         </td>
                         <td className="py-4 px-6 text-center">
                           <button className="inline-flex items-center px-4 py-2 border border-orange-500 text-orange-600 hover:bg-orange-50 text-xs font-bold rounded-lg transition-colors">
@@ -317,9 +385,10 @@ export function KaprodiRPSClient({ submissions: initialSubmissions, assignments 
                       </td>
                       <td className="py-4 px-6 text-sm text-uph-blue">{rps.fileName}</td>
                       <td className="py-4 px-6 text-center">
-                        {rps.fileUrl && (
-                          <a href={rps.fileUrl} className="inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition-colors">
-                            <Download size={14} className="mr-1.5" /> Download PDF
+                        {(rps.finalPdfUrl ?? rps.fileUrl) && (
+                          <a href={rps.finalPdfUrl ?? rps.fileUrl!}
+                            className="inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition-colors">
+                            <Download size={14} className="mr-1.5" /> Download PDF Final
                           </a>
                         )}
                       </td>
@@ -335,66 +404,209 @@ export function KaprodiRPSClient({ submissions: initialSubmissions, assignments 
         </div>
       </div>
 
-      {/* Review Modal */}
+      {/* ── Review & Signature Modal ── */}
       {reviewingObj && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800">Review Dokumen RPS</h2>
-              <button onClick={() => setReviewingId(null)} className="p-1 hover:bg-gray-200 rounded-full transition-colors"><X size={20} className="text-gray-500" /></button>
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl my-4 overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 flex-shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {signStep === 'review' ? 'Evaluasi Dokumen RPS' : 'Tanda Tangan Final Kaprodi'}
+                </h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {reviewingObj.matkulName} &bull; {reviewingObj.dosenName}
+                  {reviewingObj.koordinatorName && (
+                    <span className="ml-2 text-green-600 font-medium">
+                      ✓ Koordinator: {reviewingObj.koordinatorName}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button onClick={closeModal} className="p-1 hover:bg-gray-200 rounded-full transition-colors"><X size={20} className="text-gray-500" /></button>
             </div>
 
-            <div className="p-6 flex-1 overflow-y-auto">
-              <div className="mb-6">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Mata Kuliah</h3>
-                <p className="text-lg font-bold text-uph-blue">{reviewingObj.matkulName}</p>
-                <div className="flex items-center text-sm font-medium text-gray-600 mt-1">
-                  <span>Dosen: {reviewingObj.dosenName}</span>
-                  <span className="mx-2">•</span>
-                  <span>Kode: {reviewingObj.matkulCode}</span>
+            {/* Step indicator */}
+            <div className="flex border-b border-gray-100">
+              {(['review', 'sign'] as const).map((step, i) => (
+                <div key={step} className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold border-b-2 transition-colors ${signStep === step ? 'border-uph-blue text-uph-blue bg-blue-50/30' : 'border-transparent text-gray-400'}`}>
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${signStep === step ? 'bg-uph-blue text-white' : 'bg-gray-200 text-gray-500'}`}>{i + 1}</span>
+                  {step === 'review' ? 'Tinjau Dokumen' : 'Tanda Tangan Final'}
                 </div>
-              </div>
+              ))}
+            </div>
 
-              <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-6 flex justify-between items-center">
-                <div className="flex items-center">
-                  <FileText className="text-uph-blue mr-3" size={24} />
+            {/* Body */}
+            <div className="p-6 overflow-y-auto flex-1">
+              {signStep === 'review' && (
+                <div className="space-y-5">
+                  {/* Document info — show koordinator-signed PDF if available */}
+                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <FileText className="text-uph-blue mr-3" size={24} />
+                        <div>
+                          <p className="font-bold text-uph-blue text-sm">{reviewingObj.fileName ?? 'File tidak tersedia'}</p>
+                          <p className="text-xs text-blue-600">
+                            {reviewingObj.koordinatorSignedPdfUrl
+                              ? '✓ PDF sudah ditandatangani oleh Koordinator'
+                              : 'Dokumen original dari Dosen'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {reviewingObj.fileUrl && (
+                          <a href={reviewingObj.fileUrl} target="_blank" rel="noreferrer"
+                            className="inline-flex items-center px-3 py-1.5 bg-white border border-uph-blue text-uph-blue hover:bg-blue-50 text-xs font-bold rounded-lg transition-colors">
+                            <Download size={14} className="mr-1" /> Original
+                          </a>
+                        )}
+                        {reviewingObj.koordinatorSignedPdfUrl && (
+                          <a href={reviewingObj.koordinatorSignedPdfUrl} target="_blank" rel="noreferrer"
+                            className="inline-flex items-center px-3 py-1.5 bg-uph-blue text-white hover:bg-[#111c33] text-xs font-bold rounded-lg transition-colors">
+                            <Download size={14} className="mr-1" /> Sudah Ditandatangani
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PDF preview */}
+                  {isPdf && reviewPdfUrl && (
+                    <div className="rounded-xl overflow-hidden border border-gray-200">
+                      <iframe
+                        src={`${reviewPdfUrl}#toolbar=0&navpanes=0`}
+                        className="w-full"
+                        style={{ height: 480 }}
+                        title="RPS Document Preview"
+                      />
+                    </div>
+                  )}
+
+                  {/* Rejection notes */}
                   <div>
-                    <p className="font-bold text-uph-blue text-sm">{reviewingObj.fileName ?? 'File tidak tersedia'}</p>
-                    <p className="text-xs text-blue-600">Dokumen PDF/Word siap untuk direview.</p>
+                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                      Catatan Revisi <span className="text-red-500 font-normal">(wajib diisi jika menolak)</span>
+                    </label>
+                    <textarea
+                      value={revisionNote}
+                      onChange={e => setRevisionNote(e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-uph-blue text-sm min-h-[100px]"
+                      placeholder="Tuliskan masukan spesifik mengapa RPS ini perlu direvisi..."
+                    />
                   </div>
                 </div>
-                {reviewingObj.fileUrl && (
-                  <a href={reviewingObj.fileUrl} className="inline-flex items-center px-4 py-2 bg-uph-blue text-white hover:bg-[#111c33] text-sm font-bold rounded-lg transition-colors shadow-sm">
-                    <Download size={16} className="mr-1.5" /> Download
-                  </a>
-                )}
-              </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Catatan Revisi <span className="text-red-500 font-normal">(wajib diisi jika menolak)</span>
-                </label>
-                <textarea
-                  value={revisionNote}
-                  onChange={e => setRevisionNote(e.target.value)}
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-uph-blue text-sm min-h-[120px]"
-                  placeholder="Tuliskan masukan spesifik mengapa RPS ini perlu direvisi..."
-                />
-              </div>
+              {signStep === 'sign' && (
+                <div className="space-y-5">
+                  {reviewingObj.koordinatorSignedPdfUrl && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 font-medium flex items-center gap-2">
+                      <CheckCircle size={16} /> Anda akan menandatangani PDF yang sudah ditandatangani Koordinator.
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left: Signature pad */}
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                        <PenLine size={16} className="text-uph-blue" /> Buat Tanda Tangan Kaprodi
+                      </h3>
+                      <SignaturePad
+                      onSignatureChange={setSignatureDataUrl}
+                      savedSignature={savedSignature}
+                      onSaveSignature={handleSaveSignature}
+                    />
+                      {signatureDataUrl && (
+                        <p className="text-xs text-green-600 mt-2 font-medium flex items-center gap-1">
+                          <CheckCircle size={12} /> Tanda tangan siap. Seret ke posisi di PDF.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Right: Instructions */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                      <h4 className="text-sm font-bold text-amber-800 mb-2">Petunjuk</h4>
+                      <ol className="text-xs text-amber-700 space-y-1.5 list-decimal list-inside">
+                        <li>Gambar atau upload tanda tangan Kaprodi.</li>
+                        <li>Seret ke posisi di PDF (biasanya di sebelah kanan tanda tangan Koordinator).</li>
+                        <li>Resize dengan handle sudut kanan-bawah jika perlu.</li>
+                        <li>Klik <strong>Stamp Final & Setujui</strong> untuk menyelesaikan proses persetujuan.</li>
+                      </ol>
+                    </div>
+                  </div>
+
+                  {/* PDF + overlay — uses koordinator-signed PDF if available */}
+                  {reviewPdfUrl && isPdf && (
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                        <Stamp size={16} className="text-uph-blue" /> Posisikan Tanda Tangan pada PDF
+                      </h3>
+                      <PdfSignatureOverlay
+                        pdfUrl={reviewPdfUrl}
+                        signatureDataUrl={signatureDataUrl}
+                        position={sigPosition}
+                        onPositionChange={setSigPosition}
+                      />
+                    </div>
+                  )}
+
+                  {reviewPdfUrl && !isPdf && (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+                      <p className="font-bold mb-1">File bukan PDF — preview tidak tersedia</p>
+                      <p className="text-xs mb-3">Dokumen diunggah dalam format Word/DOCX. Harap minta Dosen mengunggah ulang dalam format PDF.</p>
+                      <a href={reviewPdfUrl} target="_blank" rel="noreferrer"
+                        className="inline-flex items-center px-3 py-1.5 bg-amber-700 text-white text-xs font-bold rounded-lg hover:bg-amber-800 transition-colors">
+                        <Download size={14} className="mr-1.5" /> Unduh File
+                      </a>
+                    </div>
+                  )}
+
+                  {!reviewPdfUrl && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                      File PDF tidak tersedia.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-              <button onClick={() => setReviewingId(null)} className="px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-lg transition-colors">
-                Batal
-              </button>
-              <button onClick={() => handleAction('reject')} disabled={isSaving}
-                className="px-5 py-2.5 bg-uph-red hover:bg-uph-redHover text-white text-sm font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50">
-                <XCircle size={16} className="inline mr-1.5" /> Tolak & Kembalikan
-              </button>
-              <button onClick={() => handleAction('approve')} disabled={isSaving}
-                className="px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50">
-                <CheckCircle size={16} className="inline mr-1.5" /> Setujui Dokumen
-              </button>
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center flex-shrink-0">
+              <div className="flex gap-2">
+                {signStep === 'sign' && (
+                  <button onClick={() => setSignStep('review')}
+                    className="px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-lg transition-colors">
+                    ← Kembali
+                  </button>
+                )}
+                <button onClick={closeModal}
+                  className="px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-lg transition-colors">
+                  Batal
+                </button>
+              </div>
+
+              <div className="flex gap-3">
+                {signStep === 'review' && (
+                  <>
+                    <button onClick={handleReject} disabled={isSaving}
+                      className="px-5 py-2.5 bg-uph-red hover:bg-[#9a0818] text-white text-sm font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50">
+                      <XCircle size={16} className="inline mr-1.5" /> Tolak & Kembalikan
+                    </button>
+                    <button onClick={() => setSignStep('sign')}
+                      className="px-5 py-2.5 bg-uph-blue hover:bg-[#111c33] text-white text-sm font-bold rounded-lg transition-colors shadow-sm">
+                      <PenLine size={16} className="inline mr-1.5" /> Lanjut: Tanda Tangan →
+                    </button>
+                  </>
+                )}
+                {signStep === 'sign' && (
+                  <button onClick={handleStampAndApprove} disabled={isSaving || !signatureDataUrl || !isPdf}
+                    className="px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
+                    <Stamp size={16} />
+                    {isSaving ? 'Menyimpan…' : 'Stamp Final & Setujui'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
