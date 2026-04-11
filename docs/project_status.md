@@ -1,8 +1,8 @@
 # Project Status Report
 
 **Last Updated:** 2026-04-11  
-**Current Version:** 0.8.1  
-**Status:** Stable - Koordinator Bug Fixes Applied
+**Current Version:** 0.9.0  
+**Status:** Stable - Admin UX Polish & Data Integrity Fix
 
 ---
 
@@ -33,6 +33,14 @@
 - [x] Approval locking (Kaprodi can't review until Koordinator approves)
 - [x] UI/UX synchronization (Koordinator & Kaprodi pages identical)
 - [x] Removal of emojis from all UI labels
+
+### Phase 7: Admin UX Polish & Data Integrity (v0.9.0)
+- [x] Searchable combobox in "Tambah Matkul" with hardcoded MATKUL_CATALOG (5 entries)
+- [x] Unified "Assign Roles" modal replaces separate +Koord / +Dosen buttons
+- [x] Two-tab modal (Koordinator / Dosen) with per-tab search
+- [x] Deep cleanup on dosen removal: `prisma.$transaction` deletes RPS records before disconnect
+- [x] Confirmation modal for dosen removal with explicit RPS data loss warning (replaces `window.confirm`)
+- [x] Matkul table action column layout consolidated
 
 ### Phase 6: Bug Fixes — Koordinator Role (v0.8.1)
 - [x] Fixed `/api/rps` role-branch ordering: KOORDINATOR+DOSEN users now correctly receive `RpsApiResponse` (not DOSEN-format array)
@@ -90,7 +98,7 @@
 | Role | Features | Status |
 |---|---|---|
 | **MASTER** | System monitoring, audit logs, user management, account approvals | Complete |
-| **ADMIN** | Matkul CRUD, user management, change requests, account approvals | Complete |
+| **ADMIN** | Matkul CRUD (with catalog combobox + unified assign modal), user management, change requests, account approvals | Complete (v0.9.0) |
 | **KAPRODI** | RPS review queue, approval workflow, dosen directory | Complete |
 | **KOORDINATOR** | RPS first-level review, digital signature stamping, dosen directory | Complete (v0.8.0) |
 | **DOSEN** | Upload RPS (DOCX/PDF), track status, download signed final PDF | Complete (v0.8.0) |

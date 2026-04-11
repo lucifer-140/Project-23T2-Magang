@@ -9,17 +9,36 @@ export async function POST(
   const { id } = await params;
   const { dosenId, action } = await req.json();
 
+  if (!dosenId || !action) {
+    return NextResponse.json({ error: 'dosenId and action required' }, { status: 400 });
+  }
+
   try {
-    const matkul = await prisma.matkul.update({
-      where: { id },
-      data: {
-        dosens: action === 'add'
-          ? { connect: { id: dosenId } }
-          : { disconnect: { id: dosenId } },
-      },
-      include: { dosens: { select: { id: true, name: true, email: true } } },
-    });
-    return NextResponse.json(matkul);
+    if (action === 'add') {
+      const matkul = await prisma.matkul.update({
+        where: { id },
+        data: { dosens: { connect: { id: dosenId } } },
+        include: { dosens: { select: { id: true, name: true, email: true } } },
+      });
+      return NextResponse.json(matkul);
+    }
+
+    if (action === 'remove') {
+      // Deep cleanup: disconnect dosen AND delete all their RPS records for this matkul
+      const [, matkul] = await prisma.$transaction([
+        prisma.rPS.deleteMany({
+          where: { matkulId: id, dosenId },
+        }),
+        prisma.matkul.update({
+          where: { id },
+          data: { dosens: { disconnect: { id: dosenId } } },
+          include: { dosens: { select: { id: true, name: true, email: true } } },
+        }),
+      ]);
+      return NextResponse.json(matkul);
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 });
   }

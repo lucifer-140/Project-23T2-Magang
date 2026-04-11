@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## [0.9.0] - 2026-04-11
+
+### Added
+- **Searchable Combobox for Tambah Matkul**: The "Tambah Matkul" form now includes a live-search combobox backed by a `MATKUL_CATALOG` list (CS101–CS410). Admins can search by code or name; selecting an item auto-fills the Code and Name fields. Fields remain individually editable for overrides.
+- **Unified "Assign Roles" Modal**: Replaced the separate `+Koord` and `+Dosen` buttons in the matkul table with a single **Assign Roles** button (`UserCog`). The new modal has two tabs — Koordinator (blue) and Dosen (teal) — each with its own search box, giving admins a single workflow to manage both role assignments per matkul.
+- **Deep Cleanup on Dosen Removal (Bug Fix)**:
+  - `POST /api/matkul/[id]/assign` action `remove` now runs a `prisma.$transaction` that deletes all `RPS` records for the (matkul, dosen) pair before disconnecting the dosen, preventing orphaned ghost data and future duplication errors on reassignment.
+  - Client-side: unchecking a dosen in the Assign Roles modal no longer fires the API immediately. Instead, a dedicated **confirmation modal** (z-60, above the assign modal) appears with a red warning describing the permanent RPS data cleanup. The admin must click "Hapus & Bersihkan Data" to proceed.
+
+### Changed
+- Matkul table action column: consolidated four buttons (two rows) into two buttons (Assign Roles + Edit Data/Hapus row) for a cleaner layout.
+- Warning banner in matkul page updated to mention that dosen removal also deletes related RPS data.
+
 ## [0.8.1] - 2026-04-11
 
 ### Bug Fixes

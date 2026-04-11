@@ -1,7 +1,16 @@
 "use client";
 
-import { useState, useMemo } from 'react';
-import { BookOpen, Plus, Edit2, Users, AlertTriangle, X, Trash2, Search, GraduationCap } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { BookOpen, Plus, Edit2, Users, AlertTriangle, X, Trash2, Search, GraduationCap, ChevronDown, UserCog } from 'lucide-react';
+
+// Hardcoded catalog for the "Tambah Matkul" combobox
+const MATKUL_CATALOG = [
+  { code: 'CS101', name: 'Algoritma & Pemrograman' },
+  { code: 'CS202', name: 'Struktur Data' },
+  { code: 'CS301', name: 'Basis Data' },
+  { code: 'CS405', name: 'Rekayasa Perangkat Lunak' },
+  { code: 'CS410', name: 'Keamanan Informasi' },
+];
 
 // Types
 type Dosen = { id: string; name: string; email: string };
@@ -18,6 +27,77 @@ type Props = {
   koordinators: Koordinator[];
 };
 
+// ─── Combobox component for catalog selection ───────────────────────────────
+function MatkulCombobox({
+  value, onChange,
+}: {
+  value: { code: string; name: string };
+  onChange: (v: { code: string; name: string }) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() =>
+    MATKUL_CATALOG.filter(
+      m =>
+        m.code.toLowerCase().includes(query.toLowerCase()) ||
+        m.name.toLowerCase().includes(query.toLowerCase())
+    ), [query]);
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  function select(item: { code: string; name: string }) {
+    onChange(item);
+    setQuery(`${item.code} – ${item.name}`);
+    setOpen(false);
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+        <input
+          className="w-full pl-9 pr-8 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue"
+          placeholder="Cari kode atau nama matkul..."
+          value={query}
+          onFocus={() => setOpen(true)}
+          onChange={e => {
+            setQuery(e.target.value);
+            setOpen(true);
+            // Allow free-form: split on " – " if user typed
+            const parts = e.target.value.split(' – ');
+            onChange({ code: parts[0]?.trim() ?? '', name: parts[1]?.trim() ?? '' });
+          }}
+        />
+        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+      </div>
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          {filtered.map(item => (
+            <li
+              key={item.code}
+              onMouseDown={() => select(item)}
+              className="flex items-center gap-3 px-4 py-2.5 hover:bg-uph-blue/5 cursor-pointer"
+            >
+              <span className="text-[11px] font-bold bg-uph-blue/10 text-uph-blue px-2 py-0.5 rounded uppercase">{item.code}</span>
+              <span className="text-sm text-gray-700">{item.name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─── Main page component ─────────────────────────────────────────────────────
 export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators }: Props) {
   const [matkuls, setMatkuls] = useState(initialMatkuls);
 
@@ -25,13 +105,13 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ code: '', name: '', sks: '3' });
 
-  // Modal: Assign Dosen
+  // Modal: Unified Role Assignment (replaces separate +Koor / +Dosen modals)
   const [assigningMatkul, setAssigningMatkul] = useState<Matkul | null>(null);
-  const [dosenSearch, setDosenSearch] = useState('');
+  const [assignTab, setAssignTab] = useState<'koordinator' | 'dosen'>('koordinator');
+  const [assignSearch, setAssignSearch] = useState('');
 
-  // Modal: Assign Koordinator
-  const [assigningKoordMatkul, setAssigningKoordMatkul] = useState<Matkul | null>(null);
-  const [koordSearch, setKoordSearch] = useState('');
+  // Modal: Confirm remove-dosen (deep cleanup warning)
+  const [removingDosen, setRemovingDosen] = useState<{ dosenId: string; dosenName: string } | null>(null);
 
   // Modal: Request Change
   const [changingMatkul, setChangingMatkul] = useState<Matkul | null>(null);
@@ -41,14 +121,21 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
   const [deletingMatkul, setDeletingMatkul] = useState<Matkul | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Filtered Lists for Assignment
-  const filteredDosens = useMemo(() => {
-    return dosens.filter(d => d.name.toLowerCase().includes(dosenSearch.toLowerCase()) || d.email.toLowerCase().includes(dosenSearch.toLowerCase()));
-  }, [dosens, dosenSearch]);
+  // Filtered lists for assignment modal
+  const filteredAssignList = useMemo(() => {
+    const q = assignSearch.toLowerCase();
+    if (assignTab === 'koordinator')
+      return koordinators.filter(k => k.name.toLowerCase().includes(q) || k.email.toLowerCase().includes(q));
+    return dosens.filter(d => d.name.toLowerCase().includes(q) || d.email.toLowerCase().includes(q));
+  }, [assignTab, assignSearch, dosens, koordinators]);
 
-  const filteredKoordinators = useMemo(() => {
-    return koordinators.filter(k => k.name.toLowerCase().includes(koordSearch.toLowerCase()) || k.email.toLowerCase().includes(koordSearch.toLowerCase()));
-  }, [koordinators, koordSearch]);
+  function openAssignModal(matkul: Matkul, tab: 'koordinator' | 'dosen' = 'koordinator') {
+    setAssigningMatkul(matkul);
+    setAssignTab(tab);
+    setAssignSearch('');
+  }
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   async function handleAddMatkul(e: React.FormEvent) {
     e.preventDefault();
@@ -59,8 +146,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
     });
     if (res.ok) {
       const data = await res.json();
-      const newMatkul = { ...data, dosens: [], koordinators: [] };
-      setMatkuls(prev => [...prev, newMatkul]);
+      setMatkuls(prev => [...prev, { ...data, dosens: [], koordinators: [] }]);
       setShowAddModal(false);
       setAddForm({ code: '', name: '', sks: '3' });
     }
@@ -74,56 +160,69 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
       setMatkuls(prev => prev.filter(m => m.id !== deletingMatkul.id));
       setDeletingMatkul(null);
     } else {
-      alert("Gagal menghapus matkul.");
+      alert('Gagal menghapus matkul.');
     }
     setIsDeleting(false);
   }
 
-  async function handleAssignDosen(dosenId: string, checked: boolean) {
-    if (!assigningMatkul) return;
-    
-    if (!checked) {
-      const confirmed = window.confirm("Anda yakin ingin menghapus dosen ini dari mata kuliah?");
-      if (!confirmed) return;
-    }
-
-    const matkulId = assigningMatkul.id;
-    const updatedDosens = checked
-      ? [...assigningMatkul.dosens, dosens.find(d => d.id === dosenId)!]
-      : assigningMatkul.dosens.filter(d => d.id !== dosenId);
-
-    const updatedMatkul = { ...assigningMatkul, dosens: updatedDosens };
-    setAssigningMatkul(updatedMatkul);
-    setMatkuls(prev => prev.map(m => m.id === matkulId ? updatedMatkul : m));
-
-    await fetch(`/api/matkul/${matkulId}/assign`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dosenId, action: checked ? 'add' : 'remove' }),
-    });
-  }
-
   async function handleAssignKoordinator(koordinatorId: string, checked: boolean) {
-    if (!assigningKoordMatkul) return;
-
-    if (!checked) {
-      const confirmed = window.confirm("Anda yakin ingin menghapus koordinator ini dari mata kuliah?");
-      if (!confirmed) return;
-    }
-
-    const matkulId = assigningKoordMatkul.id;
+    if (!assigningMatkul) return;
+    const matkulId = assigningMatkul.id;
     const updatedKoordinators = checked
-      ? [...assigningKoordMatkul.koordinators, koordinators.find(k => k.id === koordinatorId)!]
-      : assigningKoordMatkul.koordinators.filter(k => k.id !== koordinatorId);
+      ? [...assigningMatkul.koordinators, koordinators.find(k => k.id === koordinatorId)!]
+      : assigningMatkul.koordinators.filter(k => k.id !== koordinatorId);
 
-    const updatedMatkul = { ...assigningKoordMatkul, koordinators: updatedKoordinators };
-    setAssigningKoordMatkul(updatedMatkul);
-    setMatkuls(prev => prev.map(m => m.id === matkulId ? updatedMatkul : m));
+    const updated = { ...assigningMatkul, koordinators: updatedKoordinators };
+    setAssigningMatkul(updated);
+    setMatkuls(prev => prev.map(m => m.id === matkulId ? updated : m));
 
     await fetch(`/api/matkul/${matkulId}/assign-coordinator`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ koordinatorId, action: checked ? 'add' : 'remove' }),
+    });
+  }
+
+  // Attempt to uncheck dosen → show confirmation modal first
+  function requestRemoveDosen(dosenId: string, dosenName: string) {
+    setRemovingDosen({ dosenId, dosenName });
+  }
+
+  async function confirmRemoveDosen() {
+    if (!assigningMatkul || !removingDosen) return;
+    const matkulId = assigningMatkul.id;
+    const { dosenId } = removingDosen;
+
+    const updatedDosens = assigningMatkul.dosens.filter(d => d.id !== dosenId);
+    const updated = { ...assigningMatkul, dosens: updatedDosens };
+    setAssigningMatkul(updated);
+    setMatkuls(prev => prev.map(m => m.id === matkulId ? updated : m));
+    setRemovingDosen(null);
+
+    await fetch(`/api/matkul/${matkulId}/assign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dosenId, action: 'remove' }),
+    });
+  }
+
+  async function handleAssignDosen(dosenId: string, checked: boolean) {
+    if (!assigningMatkul) return;
+    if (!checked) {
+      const dosen = dosens.find(d => d.id === dosenId);
+      requestRemoveDosen(dosenId, dosen?.name ?? dosenId);
+      return;
+    }
+    const matkulId = assigningMatkul.id;
+    const updatedDosens = [...assigningMatkul.dosens, dosens.find(d => d.id === dosenId)!];
+    const updated = { ...assigningMatkul, dosens: updatedDosens };
+    setAssigningMatkul(updated);
+    setMatkuls(prev => prev.map(m => m.id === matkulId ? updated : m));
+
+    await fetch(`/api/matkul/${matkulId}/assign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dosenId, action: 'add' }),
     });
   }
 
@@ -140,6 +239,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
     alert('Permintaan perubahan telah dikirim ke Kaprodi untuk di-review.');
   }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -158,7 +258,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
       <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start gap-3">
         <AlertTriangle size={18} className="text-yellow-600 mt-0.5 flex-shrink-0" />
         <p className="text-sm text-yellow-800">
-          <strong>Perhatian:</strong> Mengedit data matkul yang sudah ada (nama, kode, SKS) akan mengirim permintaan ke <strong>Kaprodi</strong> untuk disetujui terlebih dahulu. Penghapusan matkul dan assigniment dosen bersifat final.
+          <strong>Perhatian:</strong> Mengedit data matkul (nama, kode, SKS) akan mengirim permintaan ke <strong>Kaprodi</strong> untuk disetujui. Penghapusan matkul dan assignment bersifat final dan <strong>menghapus data RPS terkait</strong>.
         </p>
       </div>
 
@@ -187,36 +287,32 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-1">
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1">KOORD:</span>
-                      {m.koordinators?.length === 0 ? <span className="text-xs text-gray-400 italic">Belum assign</span> : m.koordinators?.map(k => (
-                        <span key={k.id} className="text-[11px] bg-uph-blue text-white px-2 py-0.5 rounded-full font-medium">{k.name}</span>
-                      ))}
+                      {m.koordinators?.length === 0
+                        ? <span className="text-xs text-gray-400 italic">Belum assign</span>
+                        : m.koordinators?.map(k => (
+                          <span key={k.id} className="text-[11px] bg-uph-blue text-white px-2 py-0.5 rounded-full font-medium">{k.name}</span>
+                        ))}
                     </div>
                     <div className="flex flex-wrap items-center gap-1">
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1">DOSEN:</span>
-                      {m.dosens?.length === 0 ? <span className="text-xs text-gray-400 italic">Belum assign</span> : m.dosens?.map(d => (
-                        <span key={d.id} className="text-[11px] bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium border border-teal-100">{d.name}</span>
-                      ))}
+                      {m.dosens?.length === 0
+                        ? <span className="text-xs text-gray-400 italic">Belum assign</span>
+                        : m.dosens?.map(d => (
+                          <span key={d.id} className="text-[11px] bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium border border-teal-100">{d.name}</span>
+                        ))}
                     </div>
                   </div>
                 </td>
                 <td className="py-4 px-6">
                   <div className="flex flex-col items-center gap-1.5">
-                    <div className="flex gap-1.5">
-                      <button
-                        onClick={() => { setAssigningKoordMatkul(m); setKoordSearch(''); }}
-                        className="inline-flex items-center px-2 py-1.5 bg-uph-blue/5 hover:bg-uph-blue/10 text-uph-blue text-[11px] font-bold rounded transition-colors"
-                        title="Assign Koordinator"
-                      >
-                        <GraduationCap size={13} /> +Koord
-                      </button>
-                      <button
-                        onClick={() => { setAssigningMatkul(m); setDosenSearch(''); }}
-                        className="inline-flex items-center px-2 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] font-bold rounded transition-colors"
-                        title="Assign Dosen"
-                      >
-                        <Users size={13} /> +Dosen
-                      </button>
-                    </div>
+                    {/* Single unified "Assign Roles" button */}
+                    <button
+                      onClick={() => openAssignModal(m)}
+                      className="inline-flex items-center px-2.5 py-1.5 bg-uph-blue/5 hover:bg-uph-blue/10 text-uph-blue text-[11px] font-bold rounded transition-colors w-full justify-center"
+                      title="Assign Koordinator & Dosen"
+                    >
+                      <UserCog size={13} className="mr-1" /> Assign Roles
+                    </button>
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => { setChangingMatkul(m); setChangeForm({ proposedName: m.name, proposedCode: m.code, proposedSks: String(m.sks), reason: '' }); }}
@@ -244,7 +340,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
         </table>
       </div>
 
-      {/* Modal: Delete Matkul Confirm */}
+      {/* ── Modal: Delete Matkul Confirm ────────────────────────────────────── */}
       {deletingMatkul && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
@@ -263,7 +359,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
               <div className="flex gap-3">
                 <button onClick={() => setDeletingMatkul(null)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">Batal</button>
                 <button onClick={handleDeleteMatkul} disabled={isDeleting} className="flex-1 py-2.5 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 disabled:opacity-50">
-                  {isDeleting ? "Menghapus..." : "Hapus Permanen"}
+                  {isDeleting ? 'Menghapus...' : 'Hapus Permanen'}
                 </button>
               </div>
             </div>
@@ -271,7 +367,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
         </div>
       )}
 
-      {/* Modal: Add Matkul */}
+      {/* ── Modal: Add Matkul (with catalog combobox) ───────────────────────── */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
@@ -281,19 +377,29 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
             </div>
             <form onSubmit={handleAddMatkul} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Kode Matkul</label>
-                <input required value={addForm.code} onChange={e => setAddForm(p => ({ ...p, code: e.target.value }))}
-                  placeholder="Cth: CS101" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Pilih dari Katalog</label>
+                <MatkulCombobox
+                  value={{ code: addForm.code, name: addForm.name }}
+                  onChange={({ code, name }) => setAddForm(p => ({ ...p, code, name }))}
+                />
+                <p className="text-[11px] text-gray-400 mt-1">Cari berdasarkan kode atau nama mata kuliah.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Kode</label>
+                  <input required value={addForm.code} onChange={e => setAddForm(p => ({ ...p, code: e.target.value }))}
+                    placeholder="CS101" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">SKS</label>
+                  <input type="number" required min={1} max={6} value={addForm.sks} onChange={e => setAddForm(p => ({ ...p, sks: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" placeholder="3" />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Nama Mata Kuliah</label>
                 <input required value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))}
                   placeholder="Cth: Algoritma & Pemrograman" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">SKS</label>
-                <input type="number" required min={1} max={6} value={addForm.sks} onChange={e => setAddForm(p => ({ ...p, sks: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" placeholder="Cth: 3" />
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">Batal</button>
@@ -304,28 +410,80 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
         </div>
       )}
 
-      {/* Modal: Assign Dosen */}
+      {/* ── Modal: Unified Role Assignment ──────────────────────────────────── */}
       {assigningMatkul && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Assign Dosen</h2>
-                <p className="text-sm text-gray-500">{assigningMatkul.code} - {assigningMatkul.name}</p>
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <UserCog size={18} className="text-uph-blue" /> Assign Roles
+                </h2>
+                <p className="text-sm text-gray-500">{assigningMatkul.code} – {assigningMatkul.name}</p>
               </div>
               <button onClick={() => setAssigningMatkul(null)} className="p-1 hover:bg-gray-200 rounded-full"><X size={18} /></button>
             </div>
-            <div className="px-6 py-3 border-b border-gray-100">
-               <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                  <input type="text" placeholder="Cari nama dosen atau email..." value={dosenSearch} onChange={e => setDosenSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-uph-blue"
-                  />
-               </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-100">
+              <button
+                onClick={() => { setAssignTab('koordinator'); setAssignSearch(''); }}
+                className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${assignTab === 'koordinator' ? 'border-b-2 border-uph-blue text-uph-blue bg-uph-blue/5' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                <GraduationCap size={15} /> Koordinator ({assigningMatkul.koordinators.length})
+              </button>
+              <button
+                onClick={() => { setAssignTab('dosen'); setAssignSearch(''); }}
+                className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${assignTab === 'dosen' ? 'border-b-2 border-teal-600 text-teal-700 bg-teal-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                <Users size={15} /> Dosen ({assigningMatkul.dosens.length})
+              </button>
             </div>
-            <div className="p-6 space-y-2 overflow-y-auto flex-1">
-              {filteredDosens.length === 0 ? <p className="text-center text-sm text-gray-400">Pencarian tidak ditemukan.</p> : filteredDosens.map(d => {
-                const isAssigned = assigningMatkul.dosens.some(ad => ad.id === d.id);
+
+            {/* Search */}
+            <div className="px-6 py-3 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                <input
+                  type="text"
+                  placeholder={assignTab === 'koordinator' ? 'Cari koordinator...' : 'Cari dosen...'}
+                  value={assignSearch}
+                  onChange={e => setAssignSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-uph-blue"
+                />
+              </div>
+            </div>
+
+            {/* Tab hint */}
+            {assignTab === 'dosen' && (
+              <div className="px-6 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
+                <AlertTriangle size={13} className="text-amber-600 flex-shrink-0" />
+                <p className="text-[11px] text-amber-700">Menghapus dosen akan <strong>menghapus seluruh data RPS</strong> milik dosen tersebut pada matkul ini.</p>
+              </div>
+            )}
+
+            {/* List */}
+            <div className="p-4 space-y-2 overflow-y-auto flex-1">
+              {filteredAssignList.length === 0 && (
+                <p className="text-center text-sm text-gray-400 py-4">Tidak ada hasil.</p>
+              )}
+
+              {assignTab === 'koordinator' && filteredAssignList.map(k => {
+                const isAssigned = assigningMatkul.koordinators.some(a => a.id === k.id);
+                return (
+                  <label key={k.id} className={`flex items-center justify-between p-3 rounded-xl cursor-pointer border transition-colors ${isAssigned ? 'bg-uph-blue/10 border-uph-blue' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                    <div>
+                      <p className="font-semibold text-sm text-gray-800">{k.name}</p>
+                      <p className="text-xs text-gray-500">{k.email}</p>
+                    </div>
+                    <input type="checkbox" checked={isAssigned} onChange={e => handleAssignKoordinator(k.id, e.target.checked)} className="w-4 h-4 accent-uph-blue" />
+                  </label>
+                );
+              })}
+
+              {assignTab === 'dosen' && filteredAssignList.map(d => {
+                const isAssigned = assigningMatkul.dosens.some(a => a.id === d.id);
                 return (
                   <label key={d.id} className={`flex items-center justify-between p-3 rounded-xl cursor-pointer border transition-colors ${isAssigned ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
                     <div>
@@ -337,48 +495,59 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
                 );
               })}
             </div>
+
+            <div className="px-6 py-3 border-t border-gray-100 bg-gray-50">
+              <button
+                onClick={() => setAssigningMatkul(null)}
+                className="w-full py-2.5 bg-uph-blue text-white text-sm font-bold rounded-lg hover:bg-[#111c33]"
+              >
+                Selesai
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal: Assign Koordinator */}
-      {assigningKoordMatkul && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+      {/* ── Modal: Confirm Remove Dosen (deep cleanup warning) ──────────────── */}
+      {removingDosen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-red-100 flex justify-between items-center bg-red-50">
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Assign Koordinator</h2>
-                <p className="text-sm text-gray-500">{assigningKoordMatkul.code} - {assigningKoordMatkul.name}</p>
+                <h2 className="text-base font-bold text-gray-800">Hapus Dosen dari Matkul?</h2>
+                <p className="text-xs text-red-600 font-semibold">Tindakan ini tidak dapat diurungkan</p>
               </div>
-              <button onClick={() => setAssigningKoordMatkul(null)} className="p-1 hover:bg-gray-200 rounded-full"><X size={18} /></button>
+              <button onClick={() => setRemovingDosen(null)} className="p-1 hover:bg-red-100 rounded-full"><X size={16} /></button>
             </div>
-            <div className="px-6 py-3 border-b border-gray-100">
-               <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                  <input type="text" placeholder="Cari koordinator atau email..." value={koordSearch} onChange={e => setKoordSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-uph-blue"
-                  />
-               </div>
-            </div>
-            <div className="p-6 space-y-2 overflow-y-auto flex-1">
-              {filteredKoordinators.length === 0 ? <p className="text-center text-sm text-gray-400">Pencarian tidak ditemukan.</p> : filteredKoordinators.map(k => {
-                const isAssigned = assigningKoordMatkul.koordinators.some(ad => ad.id === k.id);
-                return (
-                  <label key={k.id} className={`flex items-center justify-between p-3 rounded-xl cursor-pointer border transition-colors ${isAssigned ? 'bg-uph-blue/10 border-uph-blue' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
-                    <div>
-                      <p className="font-semibold text-sm text-gray-800">{k.name}</p>
-                      <p className="text-xs text-gray-500">{k.email}</p>
-                    </div>
-                    <input type="checkbox" checked={isAssigned} onChange={e => handleAssignKoordinator(k.id, e.target.checked)} className="w-4 h-4 accent-uph-blue" />
-                  </label>
-                );
-              })}
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+                <AlertTriangle size={16} className="text-red-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-700">
+                  Menghapus <strong>{removingDosen.dosenName}</strong> dari matkul ini akan secara permanen{' '}
+                  <strong>menghapus semua data RPS</strong> milik dosen tersebut pada mata kuliah ini, termasuk file yang diunggah dan riwayat persetujuan.
+                </p>
+              </div>
+              <p className="text-sm text-gray-600">Lanjutkan hanya jika Anda yakin data tersebut tidak diperlukan lagi.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRemovingDosen(null)}
+                  className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={confirmRemoveDosen}
+                  className="flex-1 py-2.5 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700"
+                >
+                  Hapus & Bersihkan Data
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal: Request Change */}
+      {/* ── Modal: Request Change ────────────────────────────────────────────── */}
       {changingMatkul && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
