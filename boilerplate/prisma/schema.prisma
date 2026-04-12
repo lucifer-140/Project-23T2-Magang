@@ -1,0 +1,53 @@
+// Prisma schema — clean boilerplate
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// Extend with your application roles (e.g. ADMIN, EDITOR, VIEWER)
+enum Role {
+  ADMIN
+  USER
+}
+
+// ---------------------------------------------------------------------------
+// Core models
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String   // Store hashed passwords in production (e.g. bcrypt)
+  roles     Role[]   @default([USER])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts Account[]
+}
+
+/// Tracks active sessions / external OAuth accounts.
+/// Extend this for OAuth providers (Google, GitHub, etc.).
+model Account {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String   // e.g. "credentials", "google"
+  providerAccountId String
+  sessionToken String?  @unique
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
