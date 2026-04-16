@@ -2,6 +2,41 @@
 
 All notable changes to this project are documented here.
 
+## [0.10.0] - 2026-04-16
+
+### Added
+- **Inline PDF Annotation System** — Reviewers (Koordinator & Kaprodi) can annotate RPS PDFs directly in the review modal before rejecting. Four annotation tools: Highlight (semi-transparent rect), Draw (freehand polyline), Box (rect outline), Sticky Note (positioned text bubble).
+- **`RpsAnnotation` model** — Stores annotations as coordinate rows (x/y/width/height as % of page dims, color, content, pathData for draw). Cascade-deletes with RPS.
+- **Annotation persistence** — `GET/POST /api/rps/[id]/annotations`, `DELETE /api/rps/[id]/annotations/[annotId]`. Auth-gated: KOORDINATOR/KAPRODI only for write.
+- **PDF flattening on rejection** — `POST /api/rps/[id]/annotations/flatten` burns all annotations into a static PDF using `pdf-lib` (server-side), stores result as `annotatedPdfUrl`. Called automatically before `reject` action.
+- **Dosen read-only view** — When status is `REVISION` and `annotatedPdfUrl` exists, Dosen sees an "Lihat Anotasi" button that opens the flattened PDF directly (new tab). No overlay — pixel-perfect, no coordinate drift.
+- **Clean re-upload** — On Dosen re-upload all `RpsAnnotation` rows are deleted and `annotatedPdfUrl` cleared, alongside the existing signature reset chain.
+- **`PdfAnnotationViewer` component** (`src/components/PdfAnnotationViewer.tsx`) — SSR-disabled; react-pdf + SVG overlay (viewBox 0 0 100 100, preserveAspectRatio none); reviewer mode only.
+
+### Changed
+- Koordinator & Kaprodi review modals: replaced `<iframe>` PDF preview with `PdfAnnotationViewer` (interactive annotator).
+- `RPS.annotatedPdfUrl` field added to schema, API responses, and type definitions.
+
+---
+
+## [Unreleased] — Email Notifications (Phase 8)
+
+### Planned
+- **Email Notification System**: Nodemailer + Microsoft 365 OAuth2 (Client Credentials flow)
+  - Sends from institutional UPH mailbox (`noreply@uph.edu`) via `smtp.office365.com:587` (STARTTLS)
+  - OAuth2 access token acquired from Azure AD with in-memory cache and auto-refresh
+  - Notifications triggered at key RPS workflow events:
+    - Koordinator alerted on Dosen submission/re-upload
+    - Kaprodi alerted on Koordinator approval
+    - Dosen alerted on final approval or rejection (with reviewer notes)
+  - Fallback: Resend (if Azure AD registration unavailable)
+- **New file**: `src/lib/mailer.ts` — `sendEmail()` helper and token cache
+- **New env vars**: `MAIL_TENANT_ID`, `MAIL_CLIENT_ID`, `MAIL_CLIENT_SECRET`, `MAIL_SENDER`
+
+> Implementation blocked on: Azure AD app registration by UPH IT + `SMTP.SendAsApp` permission grant.
+
+---
+
 ## [0.9.0] - 2026-04-11
 
 ### Added

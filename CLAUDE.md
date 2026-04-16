@@ -56,6 +56,8 @@ Key models:
   - `finalPdfUrl`: String (archived URL after Kaprodi approval)
   - Relations: `dosen` (User who submitted), `koordinator` (first-level reviewer)
 - **MatkulChangeRequest** — Proposed course edits, approved by Admin
+- **RpsAnnotation** — Annotation on RPS PDF. Fields: `type` (highlight/draw/box/sticky), `page`, `x/y` (% of page dims), `width/height`, `color`, `content` (sticky text), `pathData` (JSON `{x,y}[]` for draw), `reviewerRole`. Relation: `rps.annotations[]`. Cascade-deleted on re-upload.
+  - `RPS.annotatedPdfUrl` — URL of PDF with annotations burned in (set on rejection via `/flatten`, cleared on re-upload).
 
 When modifying the schema, always run `npx prisma migrate dev` then `npx prisma generate`.
 
@@ -66,8 +68,11 @@ All routes live in [src/app/api/](src/app/api/). They use Next.js App Router con
 Key route groups:
 - `/api/users` — User CRUD; MASTER accounts are hidden from non-MASTER callers
 - `/api/matkul` — Course CRUD + `/[id]/assign`, `/[id]/assign-coordinator`, `/[id]/change-request`
-- `/api/rps/upload` — Saves file to `/public/uploads/` with timestamp prefix; creates or updates RPS record. On re-upload, resets `isKoordinatorApproved=false` and `status=SUBMITTED` to restart approval chain.
+- `/api/rps/upload` — Saves file to `/public/uploads/` with timestamp prefix; creates or updates RPS record. On re-upload, resets `isKoordinatorApproved=false`, `status=SUBMITTED`, deletes all `RpsAnnotation` rows, and clears `annotatedPdfUrl`.
 - `/api/rps/[id]/review` — Koordinator or Kaprodi approve/reject with body `{ reviewer, action, notes }`. Enforces sequential workflow: Kaprodi can only approve if Koordinator already approved. Captures reviewer-specific notes (`koordinatorNotes` vs `kaprodiNotes`).
+- `/api/rps/[id]/annotations` — GET all annotations for RPS; POST create annotation (KOORDINATOR/KAPRODI only).
+- `/api/rps/[id]/annotations/[annotId]` — DELETE single annotation.
+- `/api/rps/[id]/annotations/flatten` — POST burns all annotations into PDF via `pdf-lib`, saves result to `/public/uploads/`, stores URL in `annotatedPdfUrl`. Called automatically before rejection.
 - `/api/change-requests/[id]` — Admin approve/reject; approval applies proposed changes to Matkul
 
 ### File Uploads
@@ -88,6 +93,12 @@ Reusable UI components are in [src/components/ui-templates/](src/components/ui-t
 - **Kaprodi** ([src/app/dashboard/kaprodi/rps/](src/app/dashboard/kaprodi/rps/)) — Second-level review queue; sees Koordinator name on each submission
 
 All three review/display pages are visually identical for consistency. Backend logic enforces role-specific actions.
+
+### PDF Annotation System
+
+`pdf-lib` (already in deps) handles server-side PDF writes. Coordinate system: stored as % of page dims → flatten route converts to PDF points (`pdfY = pageHeight - (y/100 * pageHeight) - rectHeight`; PDF origin = bottom-left).
+
+`PdfAnnotationViewer` (`src/components/PdfAnnotationViewer.tsx`) — SSR-disabled; reviewer-mode only (Koordinator/Kaprodi). Uses react-pdf + SVG overlay (`viewBox="0 0 100 100" preserveAspectRatio="none"`). Dosen sees static `annotatedPdfUrl` PDF, not the overlay viewer.
 
 ### Design Tokens
 
@@ -141,6 +152,6 @@ DATABASE_URL=postgresql://postgres:password@localhost:5432/uph_admin?schema=publ
 - **Commit Messages:** Follow conventional commits format without Co-Authored-By lines
 - **Pull Requests:** Require review and all checks passing
 - **Merging:** Squash commits for clean history
-- **Tagging & Releases:** Use Semantic Versioning (e.g., `v1.0.0`, `v1.1.0`) when tagging milestones. Create a formal GitHub Release for these tags to attach release notes and compiled assets alongside the automatically packaged source code.
+- **Tagging & Releases:** Use Semantic Versioning. Minor features → `0.x.0` bump; patches/fixes → `0.x.y` bump. **Do NOT version to `1.0.0` unless the user explicitly says the project is ready to ship.**
 
 **IMPORTANT:** When creating commits, do NOT include "Co-Authored-By: Claude" or similar attribution lines in commit messages.

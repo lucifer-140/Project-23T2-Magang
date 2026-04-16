@@ -21,6 +21,7 @@ export default async function LobbyPage({
             alt="Logo UPH"
             width={64}
             height={64}
+            loading="eager"
             className="mb-4 object-contain"
           />
 

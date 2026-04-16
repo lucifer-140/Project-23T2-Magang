@@ -1,0 +1,299 @@
+/* ─────────────────────────────────────────────────────────────────
+   auth.css — Styles for login, signup, lobby, and forgot-password pages.
+───────────────────────────────────────────────────────────────── */
+
+/* ── Background ───────────────────────────────────────────────── */
+.auth-bg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a2a4a 0%, #2d4a7a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  position: relative;
+  overflow: hidden;
+}
+.auth-bg::before {
+  content: '';
+  position: absolute;
+  top: -80px; left: -80px;
+  width: 340px; height: 340px;
+  border-radius: 50%;
+  background: rgba(180, 10, 30, 0.10);
+  pointer-events: none;
+}
+.auth-bg::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; right: -60px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+/* Lobby page uses gray background instead */
+.auth-bg.light {
+  background: var(--gray-bg);
+}
+
+/* ── Card ─────────────────────────────────────────────────────── */
+.auth-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 3rem 2.75rem 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+}
+
+.auth-card.wide  { max-width: 460px; }
+.auth-card.lobby { max-width: 480px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.12); border: 1px solid var(--divider); }
+
+/* Top accent bar */
+.auth-card .accent-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+  background: var(--red);
+  border-radius: 16px 16px 0 0;
+}
+.auth-card .accent-bar.blue { background: var(--blue); }
+
+/* ── Logo block ───────────────────────────────────────────────── */
+.logo-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.logo-block img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  margin-bottom: 0.875rem;
+}
+
+/* Fallback mark if logo image fails */
+.logo-block .logo-fallback {
+  width: 72px; height: 72px;
+  background: var(--blue);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 0.875rem;
+  color: #fff;
+}
+
+.logo-block h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.375rem;
+  color: var(--blue);
+  letter-spacing: 0.02em;
+  margin-bottom: 0.25rem;
+}
+.logo-block .subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Lobby status icon */
+.status-circle {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0.25rem auto 1rem;
+}
+.status-circle.pending  { background: #fefce8; color: #ca8a04; }
+.status-circle.rejected { background: #fef2f2; color: var(--red); }
+
+.lobby-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.lobby-desc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  max-width: 360px;
+}
+
+/* ── Divider ──────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin-bottom: 1.75rem;
+}
+
+/* ── Alerts ───────────────────────────────────────────────────── */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+.alert-error   { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+.alert-warning { background: #fefce8; border: 1px solid #fde68a; color: #b45309; }
+.alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
+
+/* ── Form fields ──────────────────────────────────────────────── */
+.field { margin-bottom: 1.25rem; }
+
+.field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--blue);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.field input,
+.field select {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--blue);
+  background: var(--gray-bg);
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.field input:focus,
+.field select:focus {
+  border-color: var(--blue);
+  background: var(--surface);
+}
+.field .field-hint {
+  text-align: right;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--red);
+}
+.field .field-hint a:hover { text-decoration: underline; }
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.8125rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  transition: background 0.15s, opacity 0.15s, transform 0.1s;
+  margin-top: 0.5rem;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-red   { background: var(--red);  color: #fff; }
+.btn-red:hover { background: var(--red-hov); }
+
+.btn-blue  { background: var(--blue); color: #fff; }
+.btn-blue:hover { opacity: 0.88; }
+
+.btn-ghost {
+  background: transparent;
+  border: 2px solid var(--border);
+  color: var(--blue);
+  padding: calc(0.8125rem - 2px);
+}
+.btn-ghost:hover { border-color: var(--blue); background: #f0f4ff; }
+
+/* ── Footer links ─────────────────────────────────────────────── */
+.auth-footer {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+.auth-footer a { color: var(--blue); font-weight: 700; }
+.auth-footer a:hover { text-decoration: underline; }
+
+.auth-copyright {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.auth-copyright strong { color: var(--blue); }
+
+/* ── Info box (lobby) ─────────────────────────────────────────── */
+.info-box {
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  color: #4b5563;
+  line-height: 1.6;
+}
+.info-box.info-blue { background: #eff6ff; border: 1px solid #bfdbfe; }
+.info-box.info-red  { background: #fef2f2; border: 1px solid #fecaca; }
+.info-box svg { flex-shrink: 0; margin-top: 1px; color: var(--blue); }
+.info-box.info-red svg { color: var(--red); }
+
+/* ── Demo accounts hint (login only) ─────────────────────────── */
+.demo-hint {
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+  background: var(--surface-dim);
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+}
+.demo-hint p {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+.demo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}
+.demo-grid button {
+  background: none;
+  border: none;
+  text-align: left;
+  color: #2563eb;
+  font-size: 0.6875rem;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.demo-grid button:hover { text-decoration: underline; }
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 2.5rem 1.5rem 2rem;
+  }
+}

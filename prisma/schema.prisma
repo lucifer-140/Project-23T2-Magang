@@ -87,6 +87,7 @@ model RPS {
   koordinator             User?     @relation("KoordinatorReview", fields: [koordinatorId], references: [id])
   koordinatorNotes        String?
   kaprodiNotes            String?
+  annotatedPdfUrl         String?   // PDF with annotations burned in (set on rejection)
   // Koordinator digital signature fields
   koordinatorSigUrl       String?   // stored signature image URL
   koordinatorSigX         Float?    // X position as % of page width (0–100)
@@ -105,4 +106,22 @@ model RPS {
   updatedAt               DateTime  @updatedAt
   dosenId                 String
   dosen                   User      @relation("DosenRPS", fields: [dosenId], references: [id])
+  annotations             RpsAnnotation[]
+}
+
+model RpsAnnotation {
+  id           String   @id @default(cuid())
+  rpsId        String
+  rps          RPS      @relation(fields: [rpsId], references: [id], onDelete: Cascade)
+  type         String   // "highlight" | "draw" | "box" | "sticky"
+  page         Int      // 1-based page number
+  x            Float    // % of page width (left edge)
+  y            Float    // % of page height (top edge)
+  width        Float?   // % of page width (highlight/box)
+  height       Float?   // % of page height (highlight/box)
+  color        String   @default("#FFD700")
+  content      String?  // sticky note text
+  pathData     String?  // JSON array of {x,y}[] in % coords for draw type
+  reviewerRole String   // "koordinator" | "kaprodi"
+  createdAt    DateTime @default(now())
 }

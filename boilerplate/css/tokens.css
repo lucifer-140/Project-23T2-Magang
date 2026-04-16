@@ -1,0 +1,60 @@
+/* ─────────────────────────────────────────────────────────────────
+   tokens.css — Design tokens, reset, and base typography
+   Shared by every page in the template.
+───────────────────────────────────────────────────────────────── */
+
+/* ── Google Fonts ─────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Sans+3:wght@400;600;700&display=swap');
+
+/* ── Design tokens ────────────────────────────────────────────── */
+:root {
+  --blue:      #1a2a4a;   /* Primary brand */
+  --red:       #b40a1e;   /* Accent / CTA */
+  --red-hov:   #920816;
+  --gray-bg:   #f7f9fc;   /* Page background */
+  --border:    #dde3ef;
+  --sidebar-w: 256px;
+
+  /* Semantic aliases */
+  --text-primary:   #1f2937;
+  --text-secondary: #6b7280;
+  --text-muted:     #9ca3af;
+  --surface:        #ffffff;
+  --surface-dim:    #f9fafb;
+  --divider:        #f3f4f6;
+}
+
+/* ── Reset ────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Source Sans 3', sans-serif;
+  background: var(--gray-bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+a    { text-decoration: none; color: inherit; }
+img  { display: block; max-width: 100%; }
+button, input, select, textarea { font-family: inherit; }
+button { cursor: pointer; }
+
+/* ── Utility ──────────────────────────────────────────────────── */
+.hidden    { display: none !important; }
+.sr-only   {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); border: 0;
+}

@@ -13,6 +13,7 @@ export type RpsSubmission = {
   kaprodiNotes: string | null;
   koordinatorSignedPdfUrl: string | null;
   finalPdfUrl: string | null;
+  annotatedPdfUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -47,6 +48,7 @@ export type MatkulRps = {
   koordinatorNotes: string | null;
   kaprodiNotes: string | null;
   finalPdfUrl: string | null;
+  annotatedPdfUrl: string | null;
   updatedAt: string | null;
 };
 
@@ -74,4 +76,21 @@ export type LogEntry = {
   message: string;
   actor: string;
   action: string;
+};
+
+// Annotation on a PDF (created by Koordinator or Kaprodi)
+export type RpsAnnotation = {
+  id: string;
+  rpsId: string;
+  type: 'highlight' | 'draw' | 'box' | 'sticky';
+  page: number;
+  x: number;
+  y: number;
+  width: number | null;
+  height: number | null;
+  color: string;
+  content: string | null;
+  pathData: string | null;
+  reviewerRole: string;
+  createdAt: string;
 };

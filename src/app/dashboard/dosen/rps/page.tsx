@@ -16,7 +16,7 @@ export default async function DosenRPSPage() {
     include: {
       rps: {
         where: { dosenId: userId },
-        select: { id: true, status: true, isKoordinatorApproved: true, fileName: true, fileUrl: true, finalPdfUrl: true, notes: true, koordinatorNotes: true, kaprodiNotes: true, updatedAt: true },
+        select: { id: true, status: true, isKoordinatorApproved: true, fileName: true, fileUrl: true, finalPdfUrl: true, annotatedPdfUrl: true, notes: true, koordinatorNotes: true, kaprodiNotes: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
         take: 1,
       },
@@ -35,6 +35,7 @@ export default async function DosenRPSPage() {
     fileName: m.rps[0]?.fileName ?? null,
     fileUrl: m.rps[0]?.fileUrl ?? null,
     finalPdfUrl: m.rps[0]?.finalPdfUrl ?? null,
+    annotatedPdfUrl: m.rps[0]?.annotatedPdfUrl ?? null,
     notes: m.rps[0]?.notes ?? null,
     koordinatorNotes: m.rps[0]?.koordinatorNotes ?? null,
     kaprodiNotes: m.rps[0]?.kaprodiNotes ?? null,

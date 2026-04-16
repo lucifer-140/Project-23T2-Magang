@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Portal Akademik</title>
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <!-- Mobile topbar -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <img src="Logo UPH.png" alt="Logo"
+           onerror="this.style.display='none'" />
+      <span>Portal Akademik</span>
+    </div>
+    <button class="topbar-menu-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
+      <i data-lucide="menu" width="22" height="22"></i>
+    </button>
+  </div>
+
+  <!-- Overlay for mobile sidebar -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <div class="dashboard-wrap">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SIDEBAR
+    ═══════════════════════════════════════════════════════════ -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- Brand -->
+      <div class="sidebar-brand">
+        <img
+          src="Logo UPH.png"
+          alt="Logo"
+          class="brand-logo"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+        />
+        <div class="brand-logo-fallback" style="display:none">
+          <i data-lucide="graduation-cap" width="20" height="20"></i>
+        </div>
+        <div class="brand-text">
+          <span class="name">Portal</span>
+          <span class="sub">Akademik</span>
+        </div>
+      </div>
+
+      <!-- Role pill — populated by dashboard.js -->
+      <div class="role-pill blue" id="role-pill">Mode: —</div>
+
+      <!-- Nav items — populated by dashboard.js -->
+      <nav class="sidebar-nav" id="sidebar-nav" aria-label="Navigation"></nav>
+
+      <!-- User + logout -->
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="user-avatar" id="user-avatar">—</div>
+          <div>
+            <div class="user-name"  id="user-name-display">—</div>
+            <div class="user-role-label" id="user-role-display">—</div>
+          </div>
+        </div>
+        <button class="nav-item logout" onclick="handleLogout()">
+          <span class="nav-icon">
+            <i data-lucide="log-out" width="18" height="18"></i>
+          </span>
+          <span>Keluar</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MAIN CONTENT
+    ═══════════════════════════════════════════════════════════ -->
+    <main class="main-content">
+      <div class="content-inner">
+
+        <!-- ─────────────────────────────────────────────────────
+             VIEW: Overview / Dashboard Home
+        ───────────────────────────────────────────────────── -->
+        <section class="dash-view" id="view-overview">
+          <div class="page-heading">
+            <h1>Selamat Datang</h1>
+            <p>Pantau status akademik dan tugas Anda di portal ini.</p>
+          </div>
+
+          <div class="section-heading">
+            <span class="icon"><i data-lucide="bookmark" width="20" height="20"></i></span>
+            <h2>Ringkasan Status</h2>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <h3>Total Matkul</h3>
+                <span class="stat-icon"><i data-lucide="file-text" width="18" height="18"></i></span>
+              </div>
+              <p class="number">12</p>
+            </div>
+            <div class="stat-card yellow">
+              <div class="stat-card-header">
+                <h3>Dalam Proses</h3>
+                <span class="stat-icon"><i data-lucide="clock" width="18" height="18"></i></span>
+              </div>
+              <p class="number">4</p>
+            </div>
+            <div class="stat-card red">
+              <div class="stat-card-header">
+                <h3>Perlu Revisi</h3>
+                <span class="stat-icon"><i data-lucide="alert-circle" width="18" height="18"></i></span>
+              </div>
+              <p class="number">2</p>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-card-header">
+                <h3>Disetujui</h3>
+                <span class="stat-icon"><i data-lucide="check-circle" width="18" height="18"></i></span>
+              </div>
+              <p class="number">6</p>
+            </div>
+          </div>
+
+          <div class="section-heading" style="margin-top:2.5rem">
+            <span class="icon"><i data-lucide="activity" width="20" height="20"></i></span>
+            <h2>Aktivitas Terbaru</h2>
+          </div>
+
+          <div class="table-card">
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nama Matkul</th>
+                    <th>Dosen</th>
+                    <th>Status</th>
+                    <th>Diperbarui</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Pemrograman Web</td>
+                    <td>Dr. Budi Santoso</td>
+                    <td><span class="badge badge-approved">Disetujui</span></td>
+                    <td>14 Apr 2026</td>
+                  </tr>
+                  <tr>
+                    <td>Basis Data Lanjut</td>
+                    <td>Dr. Ani Rahayu</td>
+                    <td><span class="badge badge-revision">Revisi</span></td>
+                    <td>13 Apr 2026</td>
+                  </tr>
+                  <tr>
+                    <td>Kecerdasan Buatan</td>
+                    <td>Dr. Hendra Wijaya</td>
+                    <td><span class="badge badge-submitted">Diajukan</span></td>
+                    <td>12 Apr 2026</td>
+                  </tr>
+                  <tr>
+                    <td>Jaringan Komputer</td>
+                    <td>Dr. Sari Dewi</td>
+                    <td><span class="badge badge-pengecekan">Pengecekan</span></td>
+                    <td>11 Apr 2026</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────────────────
+             VIEW: Documents / RPS Table
+        ───────────────────────────────────────────────────── -->
+        <section class="dash-view" id="view-documents">
+          <div class="page-heading">
+            <h1>Kelola Dokumen</h1>
+            <p>Daftar semua dokumen yang perlu ditinjau atau diunggah.</p>
+          </div>
+
+          <div class="table-card">
+            <div class="table-toolbar">
+              <h3>Daftar Dokumen</h3>
+              <div class="toolbar-right">
+                <div class="search-wrap">
+                  <span class="search-icon">
+                    <i data-lucide="search" width="15" height="15"></i>
+                  </span>
+                  <input
+                    class="search-input"
+                    type="search"
+                    placeholder="Cari dokumen…"
+                    oninput="filterTable(this, 'doc-table')"
+                    aria-label="Cari dokumen"
+                  />
+                </div>
+                <button class="btn-action red" onclick="openModal('modal-upload')">
+                  <i data-lucide="upload" width="15" height="15"></i>
+                  Unggah
+                </button>
+              </div>
+            </div>
+
+            <div class="table-scroll">
+              <table id="doc-table">
+                <thead>
+                  <tr>
+                    <th>Matkul</th>
+                    <th>Dosen</th>
+                    <th>Koordinator</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Pemrograman Web</td>
+                    <td>Dr. Budi Santoso</td>
+                    <td>Dr. Citra</td>
+                    <td><span class="badge badge-approved">Disetujui</span></td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button class="tbl-btn view" onclick="openModal('modal-detail')">
+                          <i data-lucide="eye" width="13" height="13"></i> Detail
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Basis Data Lanjut</td>
+                    <td>Dr. Ani Rahayu</td>
+                    <td>Dr. Citra</td>
+                    <td><span class="badge badge-revision">Revisi</span></td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button class="tbl-btn view"   onclick="openModal('modal-detail')">
+                          <i data-lucide="eye" width="13" height="13"></i> Detail
+                        </button>
+                        <button class="tbl-btn upload" onclick="openModal('modal-upload')">
+                          <i data-lucide="upload" width="13" height="13"></i> Upload
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Kecerdasan Buatan</td>
+                    <td>Dr. Hendra</td>
+                    <td>Dr. Rizky</td>
+                    <td><span class="badge badge-submitted">Diajukan</span></td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button class="tbl-btn approve" onclick="openModal('modal-approve')">
+                          <i data-lucide="check" width="13" height="13"></i> Setujui
+                        </button>
+                        <button class="tbl-btn reject"  onclick="openModal('modal-reject')">
+                          <i data-lucide="x" width="13" height="13"></i> Tolak
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Jaringan Komputer</td>
+                    <td>Dr. Sari Dewi</td>
+                    <td>Dr. Rizky</td>
+                    <td><span class="badge badge-pengecekan">Pengecekan</span></td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button class="tbl-btn view" onclick="openModal('modal-detail')">
+                          <i data-lucide="eye" width="13" height="13"></i> Detail
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Sistem Operasi</td>
+                    <td>Dr. Farhan</td>
+                    <td>—</td>
+                    <td><span class="badge badge-pending">Belum Diajukan</span></td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button class="tbl-btn upload" onclick="openModal('modal-upload')">
+                          <i data-lucide="upload" width="13" height="13"></i> Upload
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <span>Menampilkan 1&ndash;5 dari 5 data</span>
+              <div class="page-btns">
+                <button class="page-btn" disabled aria-label="Halaman sebelumnya">
+                  <i data-lucide="chevron-left" width="14" height="14"></i>
+                </button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn" disabled aria-label="Halaman berikutnya">
+                  <i data-lucide="chevron-right" width="14" height="14"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────────────────
+             VIEW: User Management
+        ───────────────────────────────────────────────────── -->
+        <section class="dash-view" id="view-users">
+          <div class="page-heading">
+            <h1>Kelola Pengguna</h1>
+            <p>Manajemen akun pengguna sistem.</p>
+          </div>
+
+          <div class="table-card">
+            <div class="table-toolbar">
+              <h3>Daftar Pengguna</h3>
+              <div class="toolbar-right">
+                <div class="search-wrap">
+                  <span class="search-icon">
+                    <i data-lucide="search" width="15" height="15"></i>
+                  </span>
+                  <input
+                    class="search-input"
+                    type="search"
+                    placeholder="Cari pengguna…"
+                    oninput="filterTable(this, 'user-table')"
+                    aria-label="Cari pengguna"
+                  />
+                </div>
+                <button class="btn-action blue" onclick="openModal('modal-add-user')">
+                  <i data-lucide="user-plus" width="15" height="15"></i>
+                  Tambah
+                </button>
+              </div>
+            </div>
+
+            <div class="table-scroll">
+              <table id="user-table">
+                <thead>
+                  <tr>
+                    <th>Nama</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Dr. Budi Santoso</td>
+                    <td>budi@test.com</td>
+                    <td><span class="badge badge-dosen">Dosen</span></td>
+                    <td><span class="badge badge-active">Aktif</span></td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button class="tbl-btn edit"   onclick="openModal('modal-add-user')">
+                          <i data-lucide="pencil" width="13" height="13"></i> Edit
+                        </button>
+                        <button class="tbl-btn reject">
+                          <i data-lucide="trash-2" width="13" height="13"></i> Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Dr. Ani Rahayu</td>
+                    <td>ani@test.com</td>
+                    <td><span class="badge badge-koord">Koordinator</span></td>
+                    <td><span class="badge badge-active">Aktif</span></td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button class="tbl-btn edit"   onclick="openModal('modal-add-user')">
+                          <i data-lucide="pencil" width="13" height="13"></i> Edit
+                        </button>
+                        <button class="tbl-btn reject">
+                          <i data-lucide="trash-2" width="13" height="13"></i> Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Dr. Hendra Wijaya</td>
+                    <td>hendra@test.com</td>
+                    <td><span class="badge badge-dosen">Dosen</span></td>
+                    <td><span class="badge badge-pending">Pending</span></td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button class="tbl-btn approve" onclick="openModal('modal-approve')">
+                          <i data-lucide="check" width="13" height="13"></i> Setujui
+                        </button>
+                        <button class="tbl-btn reject"  onclick="openModal('modal-reject')">
+                          <i data-lucide="x" width="13" height="13"></i> Tolak
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <span>Menampilkan 1&ndash;3 dari 3 data</span>
+              <div class="page-btns">
+                <button class="page-btn" disabled aria-label="Halaman sebelumnya">
+                  <i data-lucide="chevron-left" width="14" height="14"></i>
+                </button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn" disabled aria-label="Halaman berikutnya">
+                  <i data-lucide="chevron-right" width="14" height="14"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────────────────
+             VIEW: Requests (Kaprodi only)
+        ───────────────────────────────────────────────────── -->
+        <section class="dash-view" id="view-requests">
+          <div class="page-heading">
+            <h1>Permintaan Perubahan</h1>
+            <p>Daftar permintaan perubahan data mata kuliah yang perlu ditinjau.</p>
+          </div>
+
+          <div class="table-card">
+            <div class="table-toolbar">
+              <h3>Permintaan Masuk</h3>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Matkul</th>
+                    <th>Diajukan Oleh</th>
+                    <th>Perubahan</th>
+                    <th>Tanggal</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Pemrograman Web</td>
+                    <td>Dr. Budi Santoso</td>
+                    <td>Penambahan SKS dari 3 ke 4</td>
+                    <td>10 Apr 2026</td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button class="tbl-btn approve" onclick="openModal('modal-approve')">
+                          <i data-lucide="check" width="13" height="13"></i> Setujui
+                        </button>
+                        <button class="tbl-btn reject"  onclick="openModal('modal-reject')">
+                          <i data-lucide="x" width="13" height="13"></i> Tolak
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <span>Menampilkan 1&ndash;1 dari 1 data</span>
+              <div class="page-btns">
+                <button class="page-btn" disabled>
+                  <i data-lucide="chevron-left" width="14" height="14"></i>
+                </button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn" disabled>
+                  <i data-lucide="chevron-right" width="14" height="14"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────────────────────────────────
+             VIEW: Settings
+        ───────────────────────────────────────────────────── -->
+        <section class="dash-view" id="view-settings">
+          <div class="page-heading">
+            <h1>Pengaturan</h1>
+            <p>Konfigurasi preferensi akun Anda.</p>
+          </div>
+
+          <div class="settings-card">
+            <h3>Informasi Akun</h3>
+            <div class="form-field">
+              <label for="set-name">Nama Lengkap</label>
+              <input type="text" id="set-name" value="Admin User" />
+            </div>
+            <div class="form-field">
+              <label for="set-email">Email</label>
+              <input type="email" id="set-email" value="admin@test.com" />
+            </div>
+            <div class="form-field">
+              <label for="set-pass">Password Baru</label>
+              <input type="password" id="set-pass" placeholder="Kosongkan jika tidak diubah" />
+            </div>
+            <div class="form-field">
+              <label for="set-confirm">Konfirmasi Password</label>
+              <input type="password" id="set-confirm" placeholder="Ulangi password baru" />
+            </div>
+            <button class="btn-action red" style="margin-top:0.25rem">
+              <i data-lucide="save" width="15" height="15"></i>
+              Simpan Perubahan
+            </button>
+          </div>
+        </section>
+
+      </div><!-- /content-inner -->
+    </main>
+  </div><!-- /dashboard-wrap -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODALS
+  ═══════════════════════════════════════════════════════════ -->
+
+  <!-- Approve -->
+  <div class="modal-overlay hidden" id="modal-approve">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Konfirmasi Persetujuan</h3>
+        <button class="modal-close" onclick="closeModal('modal-approve')" aria-label="Tutup">
+          <i data-lucide="x" width="18" height="18"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>
+          Apakah Anda yakin ingin <strong>menyetujui</strong> item ini?
+          Tindakan ini tidak dapat dibatalkan.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel"          onclick="closeModal('modal-approve')">Batal</button>
+        <button class="modal-btn confirm-approve" onclick="closeModal('modal-approve')">Ya, Setujui</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reject -->
+  <div class="modal-overlay hidden" id="modal-reject">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Konfirmasi Penolakan</h3>
+        <button class="modal-close" onclick="closeModal('modal-reject')" aria-label="Tutup">
+          <i data-lucide="x" width="18" height="18"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <label class="notes-label" for="reject-notes">Alasan Penolakan</label>
+        <textarea
+          class="notes-input"
+          id="reject-notes"
+          placeholder="Jelaskan alasan penolakan…"
+        ></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel"         onclick="closeModal('modal-reject')">Batal</button>
+        <button class="modal-btn confirm-reject" onclick="closeModal('modal-reject')">Tolak</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="modal-overlay hidden" id="modal-upload">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Unggah Dokumen</h3>
+        <button class="modal-close" onclick="closeModal('modal-upload')" aria-label="Tutup">
+          <i data-lucide="x" width="18" height="18"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-field">
+          <label for="upload-matkul">Mata Kuliah</label>
+          <select id="upload-matkul">
+            <option>Pemrograman Web</option>
+            <option>Basis Data Lanjut</option>
+            <option>Kecerdasan Buatan</option>
+            <option>Sistem Operasi</option>
+          </select>
+        </div>
+        <div class="upload-zone" onclick="triggerFileInput('file-input')">
+          <div class="upload-icon">
+            <i data-lucide="upload-cloud" width="36" height="36"></i>
+          </div>
+          <p class="upload-label">
+            <strong>Klik untuk pilih file</strong> atau seret ke sini
+          </p>
+          <p class="upload-hint">PDF, DOC, DOCX &mdash; maks. 10 MB</p>
+          <input type="file" id="file-input" accept=".pdf,.doc,.docx" style="display:none" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel"          onclick="closeModal('modal-upload')">Batal</button>
+        <button class="modal-btn confirm-approve" onclick="closeModal('modal-upload')">Unggah</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail -->
+  <div class="modal-overlay hidden" id="modal-detail">
+    <div class="modal wide">
+      <div class="modal-header">
+        <h3>Detail Dokumen</h3>
+        <button class="modal-close" onclick="closeModal('modal-detail')" aria-label="Tutup">
+          <i data-lucide="x" width="18" height="18"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <table class="detail-table">
+          <tr>
+            <td>Mata Kuliah</td>
+            <td>Pemrograman Web</td>
+          </tr>
+          <tr>
+            <td>Dosen</td>
+            <td>Dr. Budi Santoso</td>
+          </tr>
+          <tr>
+            <td>Koordinator</td>
+            <td>Dr. Citra Lestari</td>
+          </tr>
+          <tr>
+            <td>Status</td>
+            <td><span class="badge badge-approved">Disetujui</span></td>
+          </tr>
+          <tr>
+            <td>Tanggal Unggah</td>
+            <td>14 April 2026</td>
+          </tr>
+          <tr>
+            <td>Catatan</td>
+            <td>Dokumen sudah lengkap dan sesuai standar kurikulum.</td>
+          </tr>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel"       onclick="closeModal('modal-detail')">Tutup</button>
+        <button class="modal-btn confirm-blue" onclick="closeModal('modal-detail')">
+          <i data-lucide="download" width="14" height="14"></i>
+          Unduh PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit User -->
+  <div class="modal-overlay hidden" id="modal-add-user">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Tambah Pengguna</h3>
+        <button class="modal-close" onclick="closeModal('modal-add-user')" aria-label="Tutup">
+          <i data-lucide="x" width="18" height="18"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-field">
+          <label for="add-name">Nama Lengkap</label>
+          <input type="text" id="add-name" placeholder="Nama dosen" />
+        </div>
+        <div class="form-field">
+          <label for="add-email">Email</label>
+          <input type="email" id="add-email" placeholder="email@university.ac.id" />
+        </div>
+        <div class="form-field">
+          <label for="add-role">Role</label>
+          <select id="add-role">
+            <option>DOSEN</option>
+            <option>KOORDINATOR</option>
+            <option>KAPRODI</option>
+            <option>ADMIN</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin-bottom:0">
+          <label for="add-password">Password Awal</label>
+          <input type="password" id="add-password" placeholder="Password awal pengguna" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel"          onclick="closeModal('modal-add-user')">Batal</button>
+        <button class="modal-btn confirm-approve" onclick="closeModal('modal-add-user')">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

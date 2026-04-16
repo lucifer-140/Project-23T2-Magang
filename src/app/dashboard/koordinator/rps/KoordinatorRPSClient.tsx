@@ -13,10 +13,15 @@ import { SyncIndicator } from '@/components/SyncIndicator';
 import { SignaturePad } from '@/components/SignaturePad';
 import type { SignaturePosition } from '@/components/PdfSignatureOverlay';
 
-// Disable SSR for PdfSignatureOverlay — pdfjs-dist requires browser APIs
+// Disable SSR for PDF components — pdfjs-dist requires browser APIs
 const PdfSignatureOverlay = dynamic(
   () => import('@/components/PdfSignatureOverlay').then(m => m.PdfSignatureOverlay),
   { ssr: false, loading: () => <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Memuat viewer PDF…</div> }
+);
+
+const PdfAnnotationViewer = dynamic(
+  () => import('@/components/PdfAnnotationViewer').then(m => m.PdfAnnotationViewer),
+  { ssr: false, loading: () => <div className="flex items-center justify-center h-[500px] text-gray-400 text-sm">Memuat anotator PDF…</div> }
 );
 
 type Submission = RpsSubmission;
@@ -126,6 +131,8 @@ export function KoordinatorRPSClient({ submissions: initialSubmissions, assignme
     if (!reviewingId) return;
     if (!revisionNote.trim()) { alert('Harap isi catatan revisi sebelum menolak.'); return; }
     setIsSaving(true);
+    // Flatten annotations into PDF before sending back to dosen
+    await fetch(`/api/rps/${reviewingId}/annotations/flatten`, { method: 'POST' });
     const res = await fetch(`/api/rps/${reviewingId}/review`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -450,14 +457,20 @@ export function KoordinatorRPSClient({ submissions: initialSubmissions, assignme
                     )}
                   </div>
 
-                  {/* Embedded PDF preview if PDF */}
-                  {isPdf && reviewingObj.fileUrl && (
-                    <div className="rounded-xl overflow-hidden border border-gray-200">
-                      <iframe
-                        src={`${reviewingObj.fileUrl}#toolbar=0&navpanes=0`}
-                        className="w-full"
-                        style={{ height: 480 }}
-                        title="RPS Document Preview"
+                  {/* PDF Annotation Viewer */}
+                  {isPdf && reviewingObj.fileUrl && reviewingId && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-bold text-gray-700">Anotasi Dokumen</span>
+                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                          Tambahkan catatan langsung pada PDF sebelum menolak
+                        </span>
+                      </div>
+                      <PdfAnnotationViewer
+                        pdfUrl={reviewingObj.fileUrl}
+                        rpsId={reviewingId}
+                        readOnly={false}
+                        reviewerRole="koordinator"
                       />
                     </div>
                   )}

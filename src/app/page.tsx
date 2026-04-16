@@ -56,6 +56,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               alt="Logo UPH"
               width={100}
               height={100}
+              loading="eager"
               className="mb-3 object-contain"
             />
             <h1 className="font-playfair text-[22px] text-uph-blue tracking-wide">

@@ -152,6 +152,9 @@ export async function POST(req: NextRequest) {
 
   let rps;
   if (rpsId) {
+    // Delete all previous annotations — they reference the old file's coordinates
+    await prisma.rpsAnnotation.deleteMany({ where: { rpsId } });
+
     rps = await prisma.rPS.update({
       where: { id: rpsId },
       data: {
@@ -161,6 +164,7 @@ export async function POST(req: NextRequest) {
         isKoordinatorApproved: false,
         koordinatorNotes: null,
         kaprodiNotes: null,
+        annotatedPdfUrl: null,
         // Reset all signature state so the chain restarts
         koordinatorSigUrl: null,
         koordinatorSigX: null,

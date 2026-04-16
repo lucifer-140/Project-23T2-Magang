@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import useSWR from 'swr';
-import { FileUp, Clock, CheckCircle, AlertCircle, UploadCloud, XCircle, BookOpen, Download } from 'lucide-react';
+import { FileUp, Clock, CheckCircle, AlertCircle, UploadCloud, XCircle, BookOpen, Download, Eye, X } from 'lucide-react';
 import type { MatkulRps } from '@/lib/api-types';
 import { SyncIndicator } from '@/components/SyncIndicator';
+
+// Disable SSR — pdfjs-dist requires browser APIs
+const PdfAnnotationViewer = dynamic(
+  () => import('@/components/PdfAnnotationViewer').then(m => m.PdfAnnotationViewer),
+  { ssr: false, loading: () => <div className="flex items-center justify-center h-[500px] text-gray-400 text-sm">Memuat anotasi PDF…</div> }
+);
 
 type Props = { matkulRpsData: MatkulRps[]; userId: string };
 
@@ -39,6 +46,8 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
   const data_ = normalizeData(data ?? initialData);
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  // Annotation viewer state: { rpsId, fileUrl, matkulName }
+  const [annotViewer, setAnnotViewer] = useState<{ rpsId: string; fileUrl: string; matkulName: string } | null>(null);
 
   async function handleUpload(matkulId: string, rpsId: string | null, file: File) {
     setUploading(matkulId);
@@ -144,6 +153,44 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
                       >
                         <Download size={14} className="mr-1.5" /> Download PDF
                       </a>
+                    ) : rps.status === 'REVISION' && rps.rpsId ? (
+                      <div className="flex flex-col items-center gap-2">
+                        {rps.annotatedPdfUrl ? (
+                          <a
+                            href={rps.annotatedPdfUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center shrink-0 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors"
+                          >
+                            <Eye size={14} className="mr-1.5" /> Lihat Anotasi
+                          </a>
+                        ) : rps.fileUrl ? (
+                          <button
+                            onClick={() => setAnnotViewer({ rpsId: rps.rpsId!, fileUrl: rps.fileUrl!, matkulName: rps.matkulName })}
+                            className="inline-flex items-center shrink-0 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors"
+                          >
+                            <Eye size={14} className="mr-1.5" /> Lihat Anotasi
+                          </button>
+                        ) : null}
+                        <label className={`inline-flex items-center shrink-0 px-3 py-1.5 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer ${uploading === rps.matkulId ? 'bg-gray-400' : 'bg-uph-red hover:bg-uph-redHover'}`}>
+                          {uploading === rps.matkulId ? (
+                            <span className="animate-pulse">Mengunggah...</span>
+                          ) : (
+                            <><UploadCloud size={14} className="mr-1.5" />Re-Upload</>
+                          )}
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".pdf,.doc,.docx"
+                            disabled={!!uploading}
+                            ref={el => { fileInputRefs.current[rps.matkulId] = el; }}
+                            onChange={e => {
+                              const file = e.target.files?.[0];
+                              if (file) handleUpload(rps.matkulId, rps.rpsId, file);
+                            }}
+                          />
+                        </label>
+                      </div>
                     ) : canUpload(rps.status) ? (
                       <label className={`inline-flex items-center shrink-0 px-3 py-1.5 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer ${uploading === rps.matkulId ? 'bg-gray-400' : 'bg-uph-red hover:bg-uph-redHover'}`}>
                         {uploading === rps.matkulId ? (
@@ -180,6 +227,48 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
       )}
 
       <SyncIndicator isValidating={isValidating} error={error} />
+
+      {/* ── Annotation Viewer Modal (read-only for Dosen) ── */}
+      {annotViewer && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-4 overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">Panduan Revisi — {annotViewer.matkulName}</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Anotasi dari reviewer. Lihat setiap halaman untuk catatan yang ditandai pada dokumen Anda.
+                </p>
+              </div>
+              <button
+                onClick={() => setAnnotViewer(null)}
+                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto">
+              <PdfAnnotationViewer
+                pdfUrl={annotViewer.fileUrl}
+                rpsId={annotViewer.rpsId}
+                readOnly={true}
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setAnnotViewer(null)}
+                className="px-5 py-2 bg-uph-blue text-white text-sm font-bold rounded-lg hover:bg-[#111c33] transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

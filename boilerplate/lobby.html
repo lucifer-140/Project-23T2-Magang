@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Menunggu Persetujuan — Portal Akademik</title>
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+</head>
+<body>
+  <div class="auth-bg light">
+    <div class="auth-card lobby">
+      <div class="accent-bar blue"></div>
+
+      <!-- Logo -->
+      <div class="logo-block" style="margin-bottom:1.25rem">
+        <img src="Logo UPH.png" alt="Logo" width="64" height="64"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+        <div class="logo-fallback" style="display:none">
+          <i data-lucide="graduation-cap" width="24" height="24"></i>
+        </div>
+
+        <!-- Status circle -->
+        <div class="status-circle pending" id="status-circle">
+          <i data-lucide="clock" width="28" height="28"></i>
+        </div>
+
+        <h2 class="lobby-title" id="lobby-title">Menunggu Persetujuan</h2>
+        <p class="lobby-desc" id="lobby-desc">
+          Akun Anda telah berhasil dibuat dan sedang menunggu persetujuan dari
+          administrator. Anda akan dapat masuk setelah akun disetujui.
+        </p>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="info-box info-blue" id="info-box">
+        <i data-lucide="mail" width="18" height="18"></i>
+        <span id="info-text">
+          Proses persetujuan biasanya memakan waktu 1&ndash;2 hari kerja.
+          Anda dapat mencoba masuk kembali setelah menerima konfirmasi dari administrator.
+        </span>
+      </div>
+
+      <a href="index.html" class="btn btn-blue" style="text-align:center">
+        Kembali ke Halaman Masuk
+      </a>
+
+      <p class="auth-copyright">
+        &copy; 2026 <strong>Your Organization</strong>. All rights reserved.
+      </p>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+
+      // ?status=rejected shows rejected variant
+      const params  = new URLSearchParams(window.location.search);
+      if (params.get('status') === 'rejected') {
+        document.getElementById('status-circle').className = 'status-circle rejected';
+        document.querySelector('#status-circle i').setAttribute('data-lucide', 'x-circle');
+        document.getElementById('lobby-title').textContent = 'Pendaftaran Ditolak';
+        document.getElementById('lobby-desc').textContent =
+          'Maaf, permohonan akun Anda telah ditolak oleh administrator. ' +
+          'Hubungi pihak akademik untuk informasi lebih lanjut.';
+        document.getElementById('info-box').className = 'info-box info-red';
+        document.getElementById('info-text').textContent =
+          'Silakan hubungi admin akademik di email resmi kampus untuk mengajukan banding ' +
+          'atau mendapatkan penjelasan lebih lanjut.';
+        lucide.createIcons();
+      }
+    });
+  </script>
+</body>
+</html>

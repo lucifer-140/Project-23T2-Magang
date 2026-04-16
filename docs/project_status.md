@@ -1,8 +1,8 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-11  
-**Current Version:** 0.9.0  
-**Status:** Stable - Admin UX Polish & Data Integrity Fix
+**Last Updated:** 2026-04-16  
+**Current Version:** 0.10.0  
+**Status:** Stable - Inline PDF Annotation System
 
 ---
 
@@ -41,6 +41,17 @@
 - [x] Deep cleanup on dosen removal: `prisma.$transaction` deletes RPS records before disconnect
 - [x] Confirmation modal for dosen removal with explicit RPS data loss warning (replaces `window.confirm`)
 - [x] Matkul table action column layout consolidated
+
+### Phase 8: Inline PDF Annotation (v0.10.0)
+- [x] `RpsAnnotation` Prisma model with % coordinate system
+- [x] `GET/POST /api/rps/[id]/annotations` + `DELETE /api/rps/[id]/annotations/[annotId]`
+- [x] `POST /api/rps/[id]/annotations/flatten` — burns annotations into PDF via pdf-lib
+- [x] `PdfAnnotationViewer` component (SSR-disabled, react-pdf + SVG overlay)
+- [x] Four annotation tools: Highlight, Draw, Box, Sticky Note; six color options
+- [x] Auto-flatten on rejection (before review PATCH call)
+- [x] Dosen sees static annotated PDF via `annotatedPdfUrl` (no overlay drift)
+- [x] Re-upload clears all annotations + `annotatedPdfUrl`
+- [x] `RPS.annotatedPdfUrl` field in schema, API routes, and TypeScript types
 
 ### Phase 6: Bug Fixes — Koordinator Role (v0.8.1)
 - [x] Fixed `/api/rps` role-branch ordering: KOORDINATOR+DOSEN users now correctly receive `RpsApiResponse` (not DOSEN-format array)
@@ -99,9 +110,9 @@
 |---|---|---|
 | **MASTER** | System monitoring, audit logs, user management, account approvals | Complete |
 | **ADMIN** | Matkul CRUD (with catalog combobox + unified assign modal), user management, change requests, account approvals | Complete (v0.9.0) |
-| **KAPRODI** | RPS review queue, approval workflow, dosen directory | Complete |
-| **KOORDINATOR** | RPS first-level review, digital signature stamping, dosen directory | Complete (v0.8.0) |
-| **DOSEN** | Upload RPS (DOCX/PDF), track status, download signed final PDF | Complete (v0.8.0) |
+| **KAPRODI** | RPS review queue, PDF annotation, approval workflow, dosen directory | Complete (v0.10.0) |
+| **KOORDINATOR** | RPS first-level review, PDF annotation, digital signature stamping, dosen directory | Complete (v0.10.0) |
+| **DOSEN** | Upload RPS (DOCX/PDF), track status, view annotated revision PDF, download signed final PDF | Complete (v0.10.0) |
 
 ### RPS Workflow
 - Dosen upload → visible to both Koordinator and Kaprodi
@@ -164,7 +175,39 @@
 ## Known Issues & Limitations
 
 ### In Scope (Planned)
-- [ ] Email notifications for reviewers
+
+#### Phase 8: Email Notifications (Planned)
+- [ ] Email notification system for RPS workflow events
+  - [ ] Notify Koordinator when Dosen submits/re-uploads RPS
+  - [ ] Notify Kaprodi when Koordinator approves RPS
+  - [ ] Notify Dosen when RPS is approved or rejected (with reviewer notes)
+- [ ] `src/lib/mailer.ts` — email transport singleton (see architecture decision below)
+- [ ] Reusable `sendEmail({ to, subject, html, ics? })` helper used in API routes
+- [ ] ICS calendar attachment generation for deadline reminders
+- [ ] "Add to Google Calendar" deep-link in email body (fallback for non-ICS clients)
+
+**Architecture Decision (2026-04-15):** Azure AD app registration was rejected by UPH IT. Email strategy updated:
+
+- **Primary:** [Resend](https://resend.com) — API-key based, no OAuth, 3,000 emails/month free tier. Sender domain must be verified. Simplest integration path.
+- **Alternative:** Nodemailer + Gmail OAuth2 — uses a dedicated Gmail account (e.g. `noreply.uph@gmail.com`), 500 emails/day free. Google OAuth2 consent screen approval is easier than Azure AD.
+- **Ruled out:** Nodemailer + M365 OAuth2 (Azure AD registration blocked by IT).
+
+**Calendar Integration Decision (2026-04-15):** RPS deadline reminder emails will include an `.ics` file attachment. This auto-prompts the recipient's calendar app (Google Calendar, Outlook, Apple Calendar) to create the event — no calendar API or extra OAuth required. Email body will also contain an "Add to Google Calendar" deep-link as a fallback.
+
+Required env vars when implemented (Resend path):
+```
+RESEND_API_KEY=...
+MAIL_SENDER=noreply@yourdomain.com
+```
+
+Required env vars when implemented (Gmail OAuth2 path):
+```
+GMAIL_CLIENT_ID=...
+GMAIL_CLIENT_SECRET=...
+GMAIL_REFRESH_TOKEN=...
+MAIL_SENDER=noreply.uph@gmail.com
+```
+
 - [ ] Bulk operations (multiple file reviews)
 - [ ] Advanced filtering/search on RPS queues
 
@@ -192,7 +235,7 @@
 ## Next Steps & Recommendations
 
 1. **Setup CI/CD Pipeline**: Automated testing and deployment
-2. **Add Email Notifications**: Alert reviewers when docs are waiting
+2. **Implement Email Notifications + Calendar Reminders (Phase 8)**: Resend (primary) or Gmail OAuth2 (alternative) — Azure AD rejected; ICS attachment for calendar integration; see architecture docs for full spec
 3. **Implement Search/Filter**: Advanced RPS queue filtering
 4. **Monitor Performance**: Add application metrics and observability
 5. **User Training**: Documentation for all roles
@@ -204,6 +247,19 @@
 ## Deployment Notes
 
 **Current Environment**: Development (Docker-based local PostgreSQL)
+
+**Planned Local Server Environment (2026-04-15):**
+- **Hardware**: MacBook Intel (repurposed as local server)
+- **OS**: Ubuntu Server 24.04 LTS (headless)
+- **Runtime**: Node.js 22 LTS via NVM + PM2 (process manager, auto-restart on reboot)
+- **Database**: PostgreSQL via Docker Compose (existing setup, unchanged)
+- **Access**: LAN access via `http://<server-ip>:3000`; SSH for remote management
+- **Optional**: Nginx reverse proxy for clean local domain (e.g. `http://uph.local`)
+
+Setup notes:
+- MacBook broadcom WiFi may need `bcmwl-kernel-source` driver; use Ethernet during initial install
+- Boot from USB: hold **Option** key on startup to select boot device
+- Enable OpenSSH during Ubuntu install for headless management
 
 **Production Checklist**:
 - [ ] Environment variables configured (.env.production)
