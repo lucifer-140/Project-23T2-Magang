@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## [0.10.1] - 2026-04-16
+
+### Fixed
+- **Assign modal — immediate save w/o confirmation**: Unchecking a koordinator now shows "Hapus Koordinator dari Matkul?" confirmation modal before removing (mirrors existing dosen removal flow). "Selesai" button removed — assignment is immediate, button was misleading.
+- **Combobox dropdown broken after selection**: After picking a catalog item in "Tambah Matkul", the dropdown now correctly reopens on focus or ChevronDown click. On focus, query resets to empty so the full catalog list appears.
+- **Kode/SKS/Nama editable after catalog selection**: Fields are now `readOnly` (gray, non-interactive) once a catalog item is selected. Clearing via re-selection from dropdown restores editability.
+
+### Changed
+- **Admin section renamed**: "Kelola Mata Kuliah" → "Penugasan Mata Kuliah" across page title, dashboard card, and sidebar nav — better reflects the section's purpose (assigning courses to dosen for RPS uploads, not managing the catalog itself).
+
+---
+
 ## [0.10.0] - 2026-04-16
 
 ### Added

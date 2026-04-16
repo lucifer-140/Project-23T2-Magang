@@ -1,8 +1,8 @@
 # Project Status Report
 
 **Last Updated:** 2026-04-16  
-**Current Version:** 0.10.0  
-**Status:** Stable - Inline PDF Annotation System
+**Current Version:** 0.10.1  
+**Status:** Stable - Admin UX Fixes & Rename
 
 ---
 

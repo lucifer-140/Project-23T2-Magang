@@ -50,8 +50,8 @@ export default async function AdminDashboard() {
               <BookOpen size={24} className="text-uph-blue" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800">Kelola Mata Kuliah</h3>
-              <p className="text-sm text-gray-500">Tambah, assign ke dosen, ajukan perubahan</p>
+              <h3 className="font-bold text-gray-800">Penugasan Mata Kuliah</h3>
+              <p className="text-sm text-gray-500">Tambah dari katalog, assign koordinator & dosen</p>
             </div>
           </div>
           <span className="text-xs font-bold text-uph-blue group-hover:underline">Buka →</span>

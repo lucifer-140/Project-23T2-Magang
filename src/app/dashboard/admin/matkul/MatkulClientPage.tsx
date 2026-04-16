@@ -29,14 +29,19 @@ type Props = {
 
 // ─── Combobox component for catalog selection ───────────────────────────────
 function MatkulCombobox({
-  value, onChange,
+  value, onChange, onCatalogSelect,
 }: {
   value: { code: string; name: string };
   onChange: (v: { code: string; name: string }) => void;
+  onCatalogSelect?: (selected: boolean) => void;
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  // When not focused, show the selected value as display text
+  const displayValue = focused ? query : (value.code ? `${value.code} – ${value.name}` : '');
 
   const filtered = useMemo(() =>
     MATKUL_CATALOG.filter(
@@ -48,7 +53,11 @@ function MatkulCombobox({
   // Close on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setFocused(false);
+        setQuery('');
+      }
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -56,8 +65,10 @@ function MatkulCombobox({
 
   function select(item: { code: string; name: string }) {
     onChange(item);
-    setQuery(`${item.code} – ${item.name}`);
+    onCatalogSelect?.(true);
+    setQuery('');
     setOpen(false);
+    setFocused(false);
   }
 
   return (
@@ -67,17 +78,31 @@ function MatkulCombobox({
         <input
           className="w-full pl-9 pr-8 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue"
           placeholder="Cari kode atau nama matkul..."
-          value={query}
-          onFocus={() => setOpen(true)}
+          value={displayValue}
+          onFocus={() => {
+            setFocused(true);
+            setQuery('');
+            setOpen(true);
+          }}
           onChange={e => {
             setQuery(e.target.value);
             setOpen(true);
-            // Allow free-form: split on " – " if user typed
+            onCatalogSelect?.(false);
             const parts = e.target.value.split(' – ');
             onChange({ code: parts[0]?.trim() ?? '', name: parts[1]?.trim() ?? '' });
           }}
         />
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+        <button
+          type="button"
+          onMouseDown={e => {
+            e.preventDefault();
+            if (!focused) { setFocused(true); setQuery(''); }
+            setOpen(o => !o);
+          }}
+          className="absolute right-3 top-1/2 -translate-y-1/2"
+        >
+          <ChevronDown className="text-gray-400" size={14} />
+        </button>
       </div>
       {open && filtered.length > 0 && (
         <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
@@ -104,11 +129,15 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
   // Modal: Add Matkul
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ code: '', name: '', sks: '3' });
+  const [catalogSelected, setCatalogSelected] = useState(false);
 
   // Modal: Unified Role Assignment (replaces separate +Koor / +Dosen modals)
   const [assigningMatkul, setAssigningMatkul] = useState<Matkul | null>(null);
   const [assignTab, setAssignTab] = useState<'koordinator' | 'dosen'>('koordinator');
   const [assignSearch, setAssignSearch] = useState('');
+
+  // Modal: Confirm remove-koordinator
+  const [removingKoordinator, setRemovingKoordinator] = useState<{ koordinatorId: string; koordinatorName: string } | null>(null);
 
   // Modal: Confirm remove-dosen (deep cleanup warning)
   const [removingDosen, setRemovingDosen] = useState<{ dosenId: string; dosenName: string } | null>(null);
@@ -149,6 +178,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
       setMatkuls(prev => [...prev, { ...data, dosens: [], koordinators: [] }]);
       setShowAddModal(false);
       setAddForm({ code: '', name: '', sks: '3' });
+      setCatalogSelected(false);
     }
   }
 
@@ -167,11 +197,13 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
 
   async function handleAssignKoordinator(koordinatorId: string, checked: boolean) {
     if (!assigningMatkul) return;
+    if (!checked) {
+      const k = koordinators.find(k => k.id === koordinatorId);
+      setRemovingKoordinator({ koordinatorId, koordinatorName: k?.name ?? koordinatorId });
+      return;
+    }
     const matkulId = assigningMatkul.id;
-    const updatedKoordinators = checked
-      ? [...assigningMatkul.koordinators, koordinators.find(k => k.id === koordinatorId)!]
-      : assigningMatkul.koordinators.filter(k => k.id !== koordinatorId);
-
+    const updatedKoordinators = [...assigningMatkul.koordinators, koordinators.find(k => k.id === koordinatorId)!];
     const updated = { ...assigningMatkul, koordinators: updatedKoordinators };
     setAssigningMatkul(updated);
     setMatkuls(prev => prev.map(m => m.id === matkulId ? updated : m));
@@ -179,7 +211,24 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
     await fetch(`/api/matkul/${matkulId}/assign-coordinator`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ koordinatorId, action: checked ? 'add' : 'remove' }),
+      body: JSON.stringify({ koordinatorId, action: 'add' }),
+    });
+  }
+
+  async function confirmRemoveKoordinator() {
+    if (!assigningMatkul || !removingKoordinator) return;
+    const matkulId = assigningMatkul.id;
+    const { koordinatorId } = removingKoordinator;
+    const updatedKoordinators = assigningMatkul.koordinators.filter(k => k.id !== koordinatorId);
+    const updated = { ...assigningMatkul, koordinators: updatedKoordinators };
+    setAssigningMatkul(updated);
+    setMatkuls(prev => prev.map(m => m.id === matkulId ? updated : m));
+    setRemovingKoordinator(null);
+
+    await fetch(`/api/matkul/${matkulId}/assign-coordinator`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ koordinatorId, action: 'remove' }),
     });
   }
 
@@ -244,8 +293,8 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-playfair font-bold text-uph-blue mb-1">Kelola Mata Kuliah</h1>
-          <p className="text-gray-500">Tambah matkul, atur pengajar dan koordinator, atau hapus dan edit data.</p>
+          <h1 className="text-3xl font-playfair font-bold text-uph-blue mb-1">Penugasan Mata Kuliah</h1>
+          <p className="text-gray-500">Tambah matkul dari katalog, assign koordinator & dosen pengajar, atau hapus data.</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -373,7 +422,7 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h2 className="text-lg font-bold text-gray-800">Tambah Mata Kuliah Baru</h2>
-              <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-gray-200 rounded-full"><X size={18} /></button>
+              <button onClick={() => { setShowAddModal(false); setCatalogSelected(false); setAddForm({ code: '', name: '', sks: '3' }); }} className="p-1 hover:bg-gray-200 rounded-full"><X size={18} /></button>
             </div>
             <form onSubmit={handleAddMatkul} className="p-6 space-y-4">
               <div>
@@ -381,28 +430,32 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
                 <MatkulCombobox
                   value={{ code: addForm.code, name: addForm.name }}
                   onChange={({ code, name }) => setAddForm(p => ({ ...p, code, name }))}
+                  onCatalogSelect={setCatalogSelected}
                 />
                 <p className="text-[11px] text-gray-400 mt-1">Cari berdasarkan kode atau nama mata kuliah.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Kode</label>
-                  <input required value={addForm.code} onChange={e => setAddForm(p => ({ ...p, code: e.target.value }))}
-                    placeholder="CS101" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
+                  <input required value={addForm.code} readOnly={catalogSelected}
+                    onChange={catalogSelected ? undefined : e => setAddForm(p => ({ ...p, code: e.target.value }))}
+                    placeholder="CS101" className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none ${catalogSelected ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-200 focus:border-uph-blue'}`} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">SKS</label>
-                  <input type="number" required min={1} max={6} value={addForm.sks} onChange={e => setAddForm(p => ({ ...p, sks: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" placeholder="3" />
+                  <input type="number" required min={1} max={6} value={addForm.sks} readOnly={catalogSelected}
+                    onChange={catalogSelected ? undefined : e => setAddForm(p => ({ ...p, sks: e.target.value }))}
+                    className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none ${catalogSelected ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-200 focus:border-uph-blue'}`} placeholder="3" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Nama Mata Kuliah</label>
-                <input required value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="Cth: Algoritma & Pemrograman" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
+                <input required value={addForm.name} readOnly={catalogSelected}
+                  onChange={catalogSelected ? undefined : e => setAddForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="Cth: Algoritma & Pemrograman" className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none ${catalogSelected ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-200 focus:border-uph-blue'}`} />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">Batal</button>
+                <button type="button" onClick={() => { setShowAddModal(false); setCatalogSelected(false); setAddForm({ code: '', name: '', sks: '3' }); }} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">Batal</button>
                 <button type="submit" className="flex-1 py-2.5 bg-uph-blue text-white text-sm font-bold rounded-lg hover:bg-[#111c33]">Tambahkan</button>
               </div>
             </form>
@@ -496,13 +549,43 @@ export function MatkulClientPage({ matkuls: initialMatkuls, dosens, koordinators
               })}
             </div>
 
-            <div className="px-6 py-3 border-t border-gray-100 bg-gray-50">
-              <button
-                onClick={() => setAssigningMatkul(null)}
-                className="w-full py-2.5 bg-uph-blue text-white text-sm font-bold rounded-lg hover:bg-[#111c33]"
-              >
-                Selesai
-              </button>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Confirm Remove Koordinator ───────────────────────────────── */}
+      {removingKoordinator && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-red-100 flex justify-between items-center bg-red-50">
+              <div>
+                <h2 className="text-base font-bold text-gray-800">Hapus Koordinator dari Matkul?</h2>
+                <p className="text-xs text-red-600 font-semibold">Tindakan ini tidak dapat diurungkan</p>
+              </div>
+              <button onClick={() => setRemovingKoordinator(null)} className="p-1 hover:bg-red-100 rounded-full"><X size={16} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+                <AlertTriangle size={16} className="text-red-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-700">
+                  Apakah Anda yakin ingin menghapus <strong>{removingKoordinator.koordinatorName}</strong> sebagai koordinator dari matkul ini?
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRemovingKoordinator(null)}
+                  className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={confirmRemoveKoordinator}
+                  className="flex-1 py-2.5 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700"
+                >
+                  Hapus Koordinator
+                </button>
+              </div>
             </div>
           </div>
         </div>

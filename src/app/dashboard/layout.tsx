@@ -62,7 +62,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       accentColor: 'bg-uph-blue',
       navItems: [
         { href: '/dashboard/admin', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-        { href: '/dashboard/admin/matkul', icon: <BookOpen size={18} />, label: 'Kelola Matkul' },
+        { href: '/dashboard/admin/matkul', icon: <BookOpen size={18} />, label: 'Penugasan Matkul' },
         { href: '/dashboard/admin/users', icon: <Users size={18} />, label: 'Kelola Pengguna' },
         { href: '/dashboard/admin/approvals', icon: <UserCheck size={18} />, label: 'Persetujuan Akun' },
       ],
