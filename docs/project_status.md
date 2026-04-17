@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-04-17  
 **Current Version:** 0.12.0  
-**Status:** Active Development - Hierarchical Academic Term UX
+**Status:** Active Development - Phase 11 Complete
 
 ---
 
@@ -41,6 +41,25 @@
 - [x] Deep cleanup on dosen removal: `prisma.$transaction` deletes RPS records before disconnect
 - [x] Confirmation modal for dosen removal with explicit RPS data loss warning (replaces `window.confirm`)
 - [x] Matkul table action column layout consolidated
+
+### Phase 10: Hierarchical Academic Term UX (v0.12.0)
+- [x] `TahunAkademik` + `Semester` models (replaces earlier `AcademicTerm` design)
+- [x] Matkul.semesterId FK (replaces old `semester` + `academicYear` strings)
+- [x] AcademicDocument.semesterId FK (replaces `semester` string)
+- [x] `GET/POST /api/tahun-akademik` — List and create academic years
+- [x] `GET/POST /api/tahun-akademik/[tahunId]/semesters` — List and create semesters
+- [x] Admin Matkul page restructured: `/dashboard/admin/matkul` (year/semester list) → `/[semesterId]` (scoped matkul table)
+- [x] Seed data: Ganjil + Genap 2025/2026 terms pre-created with matkul assignments
+- [x] Semester selector on Matkul hub pages loads from database
+
+### Phase 11: Role Dashboard Alignment (v0.12.0)
+- [x] Dosen dashboard: updated to query `AcademicDocument` instead of `RPS`
+- [x] Kaprodi dashboard: updated to query `AcademicDocument`; labels changed ("RPS" → "Dokumen")
+- [x] Koordinator dashboard: real implementation (was placeholder) with academicDoc stats
+- [x] All dashboard stats accurately reflect new data model
+- [x] Sidebar updated: removed dead `/rps` links, added "Mata Kuliah"
+- [x] Old RPS route pages deleted: `/dashboard/dosen/rps`, `/dashboard/kaprodi/rps`, `/dashboard/koordinator/rps`, `/dashboard/admin/rps`
+- [x] All role dashboards link to `/dashboard/matkul` for document management
 
 ### Phase 9b: Matkul Composite Unique + Seed Fix (v0.11.1)
 - [x] `Matkul.code` unique constraint changed to composite `@@unique([code, semester, academicYear])`

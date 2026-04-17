@@ -1,23 +1,23 @@
 import { prisma } from '@/lib/db';
-import { FileText, Bell, CheckCircle, Clock } from 'lucide-react';
+import { FileText, Bell, CheckCircle, Library } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function KaprodiDashboard() {
   const [needsReview, pendingRequests, approved] = await Promise.all([
-    prisma.rPS.count({ where: { status: 'SUBMITTED' } }),
+    prisma.academicDocument.count({ where: { status: 'SUBMITTED' } }),
     prisma.matkulChangeRequest.count({ where: { status: 'PENDING' } }),
-    prisma.rPS.count({ where: { status: 'APPROVED' } }),
+    prisma.academicDocument.count({ where: { status: 'APPROVED' } }),
   ]);
 
   return (
     <div>
       <h1 className="text-3xl font-playfair font-bold text-uph-blue mb-2">Dashboard Kaprodi</h1>
-      <p className="text-gray-500 mb-8">Pantau pengajuan RPS dan permintaan perubahan dari Admin.</p>
+      <p className="text-gray-500 mb-8">Pantau pengajuan dokumen akademik dan permintaan perubahan dari Admin.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-uph-blue">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">RPS Perlu Review</h3>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Dokumen Perlu Review</h3>
             <FileText size={20} className="text-uph-blue opacity-60" />
           </div>
           <p className="text-4xl font-playfair font-bold text-uph-blue">{needsReview}</p>
@@ -35,7 +35,7 @@ export default async function KaprodiDashboard() {
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">RPS Disetujui</h3>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Dokumen Disetujui</h3>
             <CheckCircle size={20} className="text-green-500 opacity-60" />
           </div>
           <p className="text-4xl font-playfair font-bold text-uph-blue">{approved}</p>
@@ -44,14 +44,14 @@ export default async function KaprodiDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Link href="/dashboard/kaprodi/rps" className="group bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-uph-blue hover:shadow-md transition-all">
+        <Link href="/dashboard/matkul" className="group bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-uph-blue hover:shadow-md transition-all">
           <div className="flex items-center space-x-4 mb-3">
             <div className="w-12 h-12 rounded-xl bg-uph-blue/10 flex items-center justify-center group-hover:bg-uph-blue/20 transition-colors">
-              <FileText size={24} className="text-uph-blue" />
+              <Library size={24} className="text-uph-blue" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800">Review RPS Dosen</h3>
-              <p className="text-sm text-gray-500">Periksa, setujui, atau minta revisi dokumen RPS</p>
+              <h3 className="font-bold text-gray-800">Review Dokumen Akademik</h3>
+              <p className="text-sm text-gray-500">Periksa, setujui, atau minta revisi dokumen dari dosen</p>
             </div>
           </div>
           {needsReview > 0 && (

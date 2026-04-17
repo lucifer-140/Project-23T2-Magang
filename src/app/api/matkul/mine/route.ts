@@ -16,30 +16,33 @@ export async function GET() {
 
   const isKaprodi = roles.includes('KAPRODI');
 
-  // Fetch matkuls where user is dosen or koordinator
+  const semesterInclude = {
+    dosens: { select: { id: true, name: true } },
+    koordinators: { select: { id: true, name: true } },
+    semester: { include: { tahunAkademik: { select: { tahun: true } } } },
+  };
+
   const [dosenMatkuls, koordinatorMatkuls] = await Promise.all([
     prisma.matkul.findMany({
       where: { dosens: { some: { id: userId } } },
-      include: { dosens: { select: { id: true, name: true } }, koordinators: { select: { id: true, name: true } } },
+      include: semesterInclude,
       orderBy: { code: 'asc' },
     }),
     prisma.matkul.findMany({
       where: { koordinators: { some: { id: userId } } },
-      include: { dosens: { select: { id: true, name: true } }, koordinators: { select: { id: true, name: true } } },
+      include: semesterInclude,
       orderBy: { code: 'asc' },
     }),
   ]);
 
-  // If kaprodi, fetch all matkuls
   let kaprodiMatkuls: typeof dosenMatkuls = [];
   if (isKaprodi) {
     kaprodiMatkuls = await prisma.matkul.findMany({
-      include: { dosens: { select: { id: true, name: true } }, koordinators: { select: { id: true, name: true } } },
+      include: semesterInclude,
       orderBy: { code: 'asc' },
     });
   }
 
-  // Deduplicate and annotate with userRoles
   const map = new Map<string, (typeof dosenMatkuls[0]) & { userRoles: string[] }>();
 
   for (const m of kaprodiMatkuls) {

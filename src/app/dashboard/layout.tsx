@@ -1,11 +1,11 @@
 import { cookies } from 'next/headers';
-import Link from 'next/link';
 import { SWRProvider } from '@/components/SWRProvider';
 import { redirect } from 'next/navigation';
 import {
   LayoutDashboard, FileText, LogOut, User, BookOpen,
   Users, Settings, Shield, Terminal, Bell, UserCheck, Library
 } from 'lucide-react';
+import SidebarNav from '@/components/SidebarNav';
 import Image from 'next/image';
 
 type RoleConfig = {
@@ -114,18 +114,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {config.navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center space-x-3 text-sm font-semibold text-gray-600 hover:text-uph-red hover:bg-red-50 px-4 py-3 rounded-lg transition-colors"
-            >
-              <span className="text-gray-400">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
+        <SidebarNav navItems={config.navItems} />
 
         <div className="p-4 border-t border-gray-100">
           <div className="flex items-center space-x-3 mb-4 px-4">

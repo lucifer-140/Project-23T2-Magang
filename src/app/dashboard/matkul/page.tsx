@@ -14,23 +14,33 @@ export default async function MatkulListPage() {
 
   const isKaprodi = roles.includes('KAPRODI');
 
-  const [dosenMatkuls, koordinatorMatkuls] = await Promise.all([
+  const semesterInclude = {
+    dosens: { select: { id: true, name: true } },
+    koordinators: { select: { id: true, name: true } },
+    semester: { include: { tahunAkademik: { select: { tahun: true } } } },
+  };
+
+  const [dosenMatkuls, koordinatorMatkuls, semesters] = await Promise.all([
     prisma.matkul.findMany({
       where: { dosens: { some: { id: userId } } },
-      include: { dosens: { select: { id: true, name: true } }, koordinators: { select: { id: true, name: true } } },
+      include: semesterInclude,
       orderBy: { code: 'asc' },
     }),
     prisma.matkul.findMany({
       where: { koordinators: { some: { id: userId } } },
-      include: { dosens: { select: { id: true, name: true } }, koordinators: { select: { id: true, name: true } } },
+      include: semesterInclude,
       orderBy: { code: 'asc' },
+    }),
+    prisma.semester.findMany({
+      orderBy: [{ tahunAkademik: { tahun: 'desc' } }, { nama: 'asc' }],
+      include: { tahunAkademik: { select: { tahun: true } } },
     }),
   ]);
 
   let kaprodiMatkuls: typeof dosenMatkuls = [];
   if (isKaprodi) {
     kaprodiMatkuls = await prisma.matkul.findMany({
-      include: { dosens: { select: { id: true, name: true } }, koordinators: { select: { id: true, name: true } } },
+      include: semesterInclude,
       orderBy: { code: 'asc' },
     });
   }
@@ -52,5 +62,5 @@ export default async function MatkulListPage() {
 
   const matkuls = Array.from(map.values());
 
-  return <MatkulListClient initialMatkuls={matkuls} />;
+  return <MatkulListClient initialMatkuls={matkuls} semesters={semesters} />;
 }

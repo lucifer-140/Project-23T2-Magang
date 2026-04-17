@@ -7,7 +7,7 @@ export default async function DosenDashboard() {
   const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
   const roleStr = cookieStore.get('userRole')?.value;
-  
+
   let decodedRoleStr = roleStr || '';
   try { decodedRoleStr = decodeURIComponent(decodedRoleStr); } catch(e) {}
 
@@ -21,43 +21,43 @@ export default async function DosenDashboard() {
   }
 
   // DOSEN FETCH
-  const rpsList = userId ? await prisma.rPS.findMany({
-    where: { dosenId: userId },
-    include: { matkul: { select: { name: true } } },
-  }) : [];
-  const total = rpsList.length;
-  const submitted = rpsList.filter(r => r.status === 'SUBMITTED' || r.status === 'PENGECEKAN').length;
-  const approved = rpsList.filter(r => r.status === 'APPROVED').length;
-  const revision = rpsList.filter(r => r.status === 'REVISION').length;
+  const [total, submitted, revision, approved] = userId ? await Promise.all([
+    prisma.matkul.count({ where: { dosens: { some: { id: userId } } } }),
+    prisma.academicDocument.count({ where: { dosenId: userId, status: { in: ['SUBMITTED', 'PENGECEKAN'] } } }),
+    prisma.academicDocument.count({ where: { dosenId: userId, status: 'REVISION' } }),
+    prisma.academicDocument.count({ where: { dosenId: userId, status: 'APPROVED' } }),
+  ]) : [0, 0, 0, 0];
 
   // KOORDINATOR FETCH
   let koordStats = { matkuls: 0, totalDosens: 0, rpsSubmitted: 0 };
   if (roles.includes('KOORDINATOR') && userId) {
     const koordinatorMatkuls = await prisma.matkul.findMany({
       where: { koordinators: { some: { id: userId } } },
-      include: { dosens: true, rps: true },
+      include: { dosens: true, academicDocs: true },
     });
-    
-    let dosensSet = new Set();
+
+    const dosensSet = new Set<string>();
     let rpsSub = 0;
     koordinatorMatkuls.forEach(m => {
       m.dosens.forEach(d => dosensSet.add(d.id));
-      rpsSub += m.rps.filter(r => r.status !== 'UNSUBMITTED').length;
+      rpsSub += m.academicDocs.filter(d => d.status !== 'UNSUBMITTED').length;
     });
 
     koordStats = {
       matkuls: koordinatorMatkuls.length,
       totalDosens: dosensSet.size,
-      rpsSubmitted: rpsSub
+      rpsSubmitted: rpsSub,
     };
   }
 
   // KAPRODI FETCH
   let kaprodiStats = { rpsNeedsReview: 0, totalRps: 0, pendingRequests: 0 };
   if (roles.includes('KAPRODI')) {
-    kaprodiStats.rpsNeedsReview = await prisma.rPS.count({ where: { status: 'SUBMITTED' } });
-    kaprodiStats.totalRps = await prisma.rPS.count();
-    kaprodiStats.pendingRequests = await prisma.matkulChangeRequest.count({ where: { status: 'PENDING' } });
+    [kaprodiStats.rpsNeedsReview, kaprodiStats.totalRps, kaprodiStats.pendingRequests] = await Promise.all([
+      prisma.academicDocument.count({ where: { status: 'SUBMITTED' } }),
+      prisma.academicDocument.count(),
+      prisma.matkulChangeRequest.count({ where: { status: 'PENDING' } }),
+    ]);
   }
 
   return (
@@ -65,7 +65,7 @@ export default async function DosenDashboard() {
       <div>
         <h1 className="text-3xl font-playfair font-bold text-uph-blue mb-2">Selamat Datang</h1>
         <p className="text-gray-500 mb-8">Pantau status akademik dan tugas Anda di portal ini.</p>
-        
+
         {/* DOSEN SECTION */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">
@@ -134,7 +134,7 @@ export default async function DosenDashboard() {
               </div>
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">RPS Diterima Sistem</h3>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Dokumen Diterima Sistem</h3>
                   <p className="text-3xl font-playfair font-bold text-gray-800">{koordStats.rpsSubmitted}</p>
                 </div>
                 <div className="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center text-orange-600">
@@ -159,12 +159,12 @@ export default async function DosenDashboard() {
                 <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform">
                   <Inbox size={80} className="text-blue-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">RPS Perlu Review</h3>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Dokumen Perlu Review</h3>
                 <div className="flex items-end gap-3">
                   <p className="text-4xl font-playfair font-bold text-blue-600">{kaprodiStats.rpsNeedsReview}</p>
                   <p className="text-sm text-gray-400 mb-1">dari {kaprodiStats.totalRps} total pengajuan</p>
                 </div>
-                <Link href="/dashboard/kaprodi/rps" className="inline-block mt-4 text-xs font-bold text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
+                <Link href="/dashboard/matkul" className="inline-block mt-4 text-xs font-bold text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
                   Mulai Evaluasi &rarr;
                 </Link>
               </div>
