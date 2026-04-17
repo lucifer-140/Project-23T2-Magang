@@ -19,12 +19,15 @@ const PAGE_WIDTH = 760;
 
 interface Props {
   pdfUrl: string;
-  rpsId: string;
+  rpsId?: string;
+  /** Override API base, e.g. /api/documents/[docId]. Takes precedence over rpsId. */
+  apiBase?: string;
   readOnly?: boolean;
   reviewerRole?: 'koordinator' | 'kaprodi';
 }
 
-export function PdfAnnotationViewer({ pdfUrl, rpsId, readOnly = false, reviewerRole }: Props) {
+export function PdfAnnotationViewer({ pdfUrl, rpsId, apiBase, readOnly = false, reviewerRole }: Props) {
+  const annotationsBase = apiBase ?? (rpsId ? `/api/rps/${rpsId}` : null);
   const [numPages, setNumPages] = useState(0);
   const [activePage, setActivePage] = useState(1);
   const [annotations, setAnnotations] = useState<RpsAnnotation[]>([]);
@@ -45,13 +48,14 @@ export function PdfAnnotationViewer({ pdfUrl, rpsId, readOnly = false, reviewerR
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch existing annotations on mount / rpsId change
+  // Fetch existing annotations on mount / id change
   useEffect(() => {
-    fetch(`/api/rps/${rpsId}/annotations`)
+    if (!annotationsBase) return;
+    fetch(`${annotationsBase}/annotations`)
       .then(r => r.json())
       .then((data: RpsAnnotation[]) => setAnnotations(Array.isArray(data) ? data : []))
       .catch(() => {});
-  }, [rpsId]);
+  }, [annotationsBase]);
 
   const getPercentCoords = useCallback((e: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -63,9 +67,10 @@ export function PdfAnnotationViewer({ pdfUrl, rpsId, readOnly = false, reviewerR
   }, []);
 
   const saveAnnotation = async (ann: Omit<RpsAnnotation, 'id' | 'rpsId' | 'createdAt'>) => {
+    if (!annotationsBase) return;
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/rps/${rpsId}/annotations`, {
+      const res = await fetch(`${annotationsBase}/annotations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...ann, reviewerRole }),
@@ -80,7 +85,8 @@ export function PdfAnnotationViewer({ pdfUrl, rpsId, readOnly = false, reviewerR
   };
 
   const deleteAnnotation = async (id: string) => {
-    const res = await fetch(`/api/rps/${rpsId}/annotations/${id}`, { method: 'DELETE' });
+    if (!annotationsBase) return;
+    const res = await fetch(`${annotationsBase}/annotations/${id}`, { method: 'DELETE' });
     if (res.ok) {
       setAnnotations(prev => prev.filter(a => a.id !== id));
     }

@@ -40,7 +40,7 @@ export function SignaturePad({
     }
   }, [savedSignature]);
 
-  // Initialize canvas — transparent background (no white fill)
+  // Initialize canvas - transparent background (no white fill)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -97,7 +97,7 @@ export function SignaturePad({
   function emitDrawnSignature() {
     const canvas = canvasRef.current;
     if (!canvas || !hasDrawing) return;
-    // Export as PNG — canvas background is already transparent
+    // Export as PNG - canvas background is already transparent
     const dataUrl = canvas.toDataURL('image/png');
     currentDataUrlRef.current = dataUrl;
     onSignatureChange(dataUrl);
@@ -289,7 +289,7 @@ export function SignaturePad({
         </div>
       )}
 
-      {/* Saved tab — quick-select from profile */}
+      {/* Saved tab - quick-select from profile */}
       {activeTab === 'saved' && savedSignature && (
         <div className="p-3">
           <div className="border border-green-200 rounded-lg overflow-hidden bg-green-50 flex items-center justify-center h-[160px] relative">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 
-// GET /api/users/me/signature — return the calling user's saved signature
+// GET /api/users/me/signature - return the calling user's saved signature
 export async function GET() {
   const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value ?? '';
@@ -16,7 +16,7 @@ export async function GET() {
   return NextResponse.json({ savedSignature: user?.savedSignature ?? null });
 }
 
-// PATCH /api/users/me/signature — save or clear the calling user's signature
+// PATCH /api/users/me/signature - save or clear the calling user's signature
 export async function PATCH(req: NextRequest) {
   const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value ?? '';

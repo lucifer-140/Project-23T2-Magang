@@ -13,7 +13,7 @@ import { SyncIndicator } from '@/components/SyncIndicator';
 import { SignaturePad } from '@/components/SignaturePad';
 import type { SignaturePosition } from '@/components/PdfSignatureOverlay';
 
-// Disable SSR for PDF components — pdfjs-dist requires browser APIs
+// Disable SSR for PDF components - pdfjs-dist requires browser APIs
 const PdfSignatureOverlay = dynamic(
   () => import('@/components/PdfSignatureOverlay').then(m => m.PdfSignatureOverlay),
   { ssr: false, loading: () => <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Memuat viewer PDF…</div> }
@@ -540,7 +540,7 @@ export function KoordinatorRPSClient({ submissions: initialSubmissions, assignme
 
                   {reviewingObj.fileUrl && !isPdf && (
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-                      <p className="font-bold mb-1">File bukan PDF — preview tidak tersedia</p>
+                      <p className="font-bold mb-1">File bukan PDF - preview tidak tersedia</p>
                       <p className="text-xs mb-3">Dokumen diunggah dalam format Word/DOCX dan konversi otomatis gagal. Harap unduh, periksa secara manual, lalu tanda tangani setelah Dosen mengunggah ulang dalam format PDF.</p>
                       <a href={reviewingObj.fileUrl} target="_blank" rel="noreferrer"
                         className="inline-flex items-center px-3 py-1.5 bg-amber-700 text-white text-xs font-bold rounded-lg hover:bg-amber-800 transition-colors">

@@ -7,7 +7,7 @@ import { FileUp, Clock, CheckCircle, AlertCircle, UploadCloud, XCircle, BookOpen
 import type { MatkulRps } from '@/lib/api-types';
 import { SyncIndicator } from '@/components/SyncIndicator';
 
-// Disable SSR — pdfjs-dist requires browser APIs
+// Disable SSR - pdfjs-dist requires browser APIs
 const PdfAnnotationViewer = dynamic(
   () => import('@/components/PdfAnnotationViewer').then(m => m.PdfAnnotationViewer),
   { ssr: false, loading: () => <div className="flex items-center justify-center h-[500px] text-gray-400 text-sm">Memuat anotasi PDF…</div> }
@@ -235,7 +235,7 @@ export function DosenRPSClient({ matkulRpsData: initialData, userId }: Props) {
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Panduan Revisi — {annotViewer.matkulName}</h2>
+                <h2 className="text-lg font-bold text-gray-800">Panduan Revisi - {annotViewer.matkulName}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Anotasi dari reviewer. Lihat setiap halaman untuk catatan yang ditandai pada dokumen Anda.
                 </p>

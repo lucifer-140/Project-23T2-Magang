@@ -4,7 +4,7 @@ import { SWRProvider } from '@/components/SWRProvider';
 import { redirect } from 'next/navigation';
 import {
   LayoutDashboard, FileText, LogOut, User, BookOpen,
-  Users, Settings, Shield, Terminal, Bell, UserCheck
+  Users, Settings, Shield, Terminal, Bell, UserCheck, Library
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -71,20 +71,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Combinable roles (KAPRODI, KOORDINATOR, DOSEN)
   else {
     const combinedNavItems = [
-      { href: '/dashboard/dosen', icon: <LayoutDashboard size={18} />, label: 'Dashboard' }
+      { href: '/dashboard/dosen', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+      { href: '/dashboard/matkul', icon: <Library size={18} />, label: 'Mata Kuliah' },
     ];
 
     if (roles.includes('KAPRODI')) {
-      combinedNavItems.push({ href: '/dashboard/kaprodi/rps', icon: <FileText size={18} />, label: 'Review RPS' });
       combinedNavItems.push({ href: '/dashboard/kaprodi/requests', icon: <Bell size={18} />, label: 'Permintaan Perubahan' });
     }
-
-    if (roles.includes('KOORDINATOR')) {
-      combinedNavItems.push({ href: '/dashboard/koordinator/rps', icon: <FileText size={18} />, label: 'Kelola RPS' });
-    }
-
-    // Base DOSEN item
-    combinedNavItems.push({ href: '/dashboard/dosen/rps', icon: <FileText size={18} />, label: 'RPS Saya' });
 
     let labelStr = 'Dosen';
     if (roles.includes('KAPRODI') && roles.includes('KOORDINATOR')) labelStr = 'Kaprodi & Koordinator';
@@ -113,17 +106,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="min-h-screen bg-uph-grayBg flex">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed inset-y-0 shadow-sm z-20">
-        <div className="p-6 border-b border-gray-100 flex items-center space-x-3">
-          <Image src="/Gambar/Logo UPH.png" alt="Logo UPH" width={40} height={40} className="object-contain" />
-          <div className="flex flex-col">
-            <span className="font-playfair font-bold text-uph-blue leading-tight">Portal</span>
+        <div className="p-5 border-b border-gray-100 flex flex-col items-center gap-2">
+          <Image src="/Gambar/Logo UPH.png" alt="Logo UPH" width={96} height={96} className="object-contain" />
+          <div className="flex flex-col items-center">
+            <span className="font-playfair font-bold text-uph-blue leading-tight text-lg">Portal</span>
             <span className="text-xs text-gray-500 font-semibold tracking-wide uppercase">Akademik</span>
           </div>
-        </div>
-
-        {/* Role Badge */}
-        <div className={`px-4 py-2 ${config.accentColor} text-white`}>
-          <span className="text-[11px] font-bold uppercase tracking-widest opacity-80">Mode: {config.label}</span>
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -159,10 +147,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 p-8">
-        <div className="max-w-5xl mx-auto">
+      <main className="flex-1 ml-64 p-8 flex flex-col min-h-screen">
+        <div className="max-w-5xl mx-auto w-full flex-1">
           <SWRProvider>{children}</SWRProvider>
         </div>
+        <footer className="max-w-5xl mx-auto w-full mt-12 pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-400 text-center">
+            &copy; {new Date().getFullYear()} lucifer-140. All rights reserved.
+          </p>
+        </footer>
       </main>
     </div>
   );

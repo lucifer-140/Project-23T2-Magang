@@ -9,7 +9,7 @@ const GOTENBERG_URL = process.env.GOTENBERG_URL ?? 'http://localhost:3001';
 async function convertDocxToPdf(docxPath: string): Promise<string | null> {
   const pdfPath = docxPath.replace(/\.(docx?)$/i, '.pdf');
 
-  // Strategy 1: Gotenberg (Docker service — most reliable)
+  // Strategy 1: Gotenberg (Docker service - most reliable)
   try {
     const fileBytes = await readFile(docxPath);
     const fileName = path.basename(docxPath);
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
 
   let rps;
   if (rpsId) {
-    // Delete all previous annotations — they reference the old file's coordinates
+    // Delete all previous annotations - they reference the old file's coordinates
     await prisma.rpsAnnotation.deleteMany({ where: { rpsId } });
 
     rps = await prisma.rPS.update({

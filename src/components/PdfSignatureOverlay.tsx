@@ -179,7 +179,7 @@ export function PdfSignatureOverlay({
           />
         </Document>
 
-        {/* Signature drag overlay — only shown when a signature exists */}
+        {/* Signature drag overlay - only shown when a signature exists */}
         {signatureDataUrl && (
           <div
             className="absolute border-2 border-dashed border-uph-blue rounded shadow-md cursor-grab active:cursor-grabbing"

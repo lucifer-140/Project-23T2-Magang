@@ -198,7 +198,7 @@ export function ApprovalsClient({ initialUsers, callerIsMaster }: Props) {
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <div>
                 <h2 className="text-lg font-bold text-gray-800">Setujui Akun</h2>
-                <p className="text-sm text-gray-500">{approvingUser.name} — {approvingUser.email}</p>
+                <p className="text-sm text-gray-500">{approvingUser.name} - {approvingUser.email}</p>
               </div>
               <button onClick={() => setApprovingUser(null)} className="p-1 hover:bg-gray-200 rounded-full">
                 <X size={18} />
