@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here.
 
+## [0.12.0] - 2026-04-17
+
+### Added
+- **Hierarchical Academic Term UX** — Admin no longer inputs semester + tahun akademik per course. New parent-child structure: `TahunAkademik` (year, created standalone) → `Semester` (Ganjil/Genap/Akselerasi, added as needed) → `Matkul`.
+- **New admin routing** — `/dashboard/admin/matkul` (year list) → `/[tahunId]` (semester slots) → `/[tahunId]/[semesterId]` (scoped matkul table). Breadcrumb navigation between levels.
+- **New API routes** — `GET/POST /api/tahun-akademik`, `GET/POST /api/tahun-akademik/[tahunId]/semesters`.
+- **Plan doc** — `docs/plan-phase10-academic-term.md`.
+
+### Changed
+- **Schema** — Replaced `AcademicTerm` (combined year+semester) with `TahunAkademik` + `Semester` models. `Matkul.termId` → `Matkul.semesterId`. `AcademicDocument.termId` → `AcademicDocument.semesterId`. Unique constraints updated accordingly.
+- **`/api/matkul` POST** — Accepts `semesterId` instead of `semester` + `academicYear`.
+- **`/api/matkul/[id]/documents`** — Query param `?semester=` → `?semesterId=`.
+- **`/api/matkul/[id]/documents/upload`** — FormData field `semester` → `semesterId`.
+- **Matkul hub client** — Semester selector now shows real `Semester` records (e.g. "Ganjil 2025/2026") instead of free-text string list.
+- **Seed** — Creates `TahunAkademik` first, then `Semester` rows, then links `Matkul` via `semesterId`.
+
+---
+
 ## [0.11.1] - 2026-04-17
 
 ### Changed

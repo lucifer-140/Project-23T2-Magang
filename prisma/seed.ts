@@ -26,6 +26,9 @@ async function main() {
     await client.query(`DELETE FROM "MatkulClass" WHERE "matkulId" = ANY($1)`, [existingIds]);
     await client.query(`DELETE FROM "Matkul" WHERE id = ANY($1)`, [existingIds]);
   }
+  // Clean seed terms
+  await client.query(`DELETE FROM "Semester" WHERE id IN ('sem-ganjil-2526', 'sem-genap-2526')`);
+  await client.query(`DELETE FROM "TahunAkademik" WHERE id = 'ta-2526'`);
   // Also clean seed RPS/annotations by fixed IDs
   await client.query(`DELETE FROM "RpsAnnotation" WHERE "rpsId" IN ('rps-seed-1','rps-seed-2','rps-seed-3','rps-seed-4','rps-seed-5')`);
   await client.query(`DELETE FROM "RPS" WHERE id IN ('rps-seed-1','rps-seed-2','rps-seed-3','rps-seed-4','rps-seed-5')`);
@@ -50,16 +53,31 @@ async function main() {
   const dosen1Id = users.find((u: any) => u.email === 'dosen@test.com')?.id;
   const dosen2Id = users.find((u: any) => u.email === 'dosen2@test.com')?.id;
 
+  // TahunAkademik + Semester
+  await client.query(`
+    INSERT INTO "TahunAkademik" (id, tahun, "isActive")
+    VALUES ('ta-2526', '2025/2026', true)
+    ON CONFLICT (tahun) DO NOTHING
+  `);
+  await client.query(`
+    INSERT INTO "Semester" (id, "tahunAkademikId", nama, "isActive")
+    VALUES
+      ('sem-ganjil-2526', 'ta-2526', 'Ganjil', true),
+      ('sem-genap-2526', 'ta-2526', 'Genap', false)
+    ON CONFLICT ("tahunAkademikId", nama) DO NOTHING
+  `);
+  console.log('✅ TahunAkademik + Semester seeded');
+
   // Matkul
   await client.query(`
-    INSERT INTO "Matkul" (id, code, name, sks, semester, "academicYear", "createdAt", "updatedAt")
+    INSERT INTO "Matkul" (id, code, name, sks, "semesterId", "createdAt", "updatedAt")
     VALUES
-      ('matkul-cs101', 'CS101', 'Algoritma & Pemrograman', 3, 'Ganjil', '2025/2026', NOW(), NOW()),
-      ('matkul-cs202', 'CS202', 'Struktur Data', 3, 'Ganjil', '2025/2026', NOW(), NOW()),
-      ('matkul-is204', 'IS204', 'Pemrograman Web', 2, 'Genap', '2025/2026', NOW(), NOW()),
-      ('matkul-ma105', 'MA105', 'Matematika Diskrit', 2, 'Genap', '2025/2026', NOW(), NOW()),
-      ('matkul-ai301', 'AI301', 'Kecerdasan Buatan', 3, 'Ganjil', '2025/2026', NOW(), NOW())
-    ON CONFLICT (code, semester, "academicYear") DO NOTHING
+      ('matkul-cs101', 'CS101', 'Algoritma & Pemrograman', 3, 'sem-ganjil-2526', NOW(), NOW()),
+      ('matkul-cs202', 'CS202', 'Struktur Data', 3, 'sem-ganjil-2526', NOW(), NOW()),
+      ('matkul-is204', 'IS204', 'Pemrograman Web', 2, 'sem-genap-2526', NOW(), NOW()),
+      ('matkul-ma105', 'MA105', 'Matematika Diskrit', 2, 'sem-genap-2526', NOW(), NOW()),
+      ('matkul-ai301', 'AI301', 'Kecerdasan Buatan', 3, 'sem-ganjil-2526', NOW(), NOW())
+    ON CONFLICT (code, "semesterId") DO NOTHING
   `);
   console.log('✅ Matkul seeded');
 

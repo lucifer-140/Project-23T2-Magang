@@ -1,26 +1,16 @@
 import { prisma } from '@/lib/db';
-import { MatkulClientPage } from './MatkulClientPage';
+import { TahunAkademikClient } from './TahunAkademikClient';
 
 export default async function MatkulPage() {
-  const [matkuls, dosens, koordinators] = await Promise.all([
-    prisma.matkul.findMany({
-      include: { 
-        dosens: { select: { id: true, name: true, email: true } },
-        koordinators: { select: { id: true, name: true, email: true } }
+  const items = await prisma.tahunAkademik.findMany({
+    orderBy: { tahun: 'desc' },
+    include: {
+      semesters: {
+        orderBy: { nama: 'asc' },
+        include: { _count: { select: { matkuls: true } } },
       },
-      orderBy: { code: 'asc' },
-    }),
-    prisma.user.findMany({
-      where: { roles: { has: 'DOSEN' } },
-      select: { id: true, name: true, email: true },
-      orderBy: { name: 'asc' },
-    }),
-    prisma.user.findMany({
-      where: { roles: { has: 'KOORDINATOR' } },
-      select: { id: true, name: true, email: true },
-      orderBy: { name: 'asc' },
-    }),
-  ]);
+    },
+  });
 
-  return <MatkulClientPage matkuls={matkuls} dosens={dosens} koordinators={koordinators} />;
+  return <TahunAkademikClient items={items} />;
 }

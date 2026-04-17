@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
 const INCLUDE_FULL = {
+  semester: { include: { tahunAkademik: true } },
   dosens: { select: { id: true, name: true, email: true } },
   koordinators: { select: { id: true, name: true, email: true } },
   classes: {
@@ -13,14 +14,13 @@ const INCLUDE_FULL = {
 // POST /api/matkul - Create new Matkul
 export async function POST(req: NextRequest) {
   try {
-    const { code, name, sks, semester, academicYear, classes } = await req.json();
+    const { code, name, sks, semesterId, classes } = await req.json();
     const matkul = await prisma.matkul.create({
       data: {
         code,
         name,
         sks: parseInt(sks),
-        semester: semester ?? null,
-        academicYear: academicYear ?? null,
+        semesterId: semesterId ?? null,
         classes: classes?.length
           ? { create: (classes as string[]).map((n: string) => ({ name: n.trim() })) }
           : undefined,
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(matkul, { status: 201 });
   } catch (e: any) {
     if (e?.code === 'P2002') {
-      return NextResponse.json({ error: 'Kombinasi kode, semester, dan tahun akademik sudah digunakan.' }, { status: 409 });
+      return NextResponse.json({ error: 'Mata kuliah dengan kode ini sudah ada di term yang sama.' }, { status: 409 });
     }
     return NextResponse.json({ error: e.message }, { status: 400 });
   }

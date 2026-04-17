@@ -70,23 +70,42 @@ model User {
   matkulClasses             MatkulClass[]      @relation("ClassDosen")
 }
 
-model Matkul {
-  id              String               @id @default(cuid())
-  code            String
-  name            String
-  sks             Int
-  semester        String?              // "Ganjil" | "Genap" | "Akselerasi"
-  academicYear    String?              // e.g. "2025/2026"
-  dosens          User[]               @relation("DosenMatkul")
-  koordinators    User[]               @relation("KoordinatorMatkul")
-  classes         MatkulClass[]
-  rps             RPS[]
-  academicDocs    AcademicDocument[]
-  changeRequests  MatkulChangeRequest[]
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+model TahunAkademik {
+  id        String     @id @default(cuid())
+  tahun     String     @unique  // "2025/2026"
+  isActive  Boolean    @default(false)
+  semesters Semester[]
+}
 
-  @@unique([code, semester, academicYear])
+model Semester {
+  id              String        @id @default(cuid())
+  tahunAkademikId String
+  tahunAkademik   TahunAkademik @relation(fields: [tahunAkademikId], references: [id], onDelete: Cascade)
+  nama            String        // "Ganjil" | "Genap" | "Akselerasi"
+  isActive        Boolean       @default(false)
+  matkuls         Matkul[]
+  academicDocs    AcademicDocument[]
+
+  @@unique([tahunAkademikId, nama])
+}
+
+model Matkul {
+  id             String               @id @default(cuid())
+  code           String
+  name           String
+  sks            Int
+  semesterId     String?
+  semester       Semester?            @relation(fields: [semesterId], references: [id])
+  dosens         User[]               @relation("DosenMatkul")
+  koordinators   User[]               @relation("KoordinatorMatkul")
+  classes        MatkulClass[]
+  rps            RPS[]
+  academicDocs   AcademicDocument[]
+  changeRequests MatkulChangeRequest[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([code, semesterId])
 }
 
 model MatkulClass {
@@ -154,7 +173,8 @@ model AcademicDocument {
   matkul   Matkul    @relation(fields: [matkulId], references: [id])
   dosenId  String
   dosen    User      @relation("DosenAcademicDocs", fields: [dosenId], references: [id])
-  semester String
+  semesterId String?
+  semester   Semester? @relation(fields: [semesterId], references: [id])
 
   type    DocType
   fileUrl  String?
@@ -187,7 +207,7 @@ model AcademicDocument {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([matkulId, dosenId, semester, type])
+  @@unique([matkulId, dosenId, semesterId, type])
 }
 
 model AcademicDocAnnotation {

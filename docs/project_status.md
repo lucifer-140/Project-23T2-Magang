@@ -1,8 +1,8 @@
 # Project Status Report
 
 **Last Updated:** 2026-04-17  
-**Current Version:** 0.11.1  
-**Status:** Active Development - Matkul-Centric Document Hub
+**Current Version:** 0.12.0  
+**Status:** Active Development - Hierarchical Academic Term UX
 
 ---
 
