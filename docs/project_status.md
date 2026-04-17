@@ -1,8 +1,8 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-16  
-**Current Version:** 0.10.1  
-**Status:** Stable - Admin UX Fixes & Rename
+**Last Updated:** 2026-04-17  
+**Current Version:** 0.11.1  
+**Status:** Active Development - Matkul-Centric Document Hub
 
 ---
 
@@ -41,6 +41,29 @@
 - [x] Deep cleanup on dosen removal: `prisma.$transaction` deletes RPS records before disconnect
 - [x] Confirmation modal for dosen removal with explicit RPS data loss warning (replaces `window.confirm`)
 - [x] Matkul table action column layout consolidated
+
+### Phase 9b: Matkul Composite Unique + Seed Fix (v0.11.1)
+- [x] `Matkul.code` unique constraint changed to composite `@@unique([code, semester, academicYear])`
+- [x] Migration: `20260416091313_change_matkul_unique_to_composite`
+- [x] API P2002 error message updated to reflect composite constraint
+- [x] Seed data updated with `semester`/`academicYear` values; cleanup logic robustified
+
+### Phase 9: Matkul-Centric Document Hub (v0.11.0)
+- [x] `DocType` + `DocStatus` Prisma enums (8 document types)
+- [x] `AcademicDocument` model — generic two-level approval with sig/annotation fields, unique on `(matkulId, dosenId, semester, type)`
+- [x] `AcademicDocAnnotation` model — cascade-deleted on re-upload
+- [x] Migration: `20260416_add_academic_document`
+- [x] `GET /api/matkul/mine` — returns user's matkuls with role annotations
+- [x] `POST /api/matkul/[id]/documents/upload` — create/update doc, reset on re-upload, locked when APPROVED
+- [x] `GET /api/matkul/[id]/documents` — dosen scope (own docs) + reviewer scope (all dosens, grouped by type)
+- [x] `PATCH /api/documents/[docId]/review` — koordinator/kaprodi approve/reject with two-level enforcement
+- [x] `GET/POST /api/documents/[docId]/annotations`, `DELETE /[annotId]`, `POST /flatten`
+- [x] `POST /api/documents/[docId]/sign`
+- [x] `/dashboard/matkul` list page — card grid with role badges + semester selector
+- [x] `/dashboard/matkul/[matkulId]` detail hub — 8 accordion sections; Dosen + Reviewer views; dual-role tabs
+- [x] `PdfAnnotationViewer` — `apiBase` prop added for generic doc routes; `rpsId` now optional
+- [x] Sidebar updated — "Mata Kuliah" added; old RPS nav items removed
+- [x] `prisma/migrate-rps.ts` backfill script for existing RPS data
 
 ### Phase 8: Inline PDF Annotation (v0.10.0)
 - [x] `RpsAnnotation` Prisma model with % coordinate system
@@ -211,11 +234,78 @@ MAIL_SENDER=noreply.uph@gmail.com
 - [ ] Bulk operations (multiple file reviews)
 - [ ] Advanced filtering/search on RPS queues
 
-### Out of Scope (Roadmap)
-- Verifikasi SOAL (UTS/UAS)
-- Verifikasi LPP
-- Verifikasi EPP
+### In Scope (Planned)
+
+#### Phase 9: Matkul-Centric Academic Document Hub (Planned)
+Full replacement of the siloed RPS-only flow with a unified per-Matkul document hub. All document types are **independent** — no sequential locking between sections.
+
+**Document sections per Matkul (all independent):**
+- RPS (existing, to be migrated)
+- Soal UTS
+- Soal UAS
+- LPP (Laporan Pelaksanaan Pembelajaran)
+- Tindak Lanjut LPP
+- EPP (Evaluasi Pencapaian Program)
+- Tindak Lanjut EPP
 - Berita Acara Perwalian
+
+**UI Flow — single shared route for all roles:**
+- Sidebar: "Mata Kuliah" replaces all separate RPS menu entries
+- Route: `/dashboard/matkul` (list) → `/dashboard/matkul/[matkulId]` (detail hub)
+- Matkul list shows all Matkuls relevant to the user (as Dosen, Koordinator, or Kaprodi — or any combination)
+- Detail hub is **role-aware, rendered server-side** based on user's relationship to that Matkul
+
+**Detail Hub — Dosen view** (user is Dosen for this Matkul):
+- 8 sections, each shows the user's own document status + upload/revision panel
+- `APPROVED` section locks re-upload; all others independently uploadable
+
+**Detail Hub — Koordinator / Kaprodi view** (user is reviewer for this Matkul):
+- Same 8 sections, but each section lists **all assigned Dosens** and their submission status
+- Koordinator/Kaprodi can click into any individual submission to open the annotation + approve/reject modal
+- Note: Koordinator and Kaprodi are often also Dosens — if user holds both roles for a Matkul, both views are shown (e.g. two tabs: "Dokumen Saya" | "Review Dosen")
+
+**Reviewer section layout (per section):**
+```
+┌─ Soal UTS ──────────────────────────────────────┐
+│  Budi Santoso     APPROVED ✓                    │
+│  Ani Rahayu       PENGECEKAN   [Review →]       │
+│  Citra Dewi       UNSUBMITTED  —                │
+└─────────────────────────────────────────────────┘
+```
+
+**Planned schema:**
+```prisma
+enum DocType {
+  RPS, SOAL_UTS, SOAL_UAS, LPP,
+  LPP_TINDAK_LANJUT, EPP, EPP_TINDAK_LANJUT, BERITA_ACARA
+}
+
+model AcademicDocument {
+  // Same two-level approval fields as current RPS model
+  // @@unique([matkulId, dosenId, semester, type])
+}
+```
+
+**Planned API surface:**
+- `GET /api/matkul/[id]/documents?semester=...` — server infers scope from caller's role + assignment (own docs if Dosen, all Dosens' docs if Koordinator/Kaprodi)
+- `POST /api/matkul/[id]/documents/upload` — body: `{ type, semester, file }`
+- `PATCH /api/documents/[docId]/review`
+- `GET|POST /api/documents/[docId]/annotations`
+- `POST /api/documents/[docId]/annotations/flatten`
+
+**Migration path:** Backfill existing `RPS` records → `AcademicDocument(type=RPS)`, then deprecate standalone `/rps` routes.
+
+**Implementation phases:**
+1. Schema + `npx prisma migrate dev`
+2. New API routes (upload, review, annotations)
+3. `/dashboard/matkul` list page (shared, role-aware)
+4. `/dashboard/matkul/[matkulId]` detail hub — Dosen view
+5. Detail hub — Koordinator/Kaprodi reviewer view (per-section Dosen list)
+6. Dual-role tab support (Dosen + Reviewer in same detail page)
+7. Backfill RPS → AcademicDocument
+8. Redirect/remove old `/rps` routes
+
+### Out of Scope (Roadmap)
 
 ---
 

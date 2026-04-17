@@ -9,6 +9,28 @@ async function main() {
   await client.connect();
   console.log('🌱 Seeding via raw SQL...');
 
+  // Clear existing seed data — delete by code to catch any ID variations
+  const seedCodes = ['CS101', 'CS202', 'IS204', 'MA105', 'AI301'];
+  const { rows: existingMatkuls } = await client.query(
+    `SELECT id FROM "Matkul" WHERE code = ANY($1)`, [seedCodes]
+  );
+  const existingIds = existingMatkuls.map((r: any) => r.id);
+  if (existingIds.length > 0) {
+    await client.query(`DELETE FROM "RpsAnnotation" WHERE "rpsId" IN (SELECT id FROM "RPS" WHERE "matkulId" = ANY($1))`, [existingIds]);
+    await client.query(`DELETE FROM "RPS" WHERE "matkulId" = ANY($1)`, [existingIds]);
+    await client.query(`DELETE FROM "AcademicDocAnnotation" WHERE "docId" IN (SELECT id FROM "AcademicDocument" WHERE "matkulId" = ANY($1))`, [existingIds]);
+    await client.query(`DELETE FROM "AcademicDocument" WHERE "matkulId" = ANY($1)`, [existingIds]);
+    await client.query(`DELETE FROM "MatkulChangeRequest" WHERE "matkulId" = ANY($1)`, [existingIds]);
+    await client.query(`DELETE FROM "_DosenMatkul" WHERE "A" = ANY($1)`, [existingIds]);
+    await client.query(`DELETE FROM "_KoordinatorMatkul" WHERE "A" = ANY($1)`, [existingIds]);
+    await client.query(`DELETE FROM "MatkulClass" WHERE "matkulId" = ANY($1)`, [existingIds]);
+    await client.query(`DELETE FROM "Matkul" WHERE id = ANY($1)`, [existingIds]);
+  }
+  // Also clean seed RPS/annotations by fixed IDs
+  await client.query(`DELETE FROM "RpsAnnotation" WHERE "rpsId" IN ('rps-seed-1','rps-seed-2','rps-seed-3','rps-seed-4','rps-seed-5')`);
+  await client.query(`DELETE FROM "RPS" WHERE id IN ('rps-seed-1','rps-seed-2','rps-seed-3','rps-seed-4','rps-seed-5')`);
+  console.log('🗑️  Old seed data cleared');
+
   // Users
   await client.query(`
     INSERT INTO "User" (id, email, password, roles, name, status)
@@ -30,14 +52,14 @@ async function main() {
 
   // Matkul
   await client.query(`
-    INSERT INTO "Matkul" (id, code, name, sks, "createdAt", "updatedAt")
+    INSERT INTO "Matkul" (id, code, name, sks, semester, "academicYear", "createdAt", "updatedAt")
     VALUES
-      ('matkul-cs101', 'CS101', 'Algoritma & Pemrograman', 3, NOW(), NOW()),
-      ('matkul-cs202', 'CS202', 'Struktur Data', 3, NOW(), NOW()),
-      ('matkul-is204', 'IS204', 'Pemrograman Web', 2, NOW(), NOW()),
-      ('matkul-ma105', 'MA105', 'Matematika Diskrit', 2, NOW(), NOW()),
-      ('matkul-ai301', 'AI301', 'Kecerdasan Buatan', 3, NOW(), NOW())
-    ON CONFLICT (code) DO NOTHING
+      ('matkul-cs101', 'CS101', 'Algoritma & Pemrograman', 3, 'Ganjil', '2025/2026', NOW(), NOW()),
+      ('matkul-cs202', 'CS202', 'Struktur Data', 3, 'Ganjil', '2025/2026', NOW(), NOW()),
+      ('matkul-is204', 'IS204', 'Pemrograman Web', 2, 'Genap', '2025/2026', NOW(), NOW()),
+      ('matkul-ma105', 'MA105', 'Matematika Diskrit', 2, 'Genap', '2025/2026', NOW(), NOW()),
+      ('matkul-ai301', 'AI301', 'Kecerdasan Buatan', 3, 'Ganjil', '2025/2026', NOW(), NOW())
+    ON CONFLICT (code, semester, "academicYear") DO NOTHING
   `);
   console.log('✅ Matkul seeded');
 

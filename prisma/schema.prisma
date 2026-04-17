@@ -34,6 +34,25 @@ enum ChangeRequestStatus {
   REJECTED
 }
 
+enum DocType {
+  RPS
+  SOAL_UTS
+  SOAL_UAS
+  LPP
+  LPP_TINDAK_LANJUT
+  EPP
+  EPP_TINDAK_LANJUT
+  BERITA_ACARA
+}
+
+enum DocStatus {
+  UNSUBMITTED
+  SUBMITTED
+  PENGECEKAN
+  REVISION
+  APPROVED
+}
+
 model User {
   id                  String     @id @default(cuid())
   email               String     @unique
@@ -42,24 +61,44 @@ model User {
   name                String
   status              UserStatus @default(PENDING)
   savedSignature      String?    // base64 PNG data URL of saved signature
-  rps                    RPS[]    @relation("DosenRPS")
-  koordinatorReviews     RPS[]    @relation("KoordinatorReview")
-  dosenMatkuls           Matkul[] @relation("DosenMatkul")
-  koordinatorMatkuls     Matkul[] @relation("KoordinatorMatkul")
+  rps                       RPS[]              @relation("DosenRPS")
+  koordinatorReviews        RPS[]              @relation("KoordinatorReview")
+  dosenMatkuls              Matkul[]           @relation("DosenMatkul")
+  koordinatorMatkuls        Matkul[]           @relation("KoordinatorMatkul")
+  academicDocs              AcademicDocument[] @relation("DosenAcademicDocs")
+  koordinatorDocReviews     AcademicDocument[] @relation("KoordinatorAcademicReview")
+  matkulClasses             MatkulClass[]      @relation("ClassDosen")
 }
 
 model Matkul {
   id              String               @id @default(cuid())
-  code            String               @unique
+  code            String
   name            String
   sks             Int
+  semester        String?              // "Ganjil" | "Genap" | "Akselerasi"
+  academicYear    String?              // e.g. "2025/2026"
   dosens          User[]               @relation("DosenMatkul")
   koordinators    User[]               @relation("KoordinatorMatkul")
+  classes         MatkulClass[]
   rps             RPS[]
+  academicDocs    AcademicDocument[]
   changeRequests  MatkulChangeRequest[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
+
+  @@unique([code, semester, academicYear])
 }
+
+model MatkulClass {
+  id       String  @id @default(cuid())
+  matkulId String
+  matkul   Matkul  @relation(fields: [matkulId], references: [id], onDelete: Cascade)
+  name     String  // e.g. "23TI1", "23TI2"
+  dosens   User[]  @relation("ClassDosen")
+
+  @@unique([matkulId, name])
+}
+
 
 model MatkulChangeRequest {
   id            String              @id @default(cuid())
@@ -107,6 +146,65 @@ model RPS {
   dosenId                 String
   dosen                   User      @relation("DosenRPS", fields: [dosenId], references: [id])
   annotations             RpsAnnotation[]
+}
+
+model AcademicDocument {
+  id       String    @id @default(cuid())
+  matkulId String
+  matkul   Matkul    @relation(fields: [matkulId], references: [id])
+  dosenId  String
+  dosen    User      @relation("DosenAcademicDocs", fields: [dosenId], references: [id])
+  semester String
+
+  type    DocType
+  fileUrl  String?
+  fileName String?
+  annotatedPdfUrl String?
+
+  status                DocStatus @default(UNSUBMITTED)
+  isKoordinatorApproved Boolean   @default(false)
+  koordinatorId         String?
+  koordinator           User?     @relation("KoordinatorAcademicReview", fields: [koordinatorId], references: [id])
+  koordinatorNotes      String?
+  kaprodiNotes          String?
+
+  koordinatorSigUrl       String?
+  koordinatorSigPage      Int?
+  koordinatorSigX         Float?
+  koordinatorSigY         Float?
+  koordinatorSigWidth     Float?
+  koordinatorSignedPdfUrl String?
+
+  kaprodiSigUrl   String?
+  kaprodiSigPage  Int?
+  kaprodiSigX     Float?
+  kaprodiSigY     Float?
+  kaprodiSigWidth Float?
+  finalPdfUrl     String?
+
+  annotations AcademicDocAnnotation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([matkulId, dosenId, semester, type])
+}
+
+model AcademicDocAnnotation {
+  id           String           @id @default(cuid())
+  docId        String
+  doc          AcademicDocument @relation(fields: [docId], references: [id], onDelete: Cascade)
+  type         String
+  page         Int
+  x            Float
+  y            Float
+  width        Float?
+  height       Float?
+  color        String   @default("#FFD700")
+  content      String?
+  pathData     String?
+  reviewerRole String
+  createdAt    DateTime @default(now())
 }
 
 model RpsAnnotation {
