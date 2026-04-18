@@ -20,6 +20,7 @@ export async function GET() {
     dosens: { select: { id: true, name: true } },
     koordinators: { select: { id: true, name: true } },
     semester: { include: { tahunAkademik: { select: { tahun: true } } } },
+    classes: { select: { id: true, name: true } },
   };
 
   const [dosenMatkuls, koordinatorMatkuls] = await Promise.all([

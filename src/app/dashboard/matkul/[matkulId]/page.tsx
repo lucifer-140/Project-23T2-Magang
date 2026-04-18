@@ -25,6 +25,10 @@ export default async function MatkulHubPage({ params, searchParams }: Props) {
     include: {
       dosens: { select: { id: true, name: true, email: true } },
       koordinators: { select: { id: true, name: true } },
+      classes: {
+        include: { dosens: { select: { id: true, name: true } } },
+        orderBy: { name: 'asc' },
+      },
     },
   });
 
@@ -73,6 +77,8 @@ export default async function MatkulHubPage({ params, searchParams }: Props) {
     <MatkulHubClient
       matkul={{ id: matkul.id, code: matkul.code, name: matkul.name, sks: matkul.sks }}
       dosens={matkul.dosens}
+      koordinators={matkul.koordinators}
+      classes={matkul.classes.map(c => ({ id: c.id, name: c.name, dosens: c.dosens }))}
       initialDocs={serializedDocs}
       userRoles={userRoles}
       userId={userId}

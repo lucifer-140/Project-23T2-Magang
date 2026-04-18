@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import useSWR from 'swr';
 import {
   ChevronDown, ChevronUp, Upload, Eye, Download,
-  CheckCircle, Clock, AlertCircle, XCircle, RefreshCw,
+  CheckCircle, Clock, AlertCircle, XCircle,
   ArrowLeft, X, Loader2, PenLine, Stamp, Lock,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -74,9 +74,17 @@ interface ApiResponse {
   sections: SectionData[];
 }
 
+interface MatkulClass {
+  id: string;
+  name: string;
+  dosens: { id: string; name: string }[];
+}
+
 interface Props {
   matkul: { id: string; code: string; name: string; sks: number };
   dosens: { id: string; name: string; email: string }[];
+  koordinators: { id: string; name: string }[];
+  classes: MatkulClass[];
   initialDocs: Doc[];
   userRoles: string[];
   userId: string;
@@ -101,7 +109,7 @@ function StatusBadge({ status, isKoordinatorApproved }: { status: string; isKoor
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 // ---------- main component ----------
-export default function MatkulHubClient({ matkul, dosens, initialDocs, userRoles, userId, initialSemesterId, semesters }: Props) {
+export default function MatkulHubClient({ matkul, dosens, koordinators, classes, initialDocs, userRoles, userId, initialSemesterId, semesters }: Props) {
   const router = useRouter();
   const [semesterId, setSemesterId] = useState(initialSemesterId);
 
@@ -156,11 +164,6 @@ export default function MatkulHubClient({ matkul, dosens, initialDocs, userRoles
       .then((d: { savedSignature: string | null }) => setSavedSignature(d.savedSignature ?? null))
       .catch(() => {});
   }, []);
-
-  const changeSemester = (id: string) => {
-    setSemesterId(id);
-    router.replace(`/dashboard/matkul/${matkul.id}?semesterId=${encodeURIComponent(id)}`);
-  };
 
   const toggleSection = (key: string) => {
     setOpenSections(prev => {
@@ -695,39 +698,74 @@ export default function MatkulHubClient({ matkul, dosens, initialDocs, userRoles
     <>
       <div>
         {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-uph-blue mb-3 transition-colors"
-            >
-              <ArrowLeft size={14} /> Kembali
-            </button>
-            <h1 className="font-playfair text-2xl font-bold text-uph-blue">{matkul.name}</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{matkul.code} · {matkul.sks} SKS</p>
+        <div className="mb-6">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-uph-blue mb-3 transition-colors"
+          >
+            <ArrowLeft size={14} /> Kembali
+          </button>
+          <h1 className="font-playfair text-2xl font-bold text-uph-blue">{matkul.name}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{matkul.code} · {matkul.sks} SKS</p>
+        </div>
+
+        {/* Info cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          {/* Koordinator */}
+          <div className="bg-white border border-uph-border rounded-xl px-4 py-3">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Koordinator</p>
+            {koordinators.length === 0
+              ? <p className="text-sm text-gray-400 italic">Belum ditetapkan</p>
+              : koordinators.map(k => (
+                <p key={k.id} className="text-sm font-semibold text-gray-800">{k.name}</p>
+              ))
+            }
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => mutate()}
-              className="p-2 rounded-lg border border-uph-border hover:bg-gray-50 transition-colors text-gray-500"
-              title="Refresh"
-            >
-              <RefreshCw size={15} />
-            </button>
-            <select
-              value={semesterId ?? ''}
-              onChange={e => changeSemester(e.target.value)}
-              className="border border-uph-border rounded-lg px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-uph-blue/30"
-            >
-              {semesters.length === 0 && <option value="">Belum ada semester</option>}
-              {semesters.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.nama} {s.tahunAkademik.tahun}
-                </option>
-              ))}
-            </select>
+
+          {/* Dosen Pengampu */}
+          <div className="bg-white border border-uph-border rounded-xl px-4 py-3">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Dosen Pengampu</p>
+            {dosens.length === 0
+              ? <p className="text-sm text-gray-400 italic">Belum ada dosen</p>
+              : <p className="text-sm font-semibold text-gray-800">{dosens.length} Dosen</p>
+            }
+          </div>
+
+          {/* Kelas */}
+          <div className="bg-white border border-uph-border rounded-xl px-4 py-3">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Kelas</p>
+            {classes.length === 0
+              ? <p className="text-sm text-gray-400 italic">Belum ada kelas</p>
+              : <div className="flex flex-wrap gap-1.5">
+                  {classes.map(c => (
+                    <span key={c.id} className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-uph-blue border border-blue-100">
+                      {c.name}
+                    </span>
+                  ))}
+                </div>
+            }
           </div>
         </div>
+
+        {/* Kelas detail (only show if classes exist) */}
+        {classes.length > 0 && (
+          <div className="bg-white border border-uph-border rounded-xl px-4 py-3 mb-6">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Detail Kelas</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {classes.map(c => (
+                <div key={c.id} className="border border-gray-100 rounded-lg px-3 py-2 bg-gray-50">
+                  <p className="text-sm font-bold text-uph-blue mb-1">{c.name}</p>
+                  {c.dosens.length === 0
+                    ? <p className="text-xs text-gray-400 italic">Belum ada dosen</p>
+                    : c.dosens.map(d => (
+                        <p key={d.id} className="text-xs text-gray-600">{d.name}</p>
+                      ))
+                  }
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tabs (dual-role only) */}
         {showTabs && (

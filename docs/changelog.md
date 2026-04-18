@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## [0.12.1] - 2026-04-18
+
+### Changed
+- **Matkul list filter bar** — replaced single semester dropdown with three-part filter: text search (nama, kode, kelas, dosen, koordinator), tahun akademik dropdown, and Ganjil/Genap/Akselerasi toggle buttons. "Hapus Filter" button appears when any filter is active.
+- **MatkulHubClient** — minor layout and UX adjustments on the per-matkul hub page.
+- **`/api/matkul/mine`** — minor query fix.
+
+---
+
 ## [0.12.0] - 2026-04-17
 
 ### Added

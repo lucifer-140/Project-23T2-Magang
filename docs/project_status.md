@@ -1,8 +1,8 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-17  
-**Current Version:** 0.12.0  
-**Status:** Active Development - Phase 11 Complete
+**Last Updated:** 2026-04-18  
+**Current Version:** 0.12.1  
+**Status:** Active Development - Phase 12 Complete
 
 ---
 
@@ -51,6 +51,15 @@
 - [x] Admin Matkul page restructured: `/dashboard/admin/matkul` (year/semester list) → `/[semesterId]` (scoped matkul table)
 - [x] Seed data: Ganjil + Genap 2025/2026 terms pre-created with matkul assignments
 - [x] Semester selector on Matkul hub pages loads from database
+
+### Phase 12: Matkul List Filter Bar (v0.12.1)
+- [x] Replaced semester dropdown with multi-part filter bar on `/dashboard/matkul`
+- [x] Text search across nama, kode, kelas, dosen, koordinator fields
+- [x] Tahun akademik dropdown (derived from loaded matkul data)
+- [x] Semester type toggle buttons (Ganjil / Genap / Akselerasi)
+- [x] "Hapus Filter" clear button appears when any filter is active
+- [x] Minor UX adjustments on MatkulHubClient per-matkul page
+- [x] Minor fix to `/api/matkul/mine` query
 
 ### Phase 11: Role Dashboard Alignment (v0.12.0)
 - [x] Dosen dashboard: updated to query `AcademicDocument` instead of `RPS`
