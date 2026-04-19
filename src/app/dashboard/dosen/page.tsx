@@ -53,11 +53,12 @@ export default async function DosenDashboard() {
   // KAPRODI FETCH
   let kaprodiStats = { rpsNeedsReview: 0, totalRps: 0, pendingRequests: 0 };
   if (roles.includes('KAPRODI')) {
-    [kaprodiStats.rpsNeedsReview, kaprodiStats.totalRps, kaprodiStats.pendingRequests] = await Promise.all([
+    const [rpsNeedsReview, totalRps, pendingRequests] = await Promise.all([
       prisma.academicDocument.count({ where: { status: 'SUBMITTED' } }),
       prisma.academicDocument.count(),
       prisma.matkulChangeRequest.count({ where: { status: 'PENDING' } }),
     ]);
+    kaprodiStats = { rpsNeedsReview, totalRps, pendingRequests };
   }
 
   return (

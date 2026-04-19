@@ -35,8 +35,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       redirect('/dashboard/master');
     } else if (user.roles.includes('ADMIN')) {
       redirect('/dashboard/admin');
+    } else if (user.roles.includes('PRODI') && !user.roles.includes('KAPRODI') && !user.roles.includes('KOORDINATOR')) {
+      redirect('/dashboard/prodi');
     } else {
-      // KAPRODI, KOORDINATOR, and DOSEN share the same page
+      // KAPRODI, KOORDINATOR, DOSEN (and PRODI with other roles) share the same base page
       redirect('/dashboard/dosen');
     }
   }
@@ -149,7 +151,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </div>
 
           <p className="text-center mt-5 text-xs text-gray-400">
-            © 2026 <span className="text-uph-blue font-semibold">Universitas Pelita Harapan</span>. All rights reserved.
+            © 2026 <span className="text-uph-blue font-semibold">lucifer-140</span>. All rights reserved.
           </p>
         </div>
       </main>

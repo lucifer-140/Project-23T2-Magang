@@ -21,7 +21,7 @@ export async function POST(
   if (!reviewer || !sigData || sigX == null || sigY == null || !sigPage || !sigWidth) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
-  if (reviewer !== 'koordinator' && reviewer !== 'kaprodi') {
+  if (reviewer !== 'koordinator' && reviewer !== 'kaprodi' && reviewer !== 'prodi') {
     return NextResponse.json({ error: 'Invalid reviewer' }, { status: 400 });
   }
 
@@ -32,6 +32,7 @@ export async function POST(
   if (reviewer === 'koordinator') {
     sourcePdfUrl = doc.fileUrl;
   } else {
+    // kaprodi and prodi both sign the koordinator-signed PDF
     sourcePdfUrl = doc.koordinatorSignedPdfUrl ?? doc.fileUrl;
   }
   if (!sourcePdfUrl) return NextResponse.json({ error: 'No source PDF found' }, { status: 400 });
@@ -88,6 +89,14 @@ export async function POST(
       koordinatorSigPage: sigPage,
       koordinatorSigWidth: sigWidth,
       koordinatorSignedPdfUrl: outFileUrl,
+    };
+  } else if (reviewer === 'prodi') {
+    updateData = {
+      status: 'APPROVED',
+      isProdiApproved: true,
+      prodiId: userId ?? null,
+      prodiNotes: null,
+      finalPdfUrl: outFileUrl,
     };
   } else {
     updateData = {

@@ -36,13 +36,15 @@ export default async function MatkulHubPage({ params, searchParams }: Props) {
 
   const isKaprodi = roles.includes('KAPRODI');
   const isKoordinator = roles.includes('KOORDINATOR') && matkul.koordinators.some(k => k.id === userId);
+  const isProdi = roles.includes('PRODI');
   const isDosen = matkul.dosens.some(d => d.id === userId);
 
-  if (!isKaprodi && !isKoordinator && !isDosen) redirect('/dashboard/matkul');
+  if (!isKaprodi && !isKoordinator && !isProdi && !isDosen) redirect('/dashboard/matkul');
 
   const userRoles = [
     ...(isKaprodi ? ['kaprodi'] : []),
     ...(isKoordinator ? ['koordinator'] : []),
+    ...(isProdi ? ['prodi'] : []),
     ...(isDosen ? ['dosen'] : []),
   ];
 
@@ -56,12 +58,14 @@ export default async function MatkulHubPage({ params, searchParams }: Props) {
     ? semesters.find(s => s.id === semesterId) ?? semesters.find(s => s.isActive) ?? semesters[0]
     : semesters.find(s => s.isActive) ?? semesters[0];
 
+  const isWideReviewer = isKaprodi || isKoordinator || isProdi;
+
   // Fetch initial documents
   const docs = activeSemester ? await prisma.academicDocument.findMany({
     where: {
       matkulId,
       semesterId: activeSemester.id,
-      ...(isKaprodi || isKoordinator ? {} : { dosenId: userId }),
+      ...(isWideReviewer ? {} : { dosenId: userId }),
     },
     include: { dosen: { select: { id: true, name: true } } },
     orderBy: { updatedAt: 'desc' },

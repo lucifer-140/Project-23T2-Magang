@@ -56,6 +56,11 @@ const ROLE_CONFIG: Record<string, { label: string; badgeCls: string; Icon: React
     badgeCls: 'bg-purple-50 text-purple-700 border border-purple-200',
     Icon: GraduationCap,
   },
+  prodi: {
+    label: 'PRODI',
+    badgeCls: 'bg-teal-50 text-teal-700 border border-teal-200',
+    Icon: ClipboardCheck,
+  },
 };
 
 const SEMESTER_TYPES = ['Ganjil', 'Genap', 'Akselerasi'] as const;

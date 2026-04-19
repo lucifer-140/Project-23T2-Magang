@@ -25,19 +25,18 @@ const PdfAnnotationViewer = dynamic(
 
 // ---------- constants ----------
 const DOC_TYPES = [
-  'RPS', 'SOAL_UTS', 'SOAL_UAS', 'LPP',
-  'LPP_TINDAK_LANJUT', 'EPP', 'EPP_TINDAK_LANJUT', 'BERITA_ACARA',
+  'RPS', 'SOAL_UTS', 'SOAL_UAS', 'LPP', 'EPP', 'BERITA_ACARA',
 ] as const;
 type DocType = typeof DOC_TYPES[number];
+
+const PRODI_DOC_TYPES: DocType[] = ['LPP', 'EPP'];
 
 const DOC_LABEL: Record<DocType, string> = {
   RPS: 'RPS',
   SOAL_UTS: 'Soal UTS',
   SOAL_UAS: 'Soal UAS',
   LPP: 'Laporan Pelaksanaan Pembelajaran',
-  LPP_TINDAK_LANJUT: 'Tindak Lanjut LPP',
   EPP: 'Evaluasi Pencapaian Program',
-  EPP_TINDAK_LANJUT: 'Tindak Lanjut EPP',
   BERITA_ACARA: 'Berita Acara Perwalian',
 };
 
@@ -51,11 +50,13 @@ interface Doc {
   type: DocType;
   status: string;
   isKoordinatorApproved: boolean;
+  isProdiApproved?: boolean;
   fileUrl: string | null;
   fileName: string | null;
   annotatedPdfUrl: string | null;
   koordinatorNotes: string | null;
   kaprodiNotes: string | null;
+  prodiNotes?: string | null;
   koordinatorId: string | null;
   koordinatorSignedPdfUrl: string | null;
   finalPdfUrl: string | null;
@@ -95,12 +96,13 @@ interface Props {
 // ---------- helpers ----------
 const canUpload = (status: string) => status === 'UNSUBMITTED' || status === 'REVISION';
 
-function StatusBadge({ status, isKoordinatorApproved }: { status: string; isKoordinatorApproved?: boolean }) {
+function StatusBadge({ status, isKoordinatorApproved, isProdiDoc }: { status: string; isKoordinatorApproved?: boolean; isProdiDoc?: boolean }) {
+  const stage2Label = isProdiDoc ? 'PRODI' : 'Kaprodi';
   if (status === 'APPROVED') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700"><CheckCircle size={12} /> Disetujui</span>;
   if (status === 'REVISION') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700"><AlertCircle size={12} /> Revisi</span>;
-  if (status === 'PENGECEKAN') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><Clock size={12} /> Menunggu Kaprodi</span>;
+  if (status === 'PENGECEKAN') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><Clock size={12} /> Menunggu {stage2Label}</span>;
   if (status === 'SUBMITTED') {
-    if (isKoordinatorApproved) return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><Clock size={12} /> Menunggu Kaprodi</span>;
+    if (isKoordinatorApproved) return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><Clock size={12} /> Menunggu {stage2Label}</span>;
     return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700"><Clock size={12} /> Menunggu Koordinator</span>;
   }
   return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500"><XCircle size={12} /> Belum Upload</span>;
@@ -135,7 +137,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
     return flat;
   })();
 
-  const isReviewer = userRoles.includes('kaprodi') || userRoles.includes('koordinator');
+  const isReviewer = userRoles.includes('kaprodi') || userRoles.includes('koordinator') || userRoles.includes('prodi');
   const isDosen = userRoles.includes('dosen');
   const showTabs = isReviewer && isDosen;
   const [activeTab, setActiveTab] = useState<'dosen' | 'reviewer'>(() =>
@@ -149,7 +151,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
   const [pendingUploadType, setPendingUploadType] = useState<DocType | null>(null);
 
   // Review modal state
-  const [reviewModal, setReviewModal] = useState<{ doc: Doc; role: 'koordinator' | 'kaprodi' } | null>(null);
+  const [reviewModal, setReviewModal] = useState<{ doc: Doc; role: 'koordinator' | 'kaprodi' | 'prodi' } | null>(null);
   const [signStep, setSignStep] = useState<'review' | 'sign'>('review');
   const [rejectNotes, setRejectNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -203,7 +205,12 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
 
   // ---------- review ----------
   const openReview = (doc: Doc) => {
-    const role = userRoles.includes('kaprodi') ? 'kaprodi' : 'koordinator';
+    const isProdiDoc = PRODI_DOC_TYPES.includes(doc.type);
+    const role = (userRoles.includes('prodi') && isProdiDoc)
+      ? 'prodi'
+      : userRoles.includes('kaprodi')
+        ? 'kaprodi'
+        : 'koordinator';
     setReviewModal({ doc, role });
     setSignStep('review');
     setRejectNotes('');
@@ -267,8 +274,17 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
   // ---------- reviewer eligibility ----------
   const reviewerCanReview = (doc: Doc): boolean => {
     if (!doc.id) return false;
-    if (userRoles.includes('kaprodi')) return doc.isKoordinatorApproved && doc.status !== 'APPROVED';
-    if (userRoles.includes('koordinator')) return doc.status === 'SUBMITTED' || doc.status === 'PENGECEKAN';
+    const isProdiDoc = PRODI_DOC_TYPES.includes(doc.type);
+    if (userRoles.includes('prodi') && isProdiDoc) {
+      return doc.isKoordinatorApproved && doc.status === 'PENGECEKAN';
+    }
+    if (userRoles.includes('kaprodi') && !isProdiDoc) {
+      return doc.isKoordinatorApproved && doc.status === 'PENGECEKAN';
+    }
+    if (userRoles.includes('koordinator')) {
+      if (isProdiDoc && doc.isKoordinatorApproved) return false;
+      return doc.status === 'SUBMITTED' || doc.status === 'PENGECEKAN';
+    }
     return false;
   };
 
@@ -281,6 +297,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
         const isUploading = uploading === type;
         const status = doc?.status ?? 'UNSUBMITTED';
         const uploadAllowed = canUpload(status);
+        const isProdiDoc = PRODI_DOC_TYPES.includes(type);
 
         return (
           <div key={type} className="bg-white border border-uph-border rounded-xl overflow-hidden">
@@ -290,7 +307,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
             >
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-gray-800">{DOC_LABEL[type]}</span>
-                <StatusBadge status={status} isKoordinatorApproved={doc?.isKoordinatorApproved} />
+                <StatusBadge status={status} isKoordinatorApproved={doc?.isKoordinatorApproved} isProdiDoc={isProdiDoc} />
               </div>
               {isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
             </button>
@@ -325,6 +342,12 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                       <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                         <p className="text-xs font-bold text-red-600 mb-1">Catatan Kaprodi:</p>
                         <p className="text-sm text-red-700">{doc.kaprodiNotes}</p>
+                      </div>
+                    )}
+                    {doc?.prodiNotes && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-xs font-bold text-red-600 mb-1">Catatan PRODI:</p>
+                        <p className="text-sm text-red-700">{doc.prodiNotes}</p>
                       </div>
                     )}
                     {doc?.annotatedPdfUrl && (
@@ -373,9 +396,13 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
   );
 
   // ---------- Reviewer view ----------
-  const renderReviewerView = () => (
+  const renderReviewerView = () => {
+    const isProdiOnly = userRoles.includes('prodi') && !userRoles.includes('kaprodi') && !userRoles.includes('koordinator');
+    const reviewDocTypes = isProdiOnly ? PRODI_DOC_TYPES : DOC_TYPES;
+    return (
     <div className="space-y-3">
-      {DOC_TYPES.map(type => {
+      {reviewDocTypes.map(type => {
+        const isProdiDoc = PRODI_DOC_TYPES.includes(type);
         const isOpen = openSections.has(`rev-${type}`);
         const typeDocs: Doc[] = dosens.map(dosen => {
           const doc = getDoc(type, dosen.id);
@@ -383,9 +410,9 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
             id: null, matkulId: matkul.id, dosenId: dosen.id,
             dosen: { id: dosen.id, name: dosen.name },
             semesterId: semesterId ?? null, type,
-            status: 'UNSUBMITTED', isKoordinatorApproved: false,
+            status: 'UNSUBMITTED', isKoordinatorApproved: false, isProdiApproved: false,
             fileUrl: null, fileName: null, annotatedPdfUrl: null,
-            koordinatorNotes: null, kaprodiNotes: null, koordinatorId: null,
+            koordinatorNotes: null, kaprodiNotes: null, prodiNotes: null, koordinatorId: null,
             koordinatorSignedPdfUrl: null, finalPdfUrl: null,
             createdAt: null, updatedAt: null,
           } as Doc);
@@ -415,10 +442,12 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                 {typeDocs.map(doc => {
                   const dosenName = doc.dosen?.name ?? dosens.find(d => d.id === doc.dosenId)?.name ?? doc.dosenId;
                   // Which notes are relevant for this reviewer
-                  const relevantNote = userRoles.includes('kaprodi')
-                    ? (doc.kaprodiNotes ?? doc.koordinatorNotes)
-                    : doc.koordinatorNotes;
-                  const rejectedBy = doc.kaprodiNotes ? 'Kaprodi' : doc.koordinatorNotes ? 'Koordinator' : null;
+                  const relevantNote = userRoles.includes('prodi') && isProdiDoc
+                    ? (doc.prodiNotes ?? doc.koordinatorNotes)
+                    : userRoles.includes('kaprodi')
+                      ? (doc.kaprodiNotes ?? doc.koordinatorNotes)
+                      : doc.koordinatorNotes;
+                  const rejectedBy = doc.prodiNotes ? 'PRODI' : doc.kaprodiNotes ? 'Kaprodi' : doc.koordinatorNotes ? 'Koordinator' : null;
                   const showRevisionDetail = doc.status === 'REVISION' && (relevantNote || doc.annotatedPdfUrl);
 
                   return (
@@ -427,7 +456,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <span className="font-medium text-gray-800 truncate">{dosenName}</span>
-                          <StatusBadge status={doc.status} isKoordinatorApproved={doc.isKoordinatorApproved} />
+                          <StatusBadge status={doc.status} isKoordinatorApproved={doc.isKoordinatorApproved} isProdiDoc={isProdiDoc} />
                         </div>
                         <div className="flex-shrink-0">
                           {reviewerCanReview(doc) ? (
@@ -480,15 +509,16 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
         );
       })}
     </div>
-  );
+    );
+  };
 
   // ---------- Review modal (2-step: annotate/reject → sign/approve) ----------
   const renderReviewModal = () => {
     if (!reviewModal) return null;
     const { doc, role } = reviewModal;
 
-    // Kaprodi reviews koordinator-signed PDF if available; koordinator reviews original
-    const reviewPdfUrl = role === 'kaprodi'
+    // Stage-2 reviewers (kaprodi, prodi) review koordinator-signed PDF; koordinator reviews original
+    const reviewPdfUrl = (role === 'kaprodi' || role === 'prodi')
       ? (doc.koordinatorSignedPdfUrl ?? doc.fileUrl)
       : doc.fileUrl;
     const isPdf = reviewPdfUrl?.toLowerCase().endsWith('.pdf') ?? false;
@@ -530,7 +560,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                   <div>
                     <p className="font-bold text-uph-blue text-sm">{doc.fileName ?? 'File'}</p>
                     <p className="text-xs text-blue-600 mt-0.5">
-                      {role === 'kaprodi' && doc.koordinatorSignedPdfUrl
+                      {(role === 'kaprodi' || role === 'prodi') && doc.koordinatorSignedPdfUrl
                         ? '✓ PDF sudah ditandatangani Koordinator'
                         : 'Dokumen original dari Dosen'}
                     </p>
@@ -584,7 +614,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
             {/* ── STEP 2: Sign + approve ── */}
             {signStep === 'sign' && (
               <div className="space-y-5">
-                {role === 'kaprodi' && doc.koordinatorSignedPdfUrl && (
+                {(role === 'kaprodi' || role === 'prodi') && doc.koordinatorSignedPdfUrl && (
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 font-medium flex items-center gap-2">
                     <CheckCircle size={16} /> Menandatangani PDF yang sudah ditandatangani Koordinator.
                   </div>
@@ -594,7 +624,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                   <div>
                     <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                       <PenLine size={16} className="text-uph-blue" />
-                      {role === 'koordinator' ? 'Tanda Tangan Koordinator' : 'Tanda Tangan Kaprodi'}
+                      {role === 'koordinator' ? 'Tanda Tangan Koordinator' : role === 'prodi' ? 'Tanda Tangan PRODI' : 'Tanda Tangan Kaprodi'}
                     </h3>
                     <SignaturePad
                       onSignatureChange={setSignatureDataUrl}

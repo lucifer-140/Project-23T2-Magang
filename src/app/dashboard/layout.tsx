@@ -77,12 +77,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     if (roles.includes('KAPRODI')) {
       combinedNavItems.push({ href: '/dashboard/kaprodi/requests', icon: <Bell size={18} />, label: 'Permintaan Perubahan' });
+      combinedNavItems.push({ href: '/dashboard/kaprodi/prodi-users', icon: <UserCheck size={18} />, label: 'Kelola PRODI' });
+    }
+
+    if (roles.includes('PRODI')) {
+      combinedNavItems.push({ href: '/dashboard/prodi', icon: <Shield size={18} />, label: 'Review LPP & EPP' });
     }
 
     let labelStr = 'Dosen';
     if (roles.includes('KAPRODI') && roles.includes('KOORDINATOR')) labelStr = 'Kaprodi & Koordinator';
     else if (roles.includes('KAPRODI')) labelStr = 'Kaprodi';
     else if (roles.includes('KOORDINATOR')) labelStr = 'Koordinator';
+    else if (roles.includes('PRODI')) labelStr = 'PRODI';
 
     config = {
       label: labelStr,

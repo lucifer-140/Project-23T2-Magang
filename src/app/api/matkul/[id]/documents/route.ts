@@ -4,9 +4,10 @@ import { prisma } from '@/lib/db';
 import { DocType } from '@prisma/client';
 
 const DOC_TYPES: DocType[] = [
-  'RPS', 'SOAL_UTS', 'SOAL_UAS', 'LPP',
-  'LPP_TINDAK_LANJUT', 'EPP', 'EPP_TINDAK_LANJUT', 'BERITA_ACARA',
+  'RPS', 'SOAL_UTS', 'SOAL_UAS', 'LPP', 'EPP', 'BERITA_ACARA',
 ];
+
+const PRODI_DOC_TYPES: DocType[] = ['LPP', 'EPP'];
 
 // GET /api/matkul/[id]/documents?semesterId=XXXX
 export async function GET(
@@ -37,9 +38,10 @@ export async function GET(
 
   const isKaprodi = roles.includes('KAPRODI');
   const isKoordinator = roles.includes('KOORDINATOR') && matkul.koordinators.some(k => k.id === userId);
+  const isProdi = roles.includes('PRODI');
   const isDosen = matkul.dosens.some(d => d.id === userId);
 
-  const isReviewer = isKaprodi || isKoordinator;
+  const isReviewer = isKaprodi || isKoordinator || isProdi;
 
   if (!isReviewer && !isDosen) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -53,20 +55,24 @@ export async function GET(
       orderBy: { updatedAt: 'desc' },
     });
 
+    // PRODI sees only LPP/EPP; others see all types
+    const reviewerDocTypes = isProdi && !isKaprodi && !isKoordinator
+      ? PRODI_DOC_TYPES
+      : DOC_TYPES;
+
     // Build sections grouped by type; include all assigned dosens (even UNSUBMITTED)
-    const sections = DOC_TYPES.map(type => {
+    const sections = reviewerDocTypes.map(type => {
       const typeDocs = docs.filter(d => d.type === type);
-      // Dosens that submitted + dosens that haven't (show as UNSUBMITTED)
       const dosenRows = matkul.dosens.map(dosen => {
         const doc = typeDocs.find(d => d.dosenId === dosen.id);
         if (doc) return doc;
-        // Synthetic unsubmitted placeholder
         return {
           id: null,
           dosenId: dosen.id,
           dosen: { id: dosen.id, name: dosen.name },
           status: 'UNSUBMITTED' as const,
           isKoordinatorApproved: false,
+          isProdiApproved: false,
           type,
           semesterId,
           matkulId,
@@ -75,6 +81,7 @@ export async function GET(
           annotatedPdfUrl: null,
           koordinatorNotes: null,
           kaprodiNotes: null,
+          prodiNotes: null,
           koordinatorId: null,
           koordinatorSignedPdfUrl: null,
           finalPdfUrl: null,

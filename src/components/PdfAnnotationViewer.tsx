@@ -23,7 +23,7 @@ interface Props {
   /** Override API base, e.g. /api/documents/[docId]. Takes precedence over rpsId. */
   apiBase?: string;
   readOnly?: boolean;
-  reviewerRole?: 'koordinator' | 'kaprodi';
+  reviewerRole?: 'koordinator' | 'kaprodi' | 'prodi';
 }
 
 export function PdfAnnotationViewer({ pdfUrl, rpsId, apiBase, readOnly = false, reviewerRole }: Props) {

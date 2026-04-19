@@ -1,8 +1,8 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-18  
-**Current Version:** 0.12.1  
-**Status:** Active Development - Phase 12 Complete
+**Last Updated:** 2026-04-20  
+**Current Version:** 0.13.0  
+**Status:** Active Development - Phase 13 Complete
 
 ---
 
@@ -51,6 +51,19 @@
 - [x] Admin Matkul page restructured: `/dashboard/admin/matkul` (year/semester list) → `/[semesterId]` (scoped matkul table)
 - [x] Seed data: Ganjil + Genap 2025/2026 terms pre-created with matkul assignments
 - [x] Semester selector on Matkul hub pages loads from database
+
+### Phase 13: PRODI Role & LPP/EPP Workflow (v0.13.0)
+- [x] `PRODI` Role enum added to Prisma schema
+- [x] `isProdiApproved`, `prodiId`, `prodiNotes` fields on `AcademicDocument`
+- [x] `LPP_TINDAK_LANJUT` and `EPP_TINDAK_LANJUT` doc types removed; only LPP and EPP remain
+- [x] LPP/EPP approval flow: Koordinator (Stage 1) → PRODI (Stage 2); Kaprodi handles all other types
+- [x] PRODI globally scoped — once assigned, reviews all LPP & EPP system-wide
+- [x] Kaprodi can assign/revoke PRODI role at `/dashboard/kaprodi/prodi-users`
+- [x] PRODI dashboard at `/dashboard/prodi` with stats + review entry point
+- [x] `POST /api/documents/[docId]/sign` extended for `prodi` reviewer
+- [x] `GET /api/matkul/mine` and list page updated for PRODI scope
+- [x] Koordinator review button blocked for LPP/EPP once Stage 1 approved
+- [x] Seed account: `prodi@test.com / prodi123`
 
 ### Phase 12: Matkul List Filter Bar (v0.12.1)
 - [x] Replaced semester dropdown with multi-part filter bar on `/dashboard/matkul`
@@ -161,9 +174,10 @@
 |---|---|---|
 | **MASTER** | System monitoring, audit logs, user management, account approvals | Complete |
 | **ADMIN** | Matkul CRUD (with catalog combobox + unified assign modal), user management, change requests, account approvals | Complete (v0.9.0) |
-| **KAPRODI** | RPS review queue, PDF annotation, approval workflow, dosen directory | Complete (v0.10.0) |
-| **KOORDINATOR** | RPS first-level review, PDF annotation, digital signature stamping, dosen directory | Complete (v0.10.0) |
-| **DOSEN** | Upload RPS (DOCX/PDF), track status, view annotated revision PDF, download signed final PDF | Complete (v0.10.0) |
+| **KAPRODI** | Document review queue (non-LPP/EPP types), PDF annotation, approval workflow, PRODI role assignment | Complete (v0.13.0) |
+| **KOORDINATOR** | Stage-1 review for all doc types, PDF annotation, digital signature stamping | Complete (v0.13.0) |
+| **PRODI** | Stage-2 review for LPP & EPP system-wide, PDF annotation, digital signature stamping | Complete (v0.13.0) |
+| **DOSEN** | Upload documents (all 6 types), track status, view annotated revision PDF, download signed final PDF | Complete (v0.13.0) |
 
 ### RPS Workflow
 - Dosen upload → visible to both Koordinator and Kaprodi

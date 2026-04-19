@@ -43,7 +43,8 @@ async function main() {
       (gen_random_uuid()::text, 'kaprodi@test.com', 'kaprodi123', ARRAY['KAPRODI', 'DOSEN']::"Role"[], 'Dr. Kaprodi Utama', 'ACTIVE'::"UserStatus"),
       (gen_random_uuid()::text, 'koordinator@test.com', 'koordinator123', ARRAY['KOORDINATOR', 'DOSEN']::"Role"[], 'Koordinator Prodi', 'ACTIVE'::"UserStatus"),
       (gen_random_uuid()::text, 'dosen@test.com', 'dosen123', ARRAY['DOSEN']::"Role"[], 'Dr. Budi Santoso', 'ACTIVE'::"UserStatus"),
-      (gen_random_uuid()::text, 'dosen2@test.com', 'dosen123', ARRAY['DOSEN']::"Role"[], 'Siti Aminah, M.Kom', 'ACTIVE'::"UserStatus")
+      (gen_random_uuid()::text, 'dosen2@test.com', 'dosen123', ARRAY['DOSEN']::"Role"[], 'Siti Aminah, M.Kom', 'ACTIVE'::"UserStatus"),
+      (gen_random_uuid()::text, 'prodi@test.com', 'prodi123', ARRAY['DOSEN', 'PRODI']::"Role"[], 'Dr. Reviewer Prodi', 'ACTIVE'::"UserStatus")
     ON CONFLICT (email) DO NOTHING
   `);
   console.log('✅ Users seeded');
@@ -120,7 +121,7 @@ async function main() {
   console.log('✅ Change request seeded');
 
   console.log('\n🎉 Seed complete!');
-  console.log('Test accounts: master@test.com | admin@test.com | kaprodi@test.com | koordinator@test.com | dosen@test.com | dosen2@test.com');
+  console.log('Test accounts: master@test.com | admin@test.com | kaprodi@test.com | koordinator@test.com | dosen@test.com | dosen2@test.com | prodi@test.com');
   console.log('Passwords: [email prefix]123 (dosen2 uses dosen123)');
 }
 

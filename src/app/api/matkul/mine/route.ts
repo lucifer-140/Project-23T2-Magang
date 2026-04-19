@@ -15,6 +15,7 @@ export async function GET() {
   try { if (roleRaw) roles = JSON.parse(decodeURIComponent(roleRaw)); } catch { roles = []; }
 
   const isKaprodi = roles.includes('KAPRODI');
+  const isProdi = roles.includes('PRODI');
 
   const semesterInclude = {
     dosens: { select: { id: true, name: true } },
@@ -44,11 +45,23 @@ export async function GET() {
     });
   }
 
+  let prodiMatkuls: typeof dosenMatkuls = [];
+  if (isProdi && !isKaprodi) {
+    prodiMatkuls = await prisma.matkul.findMany({
+      include: semesterInclude,
+      orderBy: { code: 'asc' },
+    });
+  }
+
   const map = new Map<string, (typeof dosenMatkuls[0]) & { userRoles: string[] }>();
 
   for (const m of kaprodiMatkuls) {
     if (!map.has(m.id)) map.set(m.id, { ...m, userRoles: ['kaprodi'] });
     else map.get(m.id)!.userRoles.push('kaprodi');
+  }
+  for (const m of prodiMatkuls) {
+    if (!map.has(m.id)) map.set(m.id, { ...m, userRoles: ['prodi'] });
+    else if (!map.get(m.id)!.userRoles.includes('prodi')) map.get(m.id)!.userRoles.push('prodi');
   }
   for (const m of koordinatorMatkuls) {
     if (!map.has(m.id)) map.set(m.id, { ...m, userRoles: ['koordinator'] });

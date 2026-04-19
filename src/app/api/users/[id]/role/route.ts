@@ -19,7 +19,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Roles array required.' }, { status: 400 });
   }
 
-  const validRoles = ['MASTER', 'ADMIN', 'KAPRODI', 'KOORDINATOR', 'DOSEN'];
+  const validRoles = ['MASTER', 'ADMIN', 'KAPRODI', 'KOORDINATOR', 'DOSEN', 'PRODI'];
   const hasInvalidRoles = rolesArray.some(r => !validRoles.includes(r));
   if (hasInvalidRoles) {
     return NextResponse.json({ error: 'Invalid roles provided.' }, { status: 400 });
@@ -29,6 +29,7 @@ export async function PATCH(
   const cookieStore = await cookies();
   const callerRoleStr = cookieStore.get('userRole')?.value || '';
   const isMasterCaller = callerRoleStr.includes('MASTER');
+  const isKaprodiCaller = !isMasterCaller && callerRoleStr.includes('KAPRODI');
 
   const targetUser = await prisma.user.findUnique({ where: { id } });
   if (!targetUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -41,6 +42,17 @@ export async function PATCH(
   // Prevent assigning MASTER or ADMIN role if caller is not MASTER
   if (!isMasterCaller && (rolesArray.includes('MASTER') || rolesArray.includes('ADMIN'))) {
     return NextResponse.json({ error: 'Unauthorized to assign MASTER or ADMIN role' }, { status: 403 });
+  }
+
+  // KAPRODI can only toggle PRODI role on existing DOSEN users
+  if (isKaprodiCaller) {
+    if (!targetUser.roles.includes('DOSEN')) {
+      return NextResponse.json({ error: 'PRODI role can only be assigned to users with DOSEN role' }, { status: 403 });
+    }
+    const allowedByKaprodi = ['DOSEN', 'KOORDINATOR', 'PRODI'];
+    if (rolesArray.some(r => !allowedByKaprodi.includes(r))) {
+      return NextResponse.json({ error: 'Kaprodi can only assign PRODI role' }, { status: 403 });
+    }
   }
 
   const updatedUser = await prisma.user.update({

@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented here.
 
+## [0.13.0] - 2026-04-20
+
+### Added
+- **PRODI role** — new globally-scoped reviewer role for LPP & EPP documents system-wide (no matkul-level assignment needed).
+- **LPP & EPP workflow** — Koordinator (Stage 1) → PRODI (Stage 2) instead of Kaprodi; Kaprodi handles all other doc types unchanged.
+- **Kaprodi → PRODI role assignment UI** — `/dashboard/kaprodi/prodi-users`: Kaprodi can assign/revoke PRODI role on any DOSEN user.
+- **PRODI dashboard** — `/dashboard/prodi` with 4 stat cards (pending, approved, revision, total) + link to matkul review list.
+- **PRODI sign support** — `/api/documents/[docId]/sign` accepts `reviewer: 'prodi'`; stamps koordinator-signed PDF.
+- **`isProdiApproved`, `prodiId`, `prodiNotes`** fields on `AcademicDocument` schema.
+- **`PRODI` Role enum** value added to Prisma schema.
+- **Seed account** — `prodi@test.com / prodi123` (DOSEN + PRODI roles).
+
+### Changed
+- **DocType** — removed `LPP_TINDAK_LANJUT` and `EPP_TINDAK_LANJUT`; only `LPP` and `EPP` remain.
+- **`/api/documents/[docId]/review`** — PRODI reviewer branch: approve → `isProdiApproved=true, status=APPROVED`; reject → `status=REVISION, isKoordinatorApproved=false`.
+- **`/api/matkul/[id]/documents`** — PRODI scope: only LPP/EPP sections shown; isProdi detection.
+- **`/api/matkul/mine`** — returns all matkuls for PRODI users (globally scoped, same as kaprodi).
+- **`/dashboard/matkul/page.tsx`** — fetches all matkuls for PRODI role.
+- **`MatkulListClient`** — added `prodi` entry to `ROLE_CONFIG` badge map.
+- **`MatkulHubClient`** — PRODI reviewer tab, dynamic stage-2 label, `prodiNotes` display, signature label "Tanda Tangan PRODI", koordinator review blocked for LPP/EPP once `isKoordinatorApproved=true`.
+- **`PdfAnnotationViewer`** — `reviewerRole` prop union extended to include `'prodi'`.
+- **Dashboard layout** — Kaprodi sidebar shows "Kelola PRODI" link; PRODI role gets "Review LPP & EPP" nav entry.
+- **Prisma migration** — `20260419000002_remove_tindak_lanjut_doctypes` deletes old TINDAK_LANJUT rows and recreates DocType enum.
+
+---
+
 ## [0.12.1] - 2026-04-18
 
 ### Changed

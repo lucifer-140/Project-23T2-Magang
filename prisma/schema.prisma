@@ -12,6 +12,7 @@ enum Role {
   KAPRODI
   KOORDINATOR
   DOSEN
+  PRODI
 }
 
 enum UserStatus {
@@ -39,9 +40,7 @@ enum DocType {
   SOAL_UTS
   SOAL_UAS
   LPP
-  LPP_TINDAK_LANJUT
   EPP
-  EPP_TINDAK_LANJUT
   BERITA_ACARA
 }
 
@@ -67,6 +66,7 @@ model User {
   koordinatorMatkuls        Matkul[]           @relation("KoordinatorMatkul")
   academicDocs              AcademicDocument[] @relation("DosenAcademicDocs")
   koordinatorDocReviews     AcademicDocument[] @relation("KoordinatorAcademicReview")
+  prodiDocReviews           AcademicDocument[] @relation("ProdiAcademicReview")
   matkulClasses             MatkulClass[]      @relation("ClassDosen")
 }
 
@@ -201,6 +201,11 @@ model AcademicDocument {
   kaprodiSigY     Float?
   kaprodiSigWidth Float?
   finalPdfUrl     String?
+
+  isProdiApproved Boolean  @default(false)
+  prodiId         String?
+  prodi           User?    @relation("ProdiAcademicReview", fields: [prodiId], references: [id])
+  prodiNotes      String?
 
   annotations AcademicDocAnnotation[]
 

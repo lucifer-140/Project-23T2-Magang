@@ -75,7 +75,7 @@ export default async function LobbyPage({
         </div>
 
         <p className="text-center mt-6 text-xs text-gray-400">
-          © 2026 <span className="text-uph-blue font-semibold">Universitas Pelita Harapan</span>. All rights reserved.
+          © 2026 <span className="text-uph-blue font-semibold">lucifer-140</span>. All rights reserved.
         </p>
       </div>
     </main>
