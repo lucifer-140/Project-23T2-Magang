@@ -29,7 +29,7 @@ const DOC_TYPES = [
 ] as const;
 type DocType = typeof DOC_TYPES[number];
 
-const PRODI_DOC_TYPES: DocType[] = ['LPP', 'EPP'];
+
 
 const DOC_LABEL: Record<DocType, string> = {
   RPS: 'RPS',
@@ -62,6 +62,12 @@ interface Doc {
   finalPdfUrl: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  // EPP fields
+  eppPersentaseMateri?: number | null;
+  eppPersentaseCpmk?: number | null;
+  eppPersentaseKehadiran?: number | null;
+  eppPersentaseNilaiB?: number | null;
+  eppPersentaseKkmToB?: number | null;
 }
 
 interface SectionData {
@@ -89,6 +95,7 @@ interface Props {
   initialDocs: Doc[];
   userRoles: string[];
   userId: string;
+  userName: string;
   initialSemesterId: string | null;
   semesters: { id: string; nama: string; isActive: boolean; tahunAkademik: { tahun: string } }[];
 }
@@ -96,22 +103,21 @@ interface Props {
 // ---------- helpers ----------
 const canUpload = (status: string) => status === 'UNSUBMITTED' || status === 'REVISION';
 
-function StatusBadge({ status, isKoordinatorApproved, isProdiDoc }: { status: string; isKoordinatorApproved?: boolean; isProdiDoc?: boolean }) {
-  const stage2Label = isProdiDoc ? 'PRODI' : 'Kaprodi';
+function StatusBadge({ status, isKoordinatorApproved, isProdiApproved }: { status: string; isKoordinatorApproved?: boolean; isProdiApproved?: boolean }) {
   if (status === 'APPROVED') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700"><CheckCircle size={12} /> Disetujui</span>;
   if (status === 'REVISION') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700"><AlertCircle size={12} /> Revisi</span>;
-  if (status === 'PENGECEKAN') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><Clock size={12} /> Menunggu {stage2Label}</span>;
-  if (status === 'SUBMITTED') {
-    if (isKoordinatorApproved) return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><Clock size={12} /> Menunggu {stage2Label}</span>;
-    return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700"><Clock size={12} /> Menunggu Koordinator</span>;
+  if (status === 'PENGECEKAN') {
+    if (isProdiApproved) return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><Clock size={12} /> Menunggu Kaprodi</span>;
+    return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700"><Clock size={12} /> Menunggu PRODI</span>;
   }
+  if (status === 'SUBMITTED') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700"><Clock size={12} /> Menunggu Koordinator</span>;
   return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500"><XCircle size={12} /> Belum Upload</span>;
 }
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 // ---------- main component ----------
-export default function MatkulHubClient({ matkul, dosens, koordinators, classes, initialDocs, userRoles, userId, initialSemesterId, semesters }: Props) {
+export default function MatkulHubClient({ matkul, dosens, koordinators, classes, initialDocs, userRoles, userId, userName, initialSemesterId, semesters }: Props) {
   const router = useRouter();
   const [semesterId, setSemesterId] = useState(initialSemesterId);
 
@@ -159,6 +165,9 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [sigPosition, setSigPosition] = useState<SignaturePosition>({ x: 60, y: 75, page: 1, width: 22 });
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
+  const [includeSig, setIncludeSig] = useState(true);
+  const [eppFields, setEppFields] = useState({ eppPersentaseMateri: '', eppPersentaseCpmk: '', eppPersentaseKehadiran: '', eppPersentaseNilaiB: '', eppPersentaseKkmToB: '' });
+  const [savingEpp, setSavingEpp] = useState(false);
 
   useEffect(() => {
     fetch('/api/users/me/signature')
@@ -205,17 +214,21 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
 
   // ---------- review ----------
   const openReview = (doc: Doc) => {
-    const isProdiDoc = PRODI_DOC_TYPES.includes(doc.type);
-    const role = (userRoles.includes('prodi') && isProdiDoc)
-      ? 'prodi'
-      : userRoles.includes('kaprodi')
-        ? 'kaprodi'
-        : 'koordinator';
+    // Universal workflow: Koor → Prodi → Kaprodi for all doc types
+    let role: 'koordinator' | 'prodi' | 'kaprodi';
+    if (doc.isProdiApproved && userRoles.includes('kaprodi')) {
+      role = 'kaprodi';
+    } else if (doc.isKoordinatorApproved && userRoles.includes('prodi')) {
+      role = 'prodi';
+    } else {
+      role = 'koordinator';
+    }
     setReviewModal({ doc, role });
     setSignStep('review');
     setRejectNotes('');
     setSignatureDataUrl(null);
     setSigPosition({ x: 60, y: 75, page: 1, width: 22 });
+    setIncludeSig(true);
   };
 
   const closeModal = () => {
@@ -245,46 +258,63 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
     setSavedSignature(dataUrl);
   };
 
+  const handleSaveEpp = async (type: DocType) => {
+    setSavingEpp(true);
+    const fd = new FormData();
+    fd.append('type', type);
+    fd.append('semesterId', semesterId ?? '');
+    Object.entries(eppFields).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
+    await fetch(`/api/matkul/${matkul.id}/documents/upload`, { method: 'POST', body: fd });
+    setSavingEpp(false);
+    mutate();
+  };
+
   const handleStampAndApprove = async () => {
-    if (!reviewModal || !signatureDataUrl) {
+    if (!reviewModal) return;
+    if (includeSig && !signatureDataUrl) {
       alert('Harap buat tanda tangan terlebih dahulu.');
       return;
     }
     setSubmitting(true);
-    const res = await fetch(`/api/documents/${reviewModal.doc.id}/sign`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reviewer: reviewModal.role,
-        sigData: signatureDataUrl,
-        sigX: sigPosition.x,
-        sigY: sigPosition.y,
-        sigPage: sigPosition.page,
-        sigWidth: sigPosition.width,
-      }),
-    });
+    let res: Response;
+    if (!includeSig) {
+      res = await fetch(`/api/documents/${reviewModal.doc.id}/review`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewer: reviewModal.role, action: 'approve' }),
+      });
+    } else {
+      res = await fetch(`/api/documents/${reviewModal.doc.id}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reviewer: reviewModal.role,
+          sigData: signatureDataUrl,
+          sigX: sigPosition.x,
+          sigY: sigPosition.y,
+          sigPage: sigPosition.page,
+          sigWidth: sigPosition.width,
+          reviewerName: userName,
+        }),
+      });
+    }
     setSubmitting(false);
     if (res.ok) { closeModal(); mutate(); }
     else {
       const err = await res.json().catch(() => ({}));
-      alert(`Gagal: ${err.error ?? 'Terjadi kesalahan saat menandatangani.'}`);
+      alert(`Gagal: ${err.error ?? 'Terjadi kesalahan.'}`);
     }
   };
 
   // ---------- reviewer eligibility ----------
   const reviewerCanReview = (doc: Doc): boolean => {
     if (!doc.id) return false;
-    const isProdiDoc = PRODI_DOC_TYPES.includes(doc.type);
-    if (userRoles.includes('prodi') && isProdiDoc) {
-      return doc.isKoordinatorApproved && doc.status === 'PENGECEKAN';
-    }
-    if (userRoles.includes('kaprodi') && !isProdiDoc) {
-      return doc.isKoordinatorApproved && doc.status === 'PENGECEKAN';
-    }
-    if (userRoles.includes('koordinator')) {
-      if (isProdiDoc && doc.isKoordinatorApproved) return false;
-      return doc.status === 'SUBMITTED' || doc.status === 'PENGECEKAN';
-    }
+    // Kaprodi: after Prodi approves
+    if (userRoles.includes('kaprodi') && doc.isProdiApproved && doc.status === 'PENGECEKAN') return true;
+    // Prodi: after Koordinator approves, before Prodi approves
+    if (userRoles.includes('prodi') && doc.isKoordinatorApproved && !doc.isProdiApproved && doc.status === 'PENGECEKAN') return true;
+    // Koordinator: doc submitted, not yet koordinator-approved
+    if (userRoles.includes('koordinator') && !doc.isKoordinatorApproved && doc.status === 'SUBMITTED') return true;
     return false;
   };
 
@@ -297,8 +327,6 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
         const isUploading = uploading === type;
         const status = doc?.status ?? 'UNSUBMITTED';
         const uploadAllowed = canUpload(status);
-        const isProdiDoc = PRODI_DOC_TYPES.includes(type);
-
         return (
           <div key={type} className="bg-white border border-uph-border rounded-xl overflow-hidden">
             <button
@@ -307,7 +335,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
             >
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-gray-800">{DOC_LABEL[type]}</span>
-                <StatusBadge status={status} isKoordinatorApproved={doc?.isKoordinatorApproved} isProdiDoc={isProdiDoc} />
+                <StatusBadge status={status} isKoordinatorApproved={doc?.isKoordinatorApproved} isProdiApproved={doc?.isProdiApproved} />
               </div>
               {isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
             </button>
@@ -372,6 +400,62 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                   <p className="text-sm text-gray-400">Belum ada dokumen yang diunggah.</p>
                 )}
 
+                {/* EPP additional inputs */}
+                {type === 'EPP' && uploadAllowed && (
+                  <div className="border border-uph-border rounded-xl p-4 space-y-3 bg-blue-50/30">
+                    <p className="text-xs font-bold text-uph-blue uppercase tracking-wide">Data EPP</p>
+                    {[
+                      { key: 'eppPersentaseMateri', label: 'Persentase kesesuaian materi dari perencanaan (RPS)' },
+                      { key: 'eppPersentaseCpmk', label: 'Persentase kesesuaian CPMK dengan Sub CPMK' },
+                      { key: 'eppPersentaseKehadiran', label: 'Persentase rata-rata kehadiran mahasiswa dalam setiap pertemuan' },
+                    ].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{label} (%)</label>
+                        <input type="number" min={0} max={100} value={eppFields[key as keyof typeof eppFields]}
+                          onChange={e => setEppFields(f => ({ ...f, [key]: e.target.value }))}
+                          className="w-full border border-uph-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-uph-blue/30"
+                          placeholder="0–100" />
+                      </div>
+                    ))}
+                    <p className="text-xs font-bold text-gray-600 mt-2">Tingkat pemahaman mahasiswa terhadap materi yang diberikan</p>
+                    {[
+                      { key: 'eppPersentaseNilaiB', label: 'Persentase jumlah mahasiswa yang mendapat nilai minimal ≥ B' },
+                      { key: 'eppPersentaseKkmToB', label: 'Persentase jumlah mahasiswa yang mendapat KKM ≤ Nilai < B' },
+                    ].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{label} (%)</label>
+                        <input type="number" min={0} max={100} value={eppFields[key as keyof typeof eppFields]}
+                          onChange={e => setEppFields(f => ({ ...f, [key]: e.target.value }))}
+                          className="w-full border border-uph-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-uph-blue/30"
+                          placeholder="0–100" />
+                      </div>
+                    ))}
+                    <button onClick={() => handleSaveEpp(type)} disabled={savingEpp}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-uph-blue text-white rounded-lg text-xs font-bold hover:bg-uph-blue/90 disabled:opacity-50 transition-colors">
+                      {savingEpp ? <Loader2 size={12} className="animate-spin" /> : null}
+                      Simpan Data EPP
+                    </button>
+                  </div>
+                )}
+
+                {/* EPP read-only display when locked/approved */}
+                {type === 'EPP' && !uploadAllowed && doc && (doc.eppPersentaseMateri != null || doc.eppPersentaseCpmk != null) && (
+                  <div className="border border-gray-200 rounded-xl p-3 space-y-1.5 bg-gray-50/50">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Data EPP</p>
+                    {[
+                      { key: 'eppPersentaseMateri', label: 'Kesesuaian materi (RPS)' },
+                      { key: 'eppPersentaseCpmk', label: 'Kesesuaian CPMK' },
+                      { key: 'eppPersentaseKehadiran', label: 'Kehadiran mahasiswa' },
+                      { key: 'eppPersentaseNilaiB', label: 'Nilai ≥ B' },
+                      { key: 'eppPersentaseKkmToB', label: 'KKM ≤ Nilai < B' },
+                    ].map(({ key, label }) => {
+                      const val = doc[key as keyof Doc];
+                      if (val == null) return null;
+                      return <div key={key} className="flex justify-between text-xs"><span className="text-gray-500">{label}</span><span className="font-bold text-gray-700">{String(val)}%</span></div>;
+                    })}
+                  </div>
+                )}
+
                 {/* Upload button - only when allowed */}
                 {uploadAllowed ? (
                   <button
@@ -397,12 +481,9 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
 
   // ---------- Reviewer view ----------
   const renderReviewerView = () => {
-    const isProdiOnly = userRoles.includes('prodi') && !userRoles.includes('kaprodi') && !userRoles.includes('koordinator');
-    const reviewDocTypes = isProdiOnly ? PRODI_DOC_TYPES : DOC_TYPES;
     return (
     <div className="space-y-3">
-      {reviewDocTypes.map(type => {
-        const isProdiDoc = PRODI_DOC_TYPES.includes(type);
+      {DOC_TYPES.map(type => {
         const isOpen = openSections.has(`rev-${type}`);
         const typeDocs: Doc[] = dosens.map(dosen => {
           const doc = getDoc(type, dosen.id);
@@ -442,10 +523,10 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                 {typeDocs.map(doc => {
                   const dosenName = doc.dosen?.name ?? dosens.find(d => d.id === doc.dosenId)?.name ?? doc.dosenId;
                   // Which notes are relevant for this reviewer
-                  const relevantNote = userRoles.includes('prodi') && isProdiDoc
-                    ? (doc.prodiNotes ?? doc.koordinatorNotes)
-                    : userRoles.includes('kaprodi')
-                      ? (doc.kaprodiNotes ?? doc.koordinatorNotes)
+                  const relevantNote = userRoles.includes('kaprodi')
+                    ? (doc.kaprodiNotes ?? doc.prodiNotes ?? doc.koordinatorNotes)
+                    : userRoles.includes('prodi')
+                      ? (doc.prodiNotes ?? doc.koordinatorNotes)
                       : doc.koordinatorNotes;
                   const rejectedBy = doc.prodiNotes ? 'PRODI' : doc.kaprodiNotes ? 'Kaprodi' : doc.koordinatorNotes ? 'Koordinator' : null;
                   const showRevisionDetail = doc.status === 'REVISION' && (relevantNote || doc.annotatedPdfUrl);
@@ -456,7 +537,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <span className="font-medium text-gray-800 truncate">{dosenName}</span>
-                          <StatusBadge status={doc.status} isKoordinatorApproved={doc.isKoordinatorApproved} isProdiDoc={isProdiDoc} />
+                          <StatusBadge status={doc.status} isKoordinatorApproved={doc.isKoordinatorApproved} isProdiApproved={doc.isProdiApproved} />
                         </div>
                         <div className="flex-shrink-0">
                           {reviewerCanReview(doc) ? (
@@ -581,6 +662,24 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                   </div>
                 </div>
 
+                {/* EPP data read-only for reviewers */}
+                {doc.type === 'EPP' && (doc.eppPersentaseMateri != null || doc.eppPersentaseCpmk != null) && (
+                  <div className="border border-blue-100 rounded-xl p-3 bg-blue-50/30 space-y-1.5">
+                    <p className="text-xs font-bold text-uph-blue uppercase tracking-wide mb-2">Data EPP</p>
+                    {[
+                      { key: 'eppPersentaseMateri', label: 'Kesesuaian materi (RPS)' },
+                      { key: 'eppPersentaseCpmk', label: 'Kesesuaian CPMK' },
+                      { key: 'eppPersentaseKehadiran', label: 'Kehadiran mahasiswa' },
+                      { key: 'eppPersentaseNilaiB', label: 'Nilai ≥ B' },
+                      { key: 'eppPersentaseKkmToB', label: 'KKM ≤ Nilai < B' },
+                    ].map(({ key, label }) => {
+                      const val = doc[key as keyof typeof doc];
+                      if (val == null) return null;
+                      return <div key={key} className="flex justify-between text-xs"><span className="text-gray-500">{label}</span><span className="font-bold text-gray-700">{String(val)}%</span></div>;
+                    })}
+                  </div>
+                )}
+
                 {/* Annotation viewer */}
                 {isPdf && reviewPdfUrl && doc.id && (
                   <div>
@@ -614,58 +713,74 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
             {/* ── STEP 2: Sign + approve ── */}
             {signStep === 'sign' && (
               <div className="space-y-5">
-                {(role === 'kaprodi' || role === 'prodi') && doc.koordinatorSignedPdfUrl && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 font-medium flex items-center gap-2">
-                    <CheckCircle size={16} /> Menandatangani PDF yang sudah ditandatangani Koordinator.
-                  </div>
-                )}
+                {/* Signature toggle */}
+                <label className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={includeSig}
+                    onChange={e => setIncludeSig(e.target.checked)}
+                    className="w-4 h-4 accent-uph-blue"
+                  />
+                  <span className="text-sm font-semibold text-gray-700">Sertakan Tanda Tangan</span>
+                  <span className="text-xs text-gray-400 ml-auto">{includeSig ? 'Tanda tangan akan distempel ke PDF' : 'Setujui tanpa tanda tangan'}</span>
+                </label>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                      <PenLine size={16} className="text-uph-blue" />
-                      {role === 'koordinator' ? 'Tanda Tangan Koordinator' : role === 'prodi' ? 'Tanda Tangan PRODI' : 'Tanda Tangan Kaprodi'}
-                    </h3>
-                    <SignaturePad
-                      onSignatureChange={setSignatureDataUrl}
-                      savedSignature={savedSignature}
-                      onSaveSignature={handleSaveSignature}
-                    />
-                    {signatureDataUrl && (
-                      <p className="text-xs text-green-600 mt-2 font-medium flex items-center gap-1">
-                        <CheckCircle size={12} /> Tanda tangan siap. Seret ke posisi di PDF.
-                      </p>
+                {includeSig && (
+                  <>
+                    {(role === 'kaprodi' || role === 'prodi') && doc.koordinatorSignedPdfUrl && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 font-medium flex items-center gap-2">
+                        <CheckCircle size={16} /> Menandatangani PDF yang sudah ditandatangani Koordinator.
+                      </div>
                     )}
-                  </div>
 
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <h4 className="text-sm font-bold text-amber-800 mb-2">Petunjuk</h4>
-                    <ol className="text-xs text-amber-700 space-y-1.5 list-decimal list-inside">
-                      <li>Gambar atau upload tanda tangan.</li>
-                      <li>Seret ke posisi di PDF.</li>
-                      <li>Resize dengan handle sudut kanan-bawah jika perlu.</li>
-                      <li>Klik <strong>Stamp & Setujui</strong> untuk menyelesaikan.</li>
-                    </ol>
-                  </div>
-                </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                          <PenLine size={16} className="text-uph-blue" />
+                          {role === 'koordinator' ? 'Tanda Tangan Koordinator' : role === 'prodi' ? 'Tanda Tangan PRODI' : 'Tanda Tangan Kaprodi'}
+                        </h3>
+                        <SignaturePad
+                          onSignatureChange={setSignatureDataUrl}
+                          savedSignature={savedSignature}
+                          onSaveSignature={handleSaveSignature}
+                        />
+                        {signatureDataUrl && (
+                          <p className="text-xs text-green-600 mt-2 font-medium flex items-center gap-1">
+                            <CheckCircle size={12} /> Tanda tangan siap. Nama &amp; waktu akan ditambahkan otomatis.
+                          </p>
+                        )}
+                      </div>
 
-                {reviewPdfUrl && isPdf ? (
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                      <Stamp size={16} className="text-uph-blue" /> Posisikan Tanda Tangan
-                    </h3>
-                    <PdfSignatureOverlay
-                      pdfUrl={reviewPdfUrl}
-                      signatureDataUrl={signatureDataUrl}
-                      position={sigPosition}
-                      onPositionChange={setSigPosition}
-                    />
-                  </div>
-                ) : (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-                    <p className="font-bold mb-1">File bukan PDF - preview tidak tersedia</p>
-                    <p className="text-xs">Minta Dosen mengupload ulang dalam format PDF.</p>
-                  </div>
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <h4 className="text-sm font-bold text-amber-800 mb-2">Petunjuk</h4>
+                        <ol className="text-xs text-amber-700 space-y-1.5 list-decimal list-inside">
+                          <li>Gambar atau upload tanda tangan.</li>
+                          <li>Seret ke posisi di PDF.</li>
+                          <li>Resize dengan handle sudut kanan-bawah jika perlu.</li>
+                          <li>Klik <strong>Stamp & Setujui</strong> untuk menyelesaikan.</li>
+                        </ol>
+                      </div>
+                    </div>
+
+                    {reviewPdfUrl && isPdf ? (
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                          <Stamp size={16} className="text-uph-blue" /> Posisikan Tanda Tangan
+                        </h3>
+                        <PdfSignatureOverlay
+                          pdfUrl={reviewPdfUrl}
+                          signatureDataUrl={signatureDataUrl}
+                          position={sigPosition}
+                          onPositionChange={setSigPosition}
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+                        <p className="font-bold mb-1">File bukan PDF - preview tidak tersedia</p>
+                        <p className="text-xs">Minta Dosen mengupload ulang dalam format PDF.</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -709,11 +824,11 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
               {signStep === 'sign' && (
                 <button
                   onClick={handleStampAndApprove}
-                  disabled={submitting || !signatureDataUrl || !isPdf}
+                  disabled={submitting || (includeSig && (!signatureDataUrl || !isPdf))}
                   className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-colors"
                 >
                   {submitting ? <Loader2 size={14} className="animate-spin" /> : <Stamp size={14} />}
-                  Stamp & Setujui
+                  {includeSig ? 'Stamp & Setujui' : 'Setujui Tanpa Tanda Tangan'}
                 </button>
               )}
             </div>

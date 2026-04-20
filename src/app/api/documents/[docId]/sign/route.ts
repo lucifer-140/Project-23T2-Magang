@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
 import { existsSync, mkdirSync } from 'fs';
@@ -16,7 +16,7 @@ export async function POST(
   const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
 
-  const { reviewer, sigData, sigX, sigY, sigPage, sigWidth } = await req.json();
+  const { reviewer, sigData, sigX, sigY, sigPage, sigWidth, reviewerName } = await req.json();
 
   if (!reviewer || !sigData || sigX == null || sigY == null || !sigPage || !sigWidth) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -26,6 +26,9 @@ export async function POST(
   }
 
   const doc = await prisma.academicDocument.findUnique({ where: { id: docId } });
+  if (reviewer === 'kaprodi' && !doc?.isProdiApproved) {
+    return NextResponse.json({ error: 'Prodi must approve first' }, { status: 400 });
+  }
   if (!doc) return NextResponse.json({ error: 'Document not found' }, { status: 404 });
 
   let sourcePdfUrl: string | null;
@@ -67,6 +70,17 @@ export async function POST(
 
   page.drawImage(embeddedSig, { x: actualX, y: actualY, width: actualSigWidth, height: actualSigHeight, opacity: 0.9 });
 
+  // Draw name + timestamp below signature
+  if (reviewerName) {
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontSize = Math.max(6, actualSigWidth * 0.07);
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())} WIB`;
+    page.drawText(String(reviewerName), { x: actualX, y: actualY - fontSize - 3, size: fontSize, font, color: rgb(0, 0, 0) });
+    page.drawText(dateStr, { x: actualX, y: actualY - fontSize * 2 - 5, size: fontSize * 0.85, font, color: rgb(0.3, 0.3, 0.3) });
+  }
+
   const stampedBytes = await pdfDoc.save();
   const outFileName = `${Date.now()}_signed_${reviewer}_${docId}.pdf`;
   await writeFile(path.join(uploadDir, outFileName), stampedBytes);
@@ -92,11 +106,11 @@ export async function POST(
     };
   } else if (reviewer === 'prodi') {
     updateData = {
-      status: 'APPROVED',
+      status: 'PENGECEKAN',
       isProdiApproved: true,
       prodiId: userId ?? null,
       prodiNotes: null,
-      finalPdfUrl: outFileUrl,
+      koordinatorSignedPdfUrl: outFileUrl,
     };
   } else {
     updateData = {

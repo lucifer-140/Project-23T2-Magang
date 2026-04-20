@@ -7,7 +7,7 @@ const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfa
 
 export const metadata: Metadata = {
   title: 'Portal Akademik UPH',
-  description: 'Sistem Administrasi Dosen UPH',
+  description: 'Sistem Administrasi Prodi Informatika Medan',
 };
 
 export default function RootLayout({

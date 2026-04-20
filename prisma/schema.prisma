@@ -68,6 +68,8 @@ model User {
   koordinatorDocReviews     AcademicDocument[] @relation("KoordinatorAcademicReview")
   prodiDocReviews           AcademicDocument[] @relation("ProdiAcademicReview")
   matkulClasses             MatkulClass[]      @relation("ClassDosen")
+  dosenPaBAPs               BeritaAcaraPerwalian[] @relation("DosenPaBAP")
+  prodiBAPReviews           BeritaAcaraPerwalian[] @relation("ProdiBAP")
 }
 
 model TahunAkademik {
@@ -85,6 +87,7 @@ model Semester {
   isActive        Boolean       @default(false)
   matkuls         Matkul[]
   academicDocs    AcademicDocument[]
+  baps            BeritaAcaraPerwalian[]
 
   @@unique([tahunAkademikId, nama])
 }
@@ -209,10 +212,46 @@ model AcademicDocument {
 
   annotations AcademicDocAnnotation[]
 
+  // EPP-specific fields (nullable, only used when type = EPP)
+  eppPersentaseMateri     Float?
+  eppPersentaseCpmk       Float?
+  eppPersentaseKehadiran  Float?
+  eppPersentaseNilaiB     Float?
+  eppPersentaseKkmToB     Float?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([matkulId, dosenId, semesterId, type])
+}
+
+model BeritaAcaraPerwalian {
+  id          String   @id @default(cuid())
+  kelasName   String
+  semesterId  String
+  semester    Semester @relation(fields: [semesterId], references: [id])
+  dosenPaId   String
+  dosenPa     User     @relation("DosenPaBAP", fields: [dosenPaId], references: [id])
+
+  lembarKehadiranUrl  String?
+  lembarKehadiranName String?
+  absensiUrl          String?
+  absensiName         String?
+  beritaAcaraUrl      String?
+  beritaAcaraName     String?
+
+  status          DocStatus @default(UNSUBMITTED)
+  isProdiApproved Boolean   @default(false)
+  prodiId         String?
+  prodi           User?     @relation("ProdiBAP", fields: [prodiId], references: [id])
+  prodiNotes      String?
+  kaprodiNotes    String?
+  finalApprovedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kelasName, semesterId])
 }
 
 model AcademicDocAnnotation {

@@ -81,8 +81,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
 
     if (roles.includes('PRODI')) {
-      combinedNavItems.push({ href: '/dashboard/prodi', icon: <Shield size={18} />, label: 'Review LPP & EPP' });
+      combinedNavItems.push({ href: '/dashboard/prodi', icon: <Shield size={18} />, label: 'Review Dokumen' });
     }
+
+    combinedNavItems.push({ href: '/dashboard/berita-acara', icon: <FileText size={18} />, label: 'Berita Acara Perwalian' });
 
     let labelStr = 'Dosen';
     if (roles.includes('KAPRODI') && roles.includes('KOORDINATOR')) labelStr = 'Kaprodi & Koordinator';

@@ -65,7 +65,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               Portal Akademik
             </h1>
             <p className="text-[13px] text-gray-400 mt-1 tracking-wider uppercase font-semibold">
-              Sistem Administrasi UPH
+              Sistem Administrasi Prodi Informatika Medan
             </p>
           </div>
 

@@ -11,23 +11,21 @@ export default async function ProdiDashboard() {
 
   const [pendingReview, approvedCount, revisionCount, totalDocs] = await Promise.all([
     prisma.academicDocument.count({
-      where: { type: { in: ['LPP', 'EPP'] }, isKoordinatorApproved: true, isProdiApproved: false, status: 'PENGECEKAN' },
+      where: { isKoordinatorApproved: true, isProdiApproved: false, status: 'PENGECEKAN' },
     }),
     prisma.academicDocument.count({
-      where: { type: { in: ['LPP', 'EPP'] }, isProdiApproved: true, status: 'APPROVED' },
+      where: { isProdiApproved: true },
     }),
     prisma.academicDocument.count({
-      where: { type: { in: ['LPP', 'EPP'] }, status: 'REVISION', prodiId: userId },
+      where: { status: 'REVISION', prodiId: userId },
     }),
-    prisma.academicDocument.count({
-      where: { type: { in: ['LPP', 'EPP'] } },
-    }),
+    prisma.academicDocument.count({}),
   ]);
 
   return (
     <div>
       <h1 className="text-3xl font-playfair font-bold text-uph-blue mb-2">Dashboard PRODI</h1>
-      <p className="text-gray-500 mb-8">Tinjau dan setujui dokumen LPP & EPP dari seluruh dosen.</p>
+      <p className="text-gray-500 mb-8">Tinjau dan setujui semua dokumen akademik dari seluruh dosen.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-yellow-500">
@@ -63,7 +61,7 @@ export default async function ProdiDashboard() {
             <FileText size={20} className="text-uph-blue opacity-60" />
           </div>
           <p className="text-4xl font-playfair font-bold text-uph-blue">{totalDocs}</p>
-          <p className="text-xs text-gray-400 mt-1">LPP & EPP sistem</p>
+          <p className="text-xs text-gray-400 mt-1">Semua dokumen akademik</p>
         </div>
       </div>
 
@@ -75,7 +73,7 @@ export default async function ProdiDashboard() {
           <FileText size={24} className="text-uph-blue" />
         </div>
         <div className="flex-1">
-          <h3 className="font-bold text-gray-800">Review Dokumen LPP & EPP</h3>
+          <h3 className="font-bold text-gray-800">Review Semua Dokumen</h3>
           <p className="text-sm text-gray-500">Buka daftar mata kuliah untuk memeriksa dan menyetujui dokumen</p>
         </div>
         {pendingReview > 0 && (

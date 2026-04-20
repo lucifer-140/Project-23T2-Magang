@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented here.
 
+## [0.14.0] - 2026-04-20
+
+### Added
+- **Signature toggle** — "Sertakan Tanda Tangan" checkbox in sign step; approve without stamp calls review API directly.
+- **Name + timestamp on stamps** — `drawText()` below placed signature image: reviewer name + DD/MM/YYYY HH:mm WIB.
+- **Universal 3-stage workflow** — ALL doc types now follow Koordinator → PRODI → Kaprodi (previously only LPP/EPP went through PRODI).
+- **EPP additional inputs** — 5 nullable Float fields on `AcademicDocument` (`eppPersentaseMateri`, `eppPersentaseCpmk`, `eppPersentaseKehadiran`, `eppPersentaseNilaiB`, `eppPersentaseKkmToB`); shown before upload slot in dosen view; read-only in reviewer modal.
+- **Berita Acara Perwalian (BAP)** — new standalone section per kelas per semester; 3 file slots (lembarKehadiran, absensi, beritaAcara); Kaprodi creates entries and assigns Dosen PA; Prodi → Kaprodi approval workflow.
+- **BAP API routes** — `GET/POST /api/bap`, `POST /api/bap/[id]/upload`, `PATCH /api/bap/[id]/review`, `PATCH /api/bap/[id]/assign`.
+- **BAP pages** — `/dashboard/berita-acara` (list) + `/dashboard/berita-acara/[bapId]` (detail with upload slots + review panel).
+- **Sidebar BAP nav** — visible for all combined-role users (DOSEN, KOORDINATOR, PRODI, KAPRODI).
+- **System title renamed** — "Sistem Administrasi UPH" → "Sistem Administrasi Prodi Informatika Medan".
+
+### Changed
+- **Universal workflow** — `review/route.ts`: removed `PRODI_DOC_TYPES` special-casing; kaprodi now gates on `isProdiApproved`; prodi approve sets `status=PENGECEKAN` (not APPROVED).
+- **Kaprodi gate in sign route** — returns 400 if `isProdiApproved = false`.
+- **PRODI dashboard** — stats now count all doc types (not just LPP/EPP); label "Review Semua Dokumen".
+- **StatusBadge** — updated to 3-stage labels: "Menunggu Koordinator" → "Menunggu PRODI" → "Menunggu Kaprodi".
+- **Upload route** — reset `isProdiApproved` and `prodiNotes` on re-upload; accepts EPP fields from FormData.
+
+### Schema
+- `AcademicDocument`: +5 nullable Float EPP fields.
+- New model `BeritaAcaraPerwalian` with 3 file slots, Prodi→Kaprodi workflow, back-relations on `User` and `Semester`.
+
 ## [0.13.0] - 2026-04-20
 
 ### Added

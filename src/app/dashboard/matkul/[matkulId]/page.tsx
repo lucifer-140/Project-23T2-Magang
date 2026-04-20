@@ -14,6 +14,7 @@ export default async function MatkulHubPage({ params, searchParams }: Props) {
 
   const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
+  const userName = cookieStore.get('userName')?.value ?? '';
   const roleRaw = cookieStore.get('userRole')?.value;
   if (!userId) redirect('/');
 
@@ -86,6 +87,7 @@ export default async function MatkulHubPage({ params, searchParams }: Props) {
       initialDocs={serializedDocs}
       userRoles={userRoles}
       userId={userId}
+      userName={userName}
       initialSemesterId={activeSemester?.id ?? null}
       semesters={semesters}
     />

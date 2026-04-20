@@ -55,13 +55,25 @@ export async function POST(
   if (!dosenId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const formData = await req.formData();
-  const file = formData.get('file') as File;
+  const file = formData.get('file') as File | null;
   const typeRaw = formData.get('type') as string;
   const semesterId = formData.get('semesterId') as string;
 
-  if (!file || !typeRaw || !semesterId) {
+  if (!typeRaw || !semesterId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
+
+  const parseFloat = (v: FormDataEntryValue | null) => {
+    const n = Number(v);
+    return isNaN(n) ? null : n;
+  };
+  const eppFields = typeRaw === 'EPP' ? {
+    eppPersentaseMateri: parseFloat(formData.get('eppPersentaseMateri')),
+    eppPersentaseCpmk: parseFloat(formData.get('eppPersentaseCpmk')),
+    eppPersentaseKehadiran: parseFloat(formData.get('eppPersentaseKehadiran')),
+    eppPersentaseNilaiB: parseFloat(formData.get('eppPersentaseNilaiB')),
+    eppPersentaseKkmToB: parseFloat(formData.get('eppPersentaseKkmToB')),
+  } : {};
 
   const validTypes = Object.values(DocType);
   if (!validTypes.includes(typeRaw as DocType)) {
@@ -75,6 +87,17 @@ export async function POST(
   });
   if (existing?.status === 'APPROVED') {
     return NextResponse.json({ error: 'Document already approved and locked' }, { status: 409 });
+  }
+
+  // EPP-only save (no file) — just update fields
+  if (!file) {
+    if (Object.keys(eppFields).length === 0) {
+      return NextResponse.json({ error: 'No file and no EPP fields' }, { status: 400 });
+    }
+    const doc = existing
+      ? await prisma.academicDocument.update({ where: { id: existing.id }, data: eppFields })
+      : await prisma.academicDocument.create({ data: { matkulId, dosenId, semesterId, type, status: 'UNSUBMITTED', ...eppFields } });
+    return NextResponse.json(doc, { status: 200 });
   }
 
   const uploadDir = path.join(process.cwd(), 'public', 'uploads');
@@ -99,7 +122,6 @@ export async function POST(
 
   let doc;
   if (existing) {
-    // Delete annotations - they reference the old file's coordinates
     await prisma.academicDocAnnotation.deleteMany({ where: { docId: existing.id } });
 
     doc = await prisma.academicDocument.update({
@@ -109,8 +131,10 @@ export async function POST(
         fileUrl,
         status: 'SUBMITTED',
         isKoordinatorApproved: false,
+        isProdiApproved: false,
         koordinatorNotes: null,
         kaprodiNotes: null,
+        prodiNotes: null,
         annotatedPdfUrl: null,
         koordinatorSigUrl: null,
         koordinatorSigX: null,
@@ -124,11 +148,12 @@ export async function POST(
         kaprodiSigPage: null,
         kaprodiSigWidth: null,
         finalPdfUrl: null,
+        ...eppFields,
       },
     });
   } else {
     doc = await prisma.academicDocument.create({
-      data: { matkulId, dosenId, semesterId, type, fileName: finalFileName, fileUrl, status: 'SUBMITTED' },
+      data: { matkulId, dosenId, semesterId, type, fileName: finalFileName, fileUrl, status: 'SUBMITTED', ...eppFields },
     });
   }
 

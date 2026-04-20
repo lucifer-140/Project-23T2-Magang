@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 
-const PRODI_DOC_TYPES = ['LPP', 'EPP'];
-
 // PATCH /api/documents/[docId]/review
-// Body: { reviewer: 'koordinator' | 'kaprodi' | 'prodi', action: 'approve' | 'reject', notes?: string }
+// Body: { reviewer: 'koordinator' | 'prodi' | 'kaprodi', action: 'approve' | 'reject', notes?: string }
+// Workflow (all doc types): Koordinator → Prodi → Kaprodi
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ docId: string }> }
@@ -18,11 +17,9 @@ export async function PATCH(
 
   const existingDoc = await prisma.academicDocument.findUnique({
     where: { id: docId },
-    select: { type: true, isKoordinatorApproved: true },
+    select: { isKoordinatorApproved: true, isProdiApproved: true },
   });
   if (!existingDoc) return NextResponse.json({ error: 'Document not found' }, { status: 404 });
-
-  const isProdiDoc = PRODI_DOC_TYPES.includes(existingDoc.type);
 
   let updateData: Record<string, unknown>;
 
@@ -43,7 +40,7 @@ export async function PATCH(
         prodiNotes: null,
       };
     }
-  } else if (reviewer === 'prodi' && isProdiDoc) {
+  } else if (reviewer === 'prodi') {
     if (!existingDoc.isKoordinatorApproved) {
       return NextResponse.json({ error: 'Koordinator must approve first' }, { status: 400 });
     }
@@ -51,7 +48,7 @@ export async function PATCH(
       updateData = {
         isProdiApproved: true,
         prodiId: userId ?? null,
-        status: 'APPROVED',
+        status: 'PENGECEKAN',
         prodiNotes: null,
       };
     } else {
@@ -62,18 +59,25 @@ export async function PATCH(
         prodiNotes: notes ?? null,
       };
     }
-  } else if (reviewer === 'kaprodi' && !isProdiDoc) {
+  } else if (reviewer === 'kaprodi') {
+    if (!existingDoc.isProdiApproved) {
+      return NextResponse.json({ error: 'Prodi must approve first' }, { status: 400 });
+    }
     if (action === 'approve') {
-      updateData = { status: 'APPROVED' };
+      updateData = {
+        status: 'APPROVED',
+        kaprodiId: userId ?? null,
+      };
     } else {
       updateData = {
         status: 'REVISION',
         isKoordinatorApproved: false,
+        isProdiApproved: false,
         kaprodiNotes: notes ?? null,
       };
     }
   } else {
-    return NextResponse.json({ error: 'Invalid reviewer for this document type' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid reviewer' }, { status: 400 });
   }
 
   const doc = await prisma.academicDocument.update({
