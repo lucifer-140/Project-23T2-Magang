@@ -21,41 +21,15 @@ export async function GET(req: NextRequest) {
   const baps = await prisma.beritaAcaraPerwalian.findMany({
     where: {
       ...(semesterId ? { semesterId } : {}),
-      ...(isKaprodi || isProdi ? {} : { dosenPaId: userId }),
+      ...(isKaprodi || isProdi ? {} : { kelas: { dosenPaId: userId } }),
     },
     include: {
-      dosenPa: { select: { id: true, name: true } },
+      kelas: { include: { dosenPa: { select: { id: true, name: true } } } },
       semester: { include: { tahunAkademik: true } },
     },
-    orderBy: [{ semesterId: 'desc' }, { kelasName: 'asc' }],
+    orderBy: [{ semesterId: 'desc' }, { kelas: { name: 'asc' } }],
   });
 
   return NextResponse.json(baps);
 }
 
-// POST /api/bap — Kaprodi creates BAP entry
-export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const roleRaw = cookieStore.get('userRole')?.value;
-  let roles: string[] = [];
-  try { if (roleRaw) roles = JSON.parse(decodeURIComponent(roleRaw)); } catch { roles = []; }
-
-  if (!roles.includes('KAPRODI')) {
-    return NextResponse.json({ error: 'Only Kaprodi can create BAP entries' }, { status: 403 });
-  }
-
-  const { kelasName, semesterId, dosenPaId } = await req.json();
-  if (!kelasName || !semesterId || !dosenPaId) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-  }
-
-  try {
-    const bap = await prisma.beritaAcaraPerwalian.create({
-      data: { kelasName, semesterId, dosenPaId },
-      include: { dosenPa: { select: { id: true, name: true } }, semester: { include: { tahunAkademik: true } } },
-    });
-    return NextResponse.json(bap, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Entry for this kelas+semester already exists' }, { status: 409 });
-  }
-}

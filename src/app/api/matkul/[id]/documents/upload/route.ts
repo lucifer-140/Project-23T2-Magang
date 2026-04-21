@@ -63,17 +63,19 @@ export async function POST(
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const parseFloat = (v: FormDataEntryValue | null) => {
+  const parseEppFloat = (v: FormDataEntryValue | null) => {
+    if (v === null || v === '') return null;
     const n = Number(v);
     return isNaN(n) ? null : n;
   };
-  const eppFields = typeRaw === 'EPP' ? {
-    eppPersentaseMateri: parseFloat(formData.get('eppPersentaseMateri')),
-    eppPersentaseCpmk: parseFloat(formData.get('eppPersentaseCpmk')),
-    eppPersentaseKehadiran: parseFloat(formData.get('eppPersentaseKehadiran')),
-    eppPersentaseNilaiB: parseFloat(formData.get('eppPersentaseNilaiB')),
-    eppPersentaseKkmToB: parseFloat(formData.get('eppPersentaseKkmToB')),
-  } : {};
+  // Only include EPP fields that were explicitly sent in the FormData
+  const eppFields: Record<string, number | null> = {};
+  if (typeRaw === 'EPP') {
+    for (const name of ['eppPersentaseMateri', 'eppPersentaseCpmk', 'eppPersentaseKehadiran', 'eppPersentaseNilaiB', 'eppPersentaseKkmToB']) {
+      const v = formData.get(name);
+      if (v !== null) eppFields[name] = parseEppFloat(v);
+    }
+  }
 
   const validTypes = Object.values(DocType);
   if (!validTypes.includes(typeRaw as DocType)) {

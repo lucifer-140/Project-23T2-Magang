@@ -68,8 +68,9 @@ model User {
   koordinatorDocReviews     AcademicDocument[] @relation("KoordinatorAcademicReview")
   prodiDocReviews           AcademicDocument[] @relation("ProdiAcademicReview")
   matkulClasses             MatkulClass[]      @relation("ClassDosen")
-  dosenPaBAPs               BeritaAcaraPerwalian[] @relation("DosenPaBAP")
+  kelasDosenPa              Kelas[]                @relation("DosenPaKelas")
   prodiBAPReviews           BeritaAcaraPerwalian[] @relation("ProdiBAP")
+  notifications             Notification[]
 }
 
 model TahunAkademik {
@@ -225,13 +226,21 @@ model AcademicDocument {
   @@unique([matkulId, dosenId, semesterId, type])
 }
 
+model Kelas {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  dosenPaId String
+  dosenPa   User     @relation("DosenPaKelas", fields: [dosenPaId], references: [id])
+  baps      BeritaAcaraPerwalian[]
+  createdAt DateTime @default(now())
+}
+
 model BeritaAcaraPerwalian {
-  id          String   @id @default(cuid())
-  kelasName   String
-  semesterId  String
-  semester    Semester @relation(fields: [semesterId], references: [id])
-  dosenPaId   String
-  dosenPa     User     @relation("DosenPaBAP", fields: [dosenPaId], references: [id])
+  id         String   @id @default(cuid())
+  kelasId    String
+  kelas      Kelas    @relation(fields: [kelasId], references: [id])
+  semesterId String
+  semester   Semester @relation(fields: [semesterId], references: [id])
 
   lembarKehadiranUrl  String?
   lembarKehadiranName String?
@@ -240,6 +249,7 @@ model BeritaAcaraPerwalian {
   beritaAcaraUrl      String?
   beritaAcaraName     String?
 
+  isUnlocked      Boolean   @default(false)
   status          DocStatus @default(UNSUBMITTED)
   isProdiApproved Boolean   @default(false)
   prodiId         String?
@@ -251,7 +261,17 @@ model BeritaAcaraPerwalian {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([kelasName, semesterId])
+  @@unique([kelasId, semesterId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model AcademicDocAnnotation {

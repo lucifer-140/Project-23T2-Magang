@@ -66,7 +66,6 @@ export async function PATCH(
     if (action === 'approve') {
       updateData = {
         status: 'APPROVED',
-        kaprodiId: userId ?? null,
       };
     } else {
       updateData = {

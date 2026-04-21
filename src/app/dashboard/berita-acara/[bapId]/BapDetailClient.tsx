@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Upload, FileText, CheckCircle, Clock, AlertCircle, XCircle, Loader2, Download, Users } from 'lucide-react';
 
 interface Bap {
   id: string;
-  kelasName: string;
+  kelasId: string;
+  kelas: { id: string; name: string; dosenPaId: string; dosenPa: { id: string; name: string } };
   semesterId: string;
-  semester: { id: string; nama: string; tahunAkademik: { tahun: string } };
-  dosenPa: { id: string; name: string };
-  dosenPaId: string;
+  semester: { id: string; nama: string; tahunAkademik: { id: string; tahun: string } };
   lembarKehadiranUrl: string | null;
   lembarKehadiranName: string | null;
   absensiUrl: string | null;
@@ -31,7 +30,6 @@ interface Props {
   isKaprodi: boolean;
   isProdi: boolean;
   isDosenPa: boolean;
-  dosens: { id: string; name: string }[];
 }
 
 const SLOTS = [
@@ -53,17 +51,20 @@ function StatusBadge({ status, isProdiApproved }: { status: string; isProdiAppro
   return <span className="inline-flex items-center gap-1 text-sm font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-500"><XCircle size={14} /> Belum Lengkap</span>;
 }
 
-export default function BapDetailClient({ bap: initialBap, isKaprodi, isProdi, isDosenPa, dosens }: Props) {
+export default function BapDetailClient({ bap: initialBap, isKaprodi, isProdi, isDosenPa }: Props) {
   const router = useRouter();
   const [bap, setBap] = useState(initialBap);
   const [uploadingSlot, setUploadingSlot] = useState<SlotKey | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [rejectNotes, setRejectNotes] = useState('');
   const [showRejectForm, setShowRejectForm] = useState<'prodi' | 'kaprodi' | null>(null);
-  const [reassignId, setReassignId] = useState(bap.dosenPa.id);
-  const [reassigning, setReassigning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingSlot, setPendingSlot] = useState<SlotKey | null>(null);
+
+  useEffect(() => {
+    const id = setInterval(() => router.refresh(), 30000);
+    return () => clearInterval(id);
+  }, [router]);
 
   const locked = bap.status === 'SUBMITTED' || bap.status === 'PENGECEKAN' || bap.status === 'APPROVED';
 
@@ -108,20 +109,6 @@ export default function BapDetailClient({ bap: initialBap, isKaprodi, isProdi, i
     }
   };
 
-  const handleReassign = async () => {
-    setReassigning(true);
-    const res = await fetch(`/api/bap/${bap.id}/assign`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dosenPaId: reassignId }),
-    });
-    setReassigning(false);
-    if (res.ok) {
-      const data = await res.json();
-      setBap(prev => ({ ...prev, dosenPa: data.dosenPa, dosenPaId: data.dosenPaId ?? prev.dosenPaId }));
-    }
-  };
-
   const canProdiReview = isProdi && bap.status === 'SUBMITTED' && !bap.isProdiApproved;
   const canKaprodiReview = isKaprodi && bap.isProdiApproved && bap.status === 'PENGECEKAN';
 
@@ -129,13 +116,15 @@ export default function BapDetailClient({ bap: initialBap, isKaprodi, isProdi, i
     <div>
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
 
-      <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-uph-blue mb-4 transition-colors">
+      <button
+        onClick={() => router.push(`/dashboard/berita-acara/kelas/${bap.kelas.id}/${bap.semester.tahunAkademik.id}`)}
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-uph-blue mb-4 transition-colors">
         <ArrowLeft size={14} /> Kembali
       </button>
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-playfair text-2xl font-bold text-uph-blue">Kelas {bap.kelasName}</h1>
+          <h1 className="font-playfair text-2xl font-bold text-uph-blue">Kelas {bap.kelas.name}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{bap.semester.tahunAkademik.tahun} — {bap.semester.nama}</p>
         </div>
         <StatusBadge status={bap.status} isProdiApproved={bap.isProdiApproved} />
@@ -144,22 +133,10 @@ export default function BapDetailClient({ bap: initialBap, isKaprodi, isProdi, i
       {/* Info bar */}
       <div className="bg-white border border-uph-border rounded-xl px-5 py-4 mb-6 flex items-center gap-4">
         <Users size={20} className="text-uph-blue flex-shrink-0" />
-        <div className="flex-1">
+        <div>
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Dosen PA</p>
-          <p className="font-bold text-gray-800">{bap.dosenPa.name}</p>
+          <p className="font-bold text-gray-800">{bap.kelas.dosenPa.name}</p>
         </div>
-        {isKaprodi && bap.status !== 'APPROVED' && (
-          <div className="flex items-center gap-2">
-            <select value={reassignId} onChange={e => setReassignId(e.target.value)}
-              className="border border-uph-border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-uph-blue/30">
-              {dosens.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-            <button onClick={handleReassign} disabled={reassigning || reassignId === bap.dosenPaId}
-              className="px-3 py-1.5 text-xs font-bold text-white bg-uph-blue rounded-lg hover:bg-uph-blue/90 disabled:opacity-50 transition-colors">
-              {reassigning ? <Loader2 size={12} className="animate-spin" /> : 'Ganti'}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Rejection notes */}

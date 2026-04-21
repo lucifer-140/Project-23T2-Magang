@@ -16,7 +16,7 @@ export default async function BapDetailPage({ params }: { params: Promise<{ bapI
   const bap = await prisma.beritaAcaraPerwalian.findUnique({
     where: { id: bapId },
     include: {
-      dosenPa: { select: { id: true, name: true } },
+      kelas: { include: { dosenPa: { select: { id: true, name: true } } } },
       semester: { include: { tahunAkademik: true } },
     },
   });
@@ -25,13 +25,9 @@ export default async function BapDetailPage({ params }: { params: Promise<{ bapI
 
   const isKaprodi = roles.includes('KAPRODI');
   const isProdi = roles.includes('PRODI');
-  const isDosenPa = bap.dosenPaId === userId;
+  const isDosenPa = bap.kelas.dosenPaId === userId;
 
   if (!isKaprodi && !isProdi && !isDosenPa) redirect('/dashboard/berita-acara');
-
-  const dosens = isKaprodi
-    ? await prisma.user.findMany({ where: { roles: { has: 'DOSEN' } }, select: { id: true, name: true }, orderBy: { name: 'asc' } })
-    : [];
 
   return (
     <BapDetailClient
@@ -40,11 +36,11 @@ export default async function BapDetailPage({ params }: { params: Promise<{ bapI
         createdAt: bap.createdAt.toISOString(),
         updatedAt: bap.updatedAt.toISOString(),
         finalApprovedAt: bap.finalApprovedAt?.toISOString() ?? null,
+        kelas: { ...bap.kelas },
       }}
       isKaprodi={isKaprodi}
       isProdi={isProdi}
       isDosenPa={isDosenPa}
-      dosens={dosens}
     />
   );
 }

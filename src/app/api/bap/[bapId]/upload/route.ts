@@ -16,9 +16,9 @@ export async function POST(
   const userId = cookieStore.get('userId')?.value;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const bap = await prisma.beritaAcaraPerwalian.findUnique({ where: { id: bapId } });
+  const bap = await prisma.beritaAcaraPerwalian.findUnique({ where: { id: bapId }, include: { kelas: true } });
   if (!bap) return NextResponse.json({ error: 'BAP not found' }, { status: 404 });
-  if (bap.dosenPaId !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (bap.kelas.dosenPaId !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   if (bap.status === 'APPROVED') return NextResponse.json({ error: 'BAP already approved' }, { status: 409 });
 
   const formData = await req.formData();
@@ -44,7 +44,7 @@ export async function POST(
       [`${slot}Name`]: file.name,
       // auto-set status to SUBMITTED if all 3 slots are filled after this upload
     },
-    include: { dosenPa: { select: { id: true, name: true } }, semester: { include: { tahunAkademik: true } } },
+    include: { kelas: { include: { dosenPa: { select: { id: true, name: true } } } }, semester: { include: { tahunAkademik: true } } },
   });
 
   // Auto-submit if all 3 slots filled
@@ -53,7 +53,7 @@ export async function POST(
     const submitted = await prisma.beritaAcaraPerwalian.update({
       where: { id: bapId },
       data: { status: 'SUBMITTED' },
-      include: { dosenPa: { select: { id: true, name: true } }, semester: { include: { tahunAkademik: true } } },
+      include: { kelas: { include: { dosenPa: { select: { id: true, name: true } } } }, semester: { include: { tahunAkademik: true } } },
     });
     return NextResponse.json(submitted);
   }

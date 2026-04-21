@@ -116,6 +116,8 @@ function StatusBadge({ status, isKoordinatorApproved, isProdiApproved }: { statu
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
+const DISPLAY_DOC_TYPES = DOC_TYPES.filter(t => t !== 'BERITA_ACARA');
+
 // ---------- main component ----------
 export default function MatkulHubClient({ matkul, dosens, koordinators, classes, initialDocs, userRoles, userId, userName, initialSemesterId, semesters }: Props) {
   const router = useRouter();
@@ -165,9 +167,25 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [sigPosition, setSigPosition] = useState<SignaturePosition>({ x: 60, y: 75, page: 1, width: 22 });
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
-  const [includeSig, setIncludeSig] = useState(true);
+  const [includeSig, setIncludeSig] = useState(false);
   const [eppFields, setEppFields] = useState({ eppPersentaseMateri: '', eppPersentaseCpmk: '', eppPersentaseKehadiran: '', eppPersentaseNilaiB: '', eppPersentaseKkmToB: '' });
   const [savingEpp, setSavingEpp] = useState(false);
+  const [eppSaved, setEppSaved] = useState(false);
+  const eppDoc = docs.find(d => d.type === 'EPP' && d.dosenId === userId) ?? null;
+  // Sync EPP inputs from saved doc data
+  useEffect(() => {
+    if (!eppDoc) return;
+    const synced = {
+      eppPersentaseMateri: eppDoc.eppPersentaseMateri != null ? String(eppDoc.eppPersentaseMateri) : '',
+      eppPersentaseCpmk: eppDoc.eppPersentaseCpmk != null ? String(eppDoc.eppPersentaseCpmk) : '',
+      eppPersentaseKehadiran: eppDoc.eppPersentaseKehadiran != null ? String(eppDoc.eppPersentaseKehadiran) : '',
+      eppPersentaseNilaiB: eppDoc.eppPersentaseNilaiB != null ? String(eppDoc.eppPersentaseNilaiB) : '',
+      eppPersentaseKkmToB: eppDoc.eppPersentaseKkmToB != null ? String(eppDoc.eppPersentaseKkmToB) : '',
+    };
+    setEppFields(synced);
+    setEppSaved(Object.values(synced).every(v => v !== ''));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eppDoc?.id, eppDoc?.eppPersentaseMateri, eppDoc?.eppPersentaseCpmk, eppDoc?.eppPersentaseKehadiran, eppDoc?.eppPersentaseNilaiB, eppDoc?.eppPersentaseKkmToB]);
 
   useEffect(() => {
     fetch('/api/users/me/signature')
@@ -228,7 +246,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
     setRejectNotes('');
     setSignatureDataUrl(null);
     setSigPosition({ x: 60, y: 75, page: 1, width: 22 });
-    setIncludeSig(true);
+    setIncludeSig(false);
   };
 
   const closeModal = () => {
@@ -259,14 +277,19 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
   };
 
   const handleSaveEpp = async (type: DocType) => {
+    const allFilled = Object.values(eppFields).every(v => v !== '');
+    if (!allFilled) {
+      alert('Harap isi semua data EPP terlebih dahulu sebelum menyimpan.');
+      return;
+    }
     setSavingEpp(true);
     const fd = new FormData();
     fd.append('type', type);
     fd.append('semesterId', semesterId ?? '');
-    Object.entries(eppFields).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
-    await fetch(`/api/matkul/${matkul.id}/documents/upload`, { method: 'POST', body: fd });
+    Object.entries(eppFields).forEach(([k, v]) => { fd.append(k, v); });
+    const res = await fetch(`/api/matkul/${matkul.id}/documents/upload`, { method: 'POST', body: fd });
     setSavingEpp(false);
-    mutate();
+    if (res.ok) { setEppSaved(true); mutate(); }
   };
 
   const handleStampAndApprove = async () => {
@@ -321,7 +344,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
   // ---------- Dosen view ----------
   const renderDosenView = () => (
     <div className="space-y-3">
-      {DOC_TYPES.map(type => {
+      {DISPLAY_DOC_TYPES.map(type => {
         const doc = getDoc(type);
         const isOpen = openSections.has(type);
         const isUploading = uploading === type;
@@ -411,8 +434,10 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                     ].map(({ key, label }) => (
                       <div key={key}>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">{label} (%)</label>
-                        <input type="number" min={0} max={100} value={eppFields[key as keyof typeof eppFields]}
-                          onChange={e => setEppFields(f => ({ ...f, [key]: e.target.value }))}
+                        <input
+                          type="text" inputMode="decimal" value={eppFields[key as keyof typeof eppFields]}
+                          onKeyDown={e => { if (['e','E','+','-',' '].includes(e.key) || (e.key.length === 1 && !/[\d.]/.test(e.key))) e.preventDefault(); }}
+                          onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) { const n = parseFloat(v); if (v === '' || (n >= 0 && n <= 100)) { setEppFields(f => ({ ...f, [key]: v })); setEppSaved(false); } } }}
                           className="w-full border border-uph-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-uph-blue/30"
                           placeholder="0–100" />
                       </div>
@@ -424,17 +449,26 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                     ].map(({ key, label }) => (
                       <div key={key}>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">{label} (%)</label>
-                        <input type="number" min={0} max={100} value={eppFields[key as keyof typeof eppFields]}
-                          onChange={e => setEppFields(f => ({ ...f, [key]: e.target.value }))}
+                        <input
+                          type="text" inputMode="decimal" value={eppFields[key as keyof typeof eppFields]}
+                          onKeyDown={e => { if (['e','E','+','-',' '].includes(e.key) || (e.key.length === 1 && !/[\d.]/.test(e.key))) e.preventDefault(); }}
+                          onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) { const n = parseFloat(v); if (v === '' || (n >= 0 && n <= 100)) { setEppFields(f => ({ ...f, [key]: v })); setEppSaved(false); } } }}
                           className="w-full border border-uph-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-uph-blue/30"
                           placeholder="0–100" />
                       </div>
                     ))}
-                    <button onClick={() => handleSaveEpp(type)} disabled={savingEpp}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-uph-blue text-white rounded-lg text-xs font-bold hover:bg-uph-blue/90 disabled:opacity-50 transition-colors">
-                      {savingEpp ? <Loader2 size={12} className="animate-spin" /> : null}
-                      Simpan Data EPP
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => handleSaveEpp(type)} disabled={savingEpp}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-uph-blue text-white rounded-lg text-xs font-bold hover:bg-uph-blue/90 disabled:opacity-50 transition-colors">
+                        {savingEpp ? <Loader2 size={12} className="animate-spin" /> : null}
+                        Simpan Data EPP
+                      </button>
+                      {eppSaved && (
+                        <span className="flex items-center gap-1 text-xs font-semibold text-green-600">
+                          <CheckCircle size={13} /> Data tersimpan
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -460,8 +494,9 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                 {uploadAllowed ? (
                   <button
                     onClick={() => handleUploadClick(type)}
-                    disabled={isUploading}
-                    className="flex items-center gap-2 px-4 py-2 bg-uph-blue text-white rounded-lg text-sm font-semibold hover:bg-uph-blue/90 disabled:opacity-60 transition-colors"
+                    disabled={isUploading || (type === 'EPP' && !eppSaved)}
+                    title={type === 'EPP' && !eppSaved ? 'Simpan Data EPP terlebih dahulu' : undefined}
+                    className="flex items-center gap-2 px-4 py-2 bg-uph-blue text-white rounded-lg text-sm font-semibold hover:bg-uph-blue/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                   >
                     {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
                     {status === 'UNSUBMITTED' ? 'Upload Dokumen' : 'Upload Ulang'}
@@ -483,7 +518,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
   const renderReviewerView = () => {
     return (
     <div className="space-y-3">
-      {DOC_TYPES.map(type => {
+      {DISPLAY_DOC_TYPES.map(type => {
         const isOpen = openSections.has(`rev-${type}`);
         const typeDocs: Doc[] = dosens.map(dosen => {
           const doc = getDoc(type, dosen.id);
@@ -558,6 +593,23 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                           ) : null}
                         </div>
                       </div>
+
+                      {/* EPP data inline for reviewers */}
+                      {type === 'EPP' && doc.id && (doc.eppPersentaseMateri != null || doc.eppPersentaseCpmk != null) && (
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5">
+                          {[
+                            { key: 'eppPersentaseMateri' as keyof Doc, label: 'Materi' },
+                            { key: 'eppPersentaseCpmk' as keyof Doc, label: 'CPMK' },
+                            { key: 'eppPersentaseKehadiran' as keyof Doc, label: 'Kehadiran' },
+                            { key: 'eppPersentaseNilaiB' as keyof Doc, label: '≥B' },
+                            { key: 'eppPersentaseKkmToB' as keyof Doc, label: 'KKM→B' },
+                          ].map(({ key, label }) => {
+                            const val = doc[key];
+                            if (val == null) return null;
+                            return <span key={key} className="text-xs text-gray-500">{label}: <span className="font-bold text-gray-700">{String(val)}%</span></span>;
+                          })}
+                        </div>
+                      )}
 
                       {/* Revision detail - notes + annotated PDF */}
                       {showRevisionDetail && (
@@ -772,6 +824,7 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                           signatureDataUrl={signatureDataUrl}
                           position={sigPosition}
                           onPositionChange={setSigPosition}
+                          userName={userName}
                         />
                       </div>
                     ) : (

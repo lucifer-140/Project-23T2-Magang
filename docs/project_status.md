@@ -1,8 +1,8 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-20  
-**Current Version:** 0.13.0  
-**Status:** Active Development - Phase 13 Complete
+**Last Updated:** 2026-04-21  
+**Current Version:** 0.15.0  
+**Status:** Active Development - Phase 15 Complete
 
 ---
 
@@ -51,6 +51,19 @@
 - [x] Admin Matkul page restructured: `/dashboard/admin/matkul` (year/semester list) → `/[semesterId]` (scoped matkul table)
 - [x] Seed data: Ganjil + Genap 2025/2026 terms pre-created with matkul assignments
 - [x] Semester selector on Matkul hub pages loads from database
+
+### Phase 15: BAP Hierarchy Overhaul + Notifications (v0.15.0)
+- [x] `Kelas` model — replaces flat `kelasName`/`dosenPaId` on BAP; Kelas owns Dosen PA
+- [x] `Notification` model — in-app notifications with link, isRead, userId
+- [x] `BeritaAcaraPerwalian` restructured: `kelasId` FK + `isUnlocked` flag
+- [x] Three-level navigation: Kelas list → Tahun Akademik list → 3 semester tiles
+- [x] Auto-create 3 BAPs (Ganjil/Genap/Akselerasi) on tahun add; auto-navigate to tiles page
+- [x] Locked cards by default; Kaprodi unlocks with confirmation modal → notifies Dosen PA
+- [x] Delete Kelas and delete Tahun Akademik with confirmation modals (cascade)
+- [x] Ganti Dosen PA moved to Kelas detail page — info bar with confirmation modal
+- [x] NotificationBell in sidebar — 5 s polling, unread badge, mark-all-read on open
+- [x] Auto-refresh (`router.refresh()` 30 s) on all 4 BAP client pages
+- [x] "Tambah Tahun Akademik" button blocked pending auto-create flow review
 
 ### Phase 13: PRODI Role & LPP/EPP Workflow (v0.13.0)
 - [x] `PRODI` Role enum added to Prisma schema

@@ -6,6 +6,7 @@ import {
   Users, Settings, Shield, Terminal, Bell, UserCheck, Library
 } from 'lucide-react';
 import SidebarNav from '@/components/SidebarNav';
+import NotificationBell from '@/components/NotificationBell';
 import Image from 'next/image';
 
 type RoleConfig = {
@@ -125,6 +126,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SidebarNav navItems={config.navItems} />
 
         <div className="p-4 border-t border-gray-100">
+          <NotificationBell />
           <div className="flex items-center space-x-3 mb-4 px-4">
             <div className={`w-9 h-9 rounded-full ${config.accentColor} text-white flex items-center justify-center font-bold text-sm`}>
               {userName.charAt(0).toUpperCase()}

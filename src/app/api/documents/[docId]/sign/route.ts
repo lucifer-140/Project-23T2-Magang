@@ -70,15 +70,19 @@ export async function POST(
 
   page.drawImage(embeddedSig, { x: actualX, y: actualY, width: actualSigWidth, height: actualSigHeight, opacity: 0.9 });
 
-  // Draw name + timestamp below signature
+  // Draw name + timestamp centered just below signature
   if (reviewerName) {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontSize = Math.max(6, actualSigWidth * 0.07);
+    const fontSize = Math.max(5, actualSigWidth * 0.06);
+    const dateSize = fontSize * 0.85;
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())} WIB`;
-    page.drawText(String(reviewerName), { x: actualX, y: actualY - fontSize - 3, size: fontSize, font, color: rgb(0, 0, 0) });
-    page.drawText(dateStr, { x: actualX, y: actualY - fontSize * 2 - 5, size: fontSize * 0.85, font, color: rgb(0.3, 0.3, 0.3) });
+    const nameWidth = font.widthOfTextAtSize(String(reviewerName), fontSize);
+    const dateWidth = font.widthOfTextAtSize(dateStr, dateSize);
+    const centerX = actualX + actualSigWidth / 2;
+    page.drawText(String(reviewerName), { x: centerX - nameWidth / 2, y: actualY - fontSize - 0.5, size: fontSize, font, color: rgb(0, 0, 0) });
+    page.drawText(dateStr, { x: centerX - dateWidth / 2, y: actualY - fontSize - dateSize - 1, size: dateSize, font, color: rgb(0.3, 0.3, 0.3) });
   }
 
   const stampedBytes = await pdfDoc.save();

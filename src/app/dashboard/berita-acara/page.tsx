@@ -1,8 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import Link from 'next/link';
-import BapListClient from './BapListClient';
+import KelasListClient from './KelasListClient';
 
 export default async function BeritaAcaraPage() {
   const cookieStore = await cookies();
@@ -16,35 +15,23 @@ export default async function BeritaAcaraPage() {
   const isKaprodi = roles.includes('KAPRODI');
   const isProdi = roles.includes('PRODI');
 
-  const [baps, semesters, dosens] = await Promise.all([
-    prisma.beritaAcaraPerwalian.findMany({
+  const [kelasList, dosens] = await Promise.all([
+    prisma.kelas.findMany({
       where: isKaprodi || isProdi ? {} : { dosenPaId: userId },
       include: {
         dosenPa: { select: { id: true, name: true } },
-        semester: { include: { tahunAkademik: true } },
+        _count: { select: { baps: true } },
       },
-      orderBy: [{ createdAt: 'desc' }],
-    }),
-    prisma.semester.findMany({
-      orderBy: [{ tahunAkademik: { tahun: 'desc' } }, { nama: 'asc' }],
-      include: { tahunAkademik: true },
+      orderBy: { name: 'asc' },
     }),
     isKaprodi
       ? prisma.user.findMany({ where: { roles: { has: 'DOSEN' } }, select: { id: true, name: true }, orderBy: { name: 'asc' } })
       : Promise.resolve([]),
   ]);
 
-  const serialized = baps.map(b => ({
-    ...b,
-    createdAt: b.createdAt.toISOString(),
-    updatedAt: b.updatedAt.toISOString(),
-    finalApprovedAt: b.finalApprovedAt?.toISOString() ?? null,
-  }));
-
   return (
-    <BapListClient
-      baps={serialized}
-      semesters={semesters.map(s => ({ id: s.id, label: `${s.tahunAkademik.tahun} — ${s.nama}`, isActive: s.isActive }))}
+    <KelasListClient
+      kelasList={kelasList.map(k => ({ ...k, createdAt: k.createdAt.toISOString() }))}
       dosens={dosens}
       isKaprodi={isKaprodi}
       isProdi={isProdi}

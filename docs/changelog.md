@@ -2,6 +2,41 @@
 
 All notable changes to this project are documented here.
 
+## [0.15.0] - 2026-04-21
+
+### Added
+- **Kelas model** — new `Kelas` DB entity (`name` unique, `dosenPaId`); replaces `kelasName` string + `dosenPaId` on `BeritaAcaraPerwalian`.
+- **BAP restructured hierarchy** — Kelas → Tahun Akademik → 3 semester BAP tiles (Ganjil/Genap/Akselerasi).
+- **New pages** — `/berita-acara` lists Kelas; `/berita-acara/kelas/[kelasId]` lists Tahun Akademik; `/berita-acara/kelas/[kelasId]/[tahunAkademikId]` shows 3 semester cards.
+- **Auto-create BAPs** — adding a Tahun Akademik to a Kelas creates one BAP per semester in that tahun; navigates directly to the tahun page.
+- **Locked/unlocked BAP cards** — `isUnlocked Boolean @default(false)` on BAP; cards start locked; Kaprodi unlocks with confirmation modal.
+- **Unlock notification** — unlocking a BAP sends in-app notification to Dosen PA via new `Notification` model.
+- **NotificationBell** — sidebar client component polling `/api/notifications` every 5 s; unread badge; mark-all-read on open.
+- **Delete Kelas / Tahun** — Kaprodi can delete kelas (cascade) or remove a tahun's BAPs, both with confirmation modals.
+- **Ganti Dosen PA** — moved from BAP detail to Kelas detail page; dedicated info bar card with confirmation modal; change applies to all semesters in that kelas.
+- **Auto-refresh** — `router.refresh()` every 30 s in KelasListClient, KelasDetailClient, TahunDetailClient, BapDetailClient.
+
+### Changed
+- `BeritaAcaraPerwalian`: `kelasName`+`dosenPaId` → `kelasId` FK; `@@unique([kelasId, semesterId])`.
+- `User`: `dosenPaBAPs` relation replaced by `kelasDosenPa Kelas[]`.
+- BAP assign route now patches parent `Kelas.dosenPaId` instead of the BAP directly.
+- BAP list page (`/berita-acara`) rewritten as `KelasListClient`; old `BapListClient` removed.
+- "Tambah Tahun Akademik" button blocked (commented out) pending decision on auto-create flow.
+
+### API
+- `GET/POST /api/kelas` — list/create kelas.
+- `GET/PATCH/DELETE /api/kelas/[kelasId]` — detail, update dosenPa, delete kelas.
+- `POST /api/kelas/[kelasId]/tahun` — add tahun → auto-create BAPs.
+- `DELETE /api/kelas/[kelasId]/tahun/[tahunAkademikId]` — remove tahun's BAPs.
+- `PATCH /api/bap/[id]/unlock` — unlock BAP + create notification.
+- `GET /api/notifications` — user notifications.
+- `PATCH /api/notifications/read` — mark all read.
+
+### Schema
+- New model `Kelas`.
+- New model `Notification` (`userId`, `message`, `link`, `isRead`).
+- `BeritaAcaraPerwalian`: +`kelasId`, +`isUnlocked`; -`kelasName`, -`dosenPaId`.
+
 ## [0.14.0] - 2026-04-20
 
 ### Added

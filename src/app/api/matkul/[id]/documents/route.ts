@@ -7,7 +7,6 @@ const DOC_TYPES: DocType[] = [
   'RPS', 'SOAL_UTS', 'SOAL_UAS', 'LPP', 'EPP', 'BERITA_ACARA',
 ];
 
-const PRODI_DOC_TYPES: DocType[] = ['LPP', 'EPP'];
 
 // GET /api/matkul/[id]/documents?semesterId=XXXX
 export async function GET(
@@ -55,10 +54,8 @@ export async function GET(
       orderBy: { updatedAt: 'desc' },
     });
 
-    // PRODI sees only LPP/EPP; others see all types
-    const reviewerDocTypes = isProdi && !isKaprodi && !isKoordinator
-      ? PRODI_DOC_TYPES
-      : DOC_TYPES;
+    // All reviewers see all doc types
+    const reviewerDocTypes = DOC_TYPES;
 
     // Build sections grouped by type; include all assigned dosens (even UNSUBMITTED)
     const sections = reviewerDocTypes.map(type => {

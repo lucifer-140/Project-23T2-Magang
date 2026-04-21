@@ -20,11 +20,14 @@ export async function PATCH(
   const { dosenPaId } = await req.json();
   if (!dosenPaId) return NextResponse.json({ error: 'Missing dosenPaId' }, { status: 400 });
 
-  const updated = await prisma.beritaAcaraPerwalian.update({
-    where: { id: bapId },
+  const bap = await prisma.beritaAcaraPerwalian.findUnique({ where: { id: bapId }, select: { kelasId: true } });
+  if (!bap) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const updatedKelas = await prisma.kelas.update({
+    where: { id: bap.kelasId },
     data: { dosenPaId },
     include: { dosenPa: { select: { id: true, name: true } } },
   });
 
-  return NextResponse.json(updated);
+  return NextResponse.json({ dosenPa: updatedKelas.dosenPa, dosenPaId: updatedKelas.dosenPaId });
 }

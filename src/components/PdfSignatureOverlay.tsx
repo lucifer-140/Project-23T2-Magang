@@ -21,6 +21,7 @@ interface PdfSignatureOverlayProps {
   signatureDataUrl: string | null;
   position: SignaturePosition;
   onPositionChange: (pos: SignaturePosition) => void;
+  userName?: string;
 }
 
 export function PdfSignatureOverlay({
@@ -28,6 +29,7 @@ export function PdfSignatureOverlay({
   signatureDataUrl,
   position,
   onPositionChange,
+  userName,
 }: PdfSignatureOverlayProps) {
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -200,6 +202,15 @@ export function PdfSignatureOverlay({
               className="w-full h-auto pointer-events-none block"
               draggable={false}
             />
+            {/* Name + timestamp preview */}
+            {userName && (
+              <div className="pointer-events-none pb-0.5 bg-white/80 text-center" style={{ fontSize: Math.max(5, sigWidthPx * 0.06) }}>
+                <div className="font-sans text-black leading-none truncate" style={{ fontSize: 'inherit' }}>{userName}</div>
+                <div className="font-sans text-gray-500 leading-none" style={{ fontSize: Math.max(4, sigWidthPx * 0.05) }}>
+                  {new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'2-digit', year:'numeric' })} WIB
+                </div>
+              </div>
+            )}
             {/* Drag indicator */}
             <div className="absolute top-1 left-1 bg-uph-blue/80 text-white rounded px-1 py-0.5 flex items-center gap-1 text-[10px] font-bold pointer-events-none">
               <Move size={10} /> Seret
