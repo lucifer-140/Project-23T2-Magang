@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import MatkulListClient from './MatkulListClient';
 
-export default async function MatkulListPage() {
+export default async function MatkulListPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
+  const { filter } = await searchParams;
   const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
   const roleRaw = cookieStore.get('userRole')?.value;
@@ -74,7 +75,35 @@ export default async function MatkulListPage() {
     else if (!map.get(m.id)!.userRoles.includes('dosen')) map.get(m.id)!.userRoles.push('dosen');
   }
 
-  const matkuls = Array.from(map.values());
+  const matkulIds = Array.from(map.keys());
+  const docCountsRaw = matkulIds.length > 0
+    ? await prisma.academicDocument.groupBy({
+        by: ['matkulId', 'status'],
+        where: { matkulId: { in: matkulIds } },
+        _count: { id: true },
+      })
+    : [];
 
-  return <MatkulListClient initialMatkuls={matkuls} semesters={semesters} />;
+  const dcMap = new Map<string, Record<string, number>>();
+  for (const row of docCountsRaw) {
+    if (!dcMap.has(row.matkulId)) dcMap.set(row.matkulId, {});
+    dcMap.get(row.matkulId)![row.status] = row._count.id;
+  }
+
+  const matkuls = Array.from(map.values()).map(m => {
+    const dc = dcMap.get(m.id) ?? {};
+    return {
+      ...m,
+      docCounts: {
+        SUBMITTED: dc.SUBMITTED ?? 0,
+        APPROVED: dc.APPROVED ?? 0,
+        REVISION: dc.REVISION ?? 0,
+        PENGECEKAN: dc.PENGECEKAN ?? 0,
+        UNSUBMITTED: dc.UNSUBMITTED ?? 0,
+        total: Object.values(dc).reduce((a, b) => a + b, 0),
+      },
+    };
+  });
+
+  return <MatkulListClient initialMatkuls={matkuls} semesters={semesters} initialFilter={filter} />;
 }

@@ -1,8 +1,8 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-21  
-**Current Version:** 0.15.0  
-**Status:** Active Development - Phase 15 Complete
+**Last Updated:** 2026-04-23  
+**Current Version:** 0.16.0  
+**Status:** Active Development - Phase 16 Complete
 
 ---
 
@@ -51,6 +51,23 @@
 - [x] Admin Matkul page restructured: `/dashboard/admin/matkul` (year/semester list) → `/[semesterId]` (scoped matkul table)
 - [x] Seed data: Ganjil + Genap 2025/2026 terms pre-created with matkul assignments
 - [x] Semester selector on Matkul hub pages loads from database
+
+### Phase 16: Kaprodi Analytics Dashboard + Matkul List Overhaul (v0.16.0)
+- [x] `GET /api/analytics/kaprodi` — semester-filterable aggregation: doc counts by status, type × status breakdown, EPP metric averages
+- [x] `/dashboard/kaprodi` — dedicated analytics page with recharts bar charts (doc type stacked + EPP horizontal), semester dropdown, stat cards
+- [x] `KaprodiDashboardClient` + `KaprodiDashboardWrapper` — client-side analytics with SWR-like fetch on semester change
+- [x] Kaprodi sidebar cleaned: single "Analitik Kaprodi" entry replaces 3 sub-items
+- [x] Dosen combined dashboard: Kaprodi section removed; Kaprodi role uses `/dashboard/kaprodi` as home via sidebar
+- [x] Matkul list: card grid view (default) + table view toggle + group-by-semester toggle
+- [x] Matkul list: doc status filter chips (Menunggu Review / Perlu Revisi / Semua Selesai)
+- [x] Matkul list: role quick-filter chips always visible for multi-role users
+- [x] Matkul list: SKS filter in expanded panel
+- [x] Matkul card: doc progress bar (color-coded segments), aligned visual atoms with table
+- [x] Matkul table: removed Dokumen column, merged Pengajar, whitespace-nowrap, SKS badge
+- [x] `GET /api/matkul/mine` — now returns `docCounts` per matkul
+- [x] Auto-filter from URL: `?filter=pending` pre-sets "Menunggu Review" filter
+- [x] "Lihat Semua" on Kaprodi pending panel → `/dashboard/matkul?filter=pending`
+- [x] Kaprodi quick action "Berita Acara" renamed to "Kelola Berita Acara"
 
 ### Phase 15: BAP Hierarchy Overhaul + Notifications (v0.15.0)
 - [x] `Kelas` model — replaces flat `kelasName`/`dosenPaId` on BAP; Kelas owns Dosen PA
@@ -187,7 +204,7 @@
 |---|---|---|
 | **MASTER** | System monitoring, audit logs, user management, account approvals | Complete |
 | **ADMIN** | Matkul CRUD (with catalog combobox + unified assign modal), user management, change requests, account approvals | Complete (v0.9.0) |
-| **KAPRODI** | Document review queue (non-LPP/EPP types), PDF annotation, approval workflow, PRODI role assignment | Complete (v0.13.0) |
+| **KAPRODI** | Analytics dashboard (EPP charts, doc breakdown, semester filter), document review queue, PDF annotation, approval workflow, PRODI role assignment | Complete (v0.16.0) |
 | **KOORDINATOR** | Stage-1 review for all doc types, PDF annotation, digital signature stamping | Complete (v0.13.0) |
 | **PRODI** | Stage-2 review for LPP & EPP system-wide, PDF annotation, digital signature stamping | Complete (v0.13.0) |
 | **DOSEN** | Upload documents (all 6 types), track status, view annotated revision PDF, download signed final PDF | Complete (v0.13.0) |

@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented here.
 
+## [0.16.0] - 2026-04-23
+
+### Added
+- **Kaprodi analytics dashboard** — `/dashboard/kaprodi` now shows semester-filterable analytics: 5 stat cards (Perlu Review / Pengecekan / Disetujui / Revisi / Total), stacked bar chart of doc counts by type × status, horizontal bar chart of avg EPP metrics (5 fields) color-coded by threshold.
+- `GET /api/analytics/kaprodi?semesterId=` — aggregation endpoint returning semester list, doc counts by status, type × status breakdown, EPP averages. Default: all-time.
+- **Matkul list overhaul** — card grid view (default) + table view toggle; group-by-semester toggle with section headers showing pending/revision summary counts.
+- **Doc status filter** on matkul list: "Menunggu Review", "Perlu Revisi", "Semua Selesai" chips.
+- **Role quick-filter** chips always visible in matkul filter bar for multi-role users.
+- **SKS filter** chips in expanded filter panel.
+- **Doc progress bar** on each matkul card (color-coded segments: approved/pengecekan/submitted/revision).
+- **Auto-filter from URL**: `/dashboard/matkul?filter=pending` opens filter panel pre-set to "Menunggu Review".
+- "Lihat Semua" link on Kaprodi pending docs panel → `/dashboard/matkul?filter=pending`.
+- `recharts` dependency added for dashboard charts.
+
+### Changed
+- **Kaprodi sidebar** — removed Permintaan Perubahan, Kelola PRODI, Berita Acara Perwalian entries; replaced with single "Analitik Kaprodi" entry linking to `/dashboard/kaprodi`.
+- **Dosen combined dashboard** — removed Kaprodi section (stats + action cards); Kaprodi role now navigates to `/dashboard/kaprodi` via sidebar.
+- **Kaprodi quick actions** — "Berita Acara" renamed to "Kelola Berita Acara".
+- **Matkul table** — removed Dokumen progress bar column; merged Dosen + Koordinator into single Pengajar column; all cells `whitespace-nowrap`; SKS shown as badge matching card style.
+- **Matkul card** — code/name font weight/color aligned to table; kelas uses same mono chips as table; divider color `border-gray-100`.
+- `GET /api/matkul/mine` now includes `docCounts` per matkul (grouped by status).
+- `MatkulListPage` passes `initialFilter` from `searchParams` to client; server also computes `docCounts`.
+
+### API
+- `GET /api/analytics/kaprodi` — new analytics aggregation endpoint.
+
 ## [0.15.0] - 2026-04-21
 
 ### Added

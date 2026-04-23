@@ -3,7 +3,7 @@ import { SWRProvider } from '@/components/SWRProvider';
 import { redirect } from 'next/navigation';
 import {
   LayoutDashboard, FileText, LogOut, User, BookOpen,
-  Users, Settings, Shield, Terminal, Bell, UserCheck, Library
+  Users, Settings, Shield, Terminal, Bell, UserCheck, Library, BarChart2
 } from 'lucide-react';
 import SidebarNav from '@/components/SidebarNav';
 import NotificationBell from '@/components/NotificationBell';
@@ -77,15 +77,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ];
 
     if (roles.includes('KAPRODI')) {
-      combinedNavItems.push({ href: '/dashboard/kaprodi/requests', icon: <Bell size={18} />, label: 'Permintaan Perubahan' });
-      combinedNavItems.push({ href: '/dashboard/kaprodi/prodi-users', icon: <UserCheck size={18} />, label: 'Kelola PRODI' });
+      combinedNavItems.push({ href: '/dashboard/kaprodi', icon: <BarChart2 size={18} />, label: 'Analitik Kaprodi' });
     }
 
     if (roles.includes('PRODI')) {
       combinedNavItems.push({ href: '/dashboard/prodi', icon: <Shield size={18} />, label: 'Review Dokumen' });
     }
 
-    combinedNavItems.push({ href: '/dashboard/berita-acara', icon: <FileText size={18} />, label: 'Berita Acara Perwalian' });
+    if (!roles.includes('KAPRODI')) {
+      combinedNavItems.push({ href: '/dashboard/berita-acara', icon: <FileText size={18} />, label: 'Berita Acara Perwalian' });
+    }
 
     let labelStr = 'Dosen';
     if (roles.includes('KAPRODI') && roles.includes('KOORDINATOR')) labelStr = 'Kaprodi & Koordinator';
