@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented here.
 
+## [0.17.0] - 2026-04-23
+
+### Added
+- **Toast notification system** — `ToastProvider` context with bottom-right toast queue (max 4, 5s auto-dismiss, slide-in animation). `useToast` hook available to all client components.
+- **Header notification bell** — `NotificationBell` moved from sidebar to sticky top header inside new `DashboardClientShell`. Detects new notifications on 5s poll via `prevIds` ref diff, triggers toast per new item.
+- **`DashboardClientShell`** — new client wrapper housing `ToastProvider`, sticky header, footer, and `SWRProvider`. Replaces inline `<main>` block in layout.
+- **`src/lib/notifications.ts`** — server-side helpers: `createNotification`, `notifyRole`, `notifyUsers`.
+- **Document upload notification** — koordinators notified when a dosen uploads a document to their matkul.
+- **Review flow notifications** — full coverage across all reviewer stages (koordinator, prodi, kaprodi) with deep links.
+- **Dosen dashboard UX overhaul** — stat cards with progress bar and `#revisi` anchor; revision list as `<Link>` with reviewer attribution and rejection note preview; koordinator section has compact 3-stat row + pending review list with `timeAgo` + empty state.
+- **Admin dashboard UX overhaul** — conditional alert banners; 6-card stat grid with urgency styling; matkul coverage table; merged activity feed; 3 nav cards with live counts.
+- **Revision list polish** — `FileText` icon per row, bolder matkul name, explicit "Buka" CTA, removed em-dash and HTML quote entities.
+- Plan docs: `docs/plan-dashboard-ux.md`, `docs/plan-master-pages.md`.
+- `lucide` package added.
+
+### Changed
+- Dashboard layout: sidebar no longer contains `NotificationBell`; moved to `DashboardClientShell` header.
+- Active Semester Banner and Document Progress Matrix on dosen dashboard deferred — marked `[FUTURE]` pending Semester Manager.
+- Admin activity feed orders users by `id` desc (User model has no `createdAt`).
+
+### Fixed
+- `PrismaClientValidationError` on admin dashboard — `orderBy: { createdAt }` invalid on User model; fixed to `orderBy: { id: 'desc' }`.
+
+---
+
 ## [0.16.0] - 2026-04-23
 
 ### Added

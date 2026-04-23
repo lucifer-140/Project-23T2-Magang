@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import { DocType } from '@prisma/client';
+import { notifyUsers } from '@/lib/notifications';
+
+const DOC_LABEL: Record<DocType, string> = {
+  RPS: 'RPS',
+  SOAL_UTS: 'Soal UTS',
+  SOAL_UAS: 'Soal UAS',
+  LPP: 'Laporan Pelaksanaan Pembelajaran',
+  EPP: 'Evaluasi Pencapaian Program',
+  BERITA_ACARA: 'Berita Acara Perwalian',
+};
 import path from 'path';
 import { writeFile, readFile, unlink } from 'fs/promises';
 import { existsSync, mkdirSync } from 'fs';
@@ -157,6 +167,24 @@ export async function POST(
     doc = await prisma.academicDocument.create({
       data: { matkulId, dosenId, semesterId, type, fileName: finalFileName, fileUrl, status: 'SUBMITTED', ...eppFields },
     });
+  }
+
+  // Notify koordinators for this matkul
+  const matkul = await prisma.matkul.findUnique({
+    where: { id: matkulId },
+    select: {
+      code: true,
+      koordinators: { select: { id: true } },
+    },
+  });
+  const dosen = await prisma.user.findUnique({ where: { id: dosenId }, select: { name: true } });
+  if (matkul && dosen && matkul.koordinators.length > 0) {
+    const label = DOC_LABEL[type] ?? type;
+    await notifyUsers(
+      matkul.koordinators.map(k => k.id),
+      `${dosen.name} mengupload ${label} untuk ${matkul.code} dan menunggu review Anda.`,
+      `/dashboard/matkul/${matkulId}`,
+    );
   }
 
   return NextResponse.json(doc, { status: 200 });

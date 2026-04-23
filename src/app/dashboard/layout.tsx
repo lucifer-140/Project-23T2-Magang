@@ -1,12 +1,11 @@
 import { cookies } from 'next/headers';
-import { SWRProvider } from '@/components/SWRProvider';
 import { redirect } from 'next/navigation';
 import {
-  LayoutDashboard, FileText, LogOut, User, BookOpen,
-  Users, Settings, Shield, Terminal, Bell, UserCheck, Library, BarChart2
+  LayoutDashboard, FileText, LogOut, BookOpen,
+  Users, Shield, Terminal, UserCheck, Library, BarChart2
 } from 'lucide-react';
 import SidebarNav from '@/components/SidebarNav';
-import NotificationBell from '@/components/NotificationBell';
+import { DashboardClientShell } from '@/components/DashboardClientShell';
 import Image from 'next/image';
 
 type RoleConfig = {
@@ -23,23 +22,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const userName = cookieStore.get('userName')?.value ?? 'User';
 
   if (!roleStr) redirect('/');
-  // Safely decode cookie value
   let decodedRoleStr = roleStr || '';
   try { decodedRoleStr = decodeURIComponent(decodedRoleStr); } catch(e) {}
 
-  // Parse roles array
   let roles: string[] = [];
   try {
     const parsed = JSON.parse(decodedRoleStr);
     if (Array.isArray(parsed)) roles = parsed;
-    else roles = [parsed]; // fallback if it was a scalar
+    else roles = [parsed];
   } catch (e) {
-    roles = [decodedRoleStr]; // fallback
+    roles = [decodedRoleStr];
   }
 
   let config: RoleConfig;
 
-  // MASTER gets exclusive config
   if (roles.includes('MASTER')) {
     config = {
       label: 'Developer',
@@ -53,9 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: '/dashboard/master/logs', icon: <FileText size={18} />, label: 'Application Logs' },
       ],
     };
-  } 
-  // ADMIN gets exclusive config
-  else if (roles.includes('ADMIN')) {
+  } else if (roles.includes('ADMIN')) {
     config = {
       label: 'Admin',
       subtitle: 'Administrator',
@@ -68,9 +62,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: '/dashboard/admin/approvals', icon: <UserCheck size={18} />, label: 'Persetujuan Akun' },
       ],
     };
-  } 
-  // Combinable roles (KAPRODI, KOORDINATOR, DOSEN)
-  else {
+  } else {
     const combinedNavItems = [
       { href: '/dashboard/dosen', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
       { href: '/dashboard/matkul', icon: <Library size={18} />, label: 'Mata Kuliah' },
@@ -79,11 +71,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     if (roles.includes('KAPRODI')) {
       combinedNavItems.push({ href: '/dashboard/kaprodi', icon: <BarChart2 size={18} />, label: 'Analitik Kaprodi' });
     }
-
     if (roles.includes('PRODI')) {
       combinedNavItems.push({ href: '/dashboard/prodi', icon: <Shield size={18} />, label: 'Review Dokumen' });
     }
-
     if (!roles.includes('KAPRODI')) {
       combinedNavItems.push({ href: '/dashboard/berita-acara', icon: <FileText size={18} />, label: 'Berita Acara Perwalian' });
     }
@@ -104,7 +94,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   async function handleLogout() {
-    "use server"
+    "use server";
     const cookieStore = await cookies();
     cookieStore.delete('userRole');
     cookieStore.delete('userId');
@@ -127,7 +117,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SidebarNav navItems={config.navItems} />
 
         <div className="p-4 border-t border-gray-100">
-          <NotificationBell />
           <div className="flex items-center space-x-3 mb-4 px-4">
             <div className={`w-9 h-9 rounded-full ${config.accentColor} text-white flex items-center justify-center font-bold text-sm`}>
               {userName.charAt(0).toUpperCase()}
@@ -146,17 +135,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 ml-64 p-8 flex flex-col min-h-screen">
-        <div className="max-w-5xl mx-auto w-full flex-1">
-          <SWRProvider>{children}</SWRProvider>
-        </div>
-        <footer className="max-w-5xl mx-auto w-full mt-12 pt-4 border-t border-gray-200">
-          <p className="text-xs text-gray-400 text-center">
-            &copy; {new Date().getFullYear()} lucifer-140. All rights reserved.
-          </p>
-        </footer>
-      </main>
+      {/* Main Content — handled by client shell (ToastProvider + header + SWR) */}
+      <DashboardClientShell>{children}</DashboardClientShell>
     </div>
   );
 }

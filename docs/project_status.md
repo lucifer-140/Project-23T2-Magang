@@ -1,8 +1,8 @@
 # Project Status Report
 
 **Last Updated:** 2026-04-23  
-**Current Version:** 0.16.0  
-**Status:** Active Development - Phase 16 Complete
+**Current Version:** 0.17.0  
+**Status:** Active Development - Phase 17 Complete
 
 ---
 
@@ -51,6 +51,20 @@
 - [x] Admin Matkul page restructured: `/dashboard/admin/matkul` (year/semester list) → `/[semesterId]` (scoped matkul table)
 - [x] Seed data: Ganjil + Genap 2025/2026 terms pre-created with matkul assignments
 - [x] Semester selector on Matkul hub pages loads from database
+
+### Phase 17: Notification System + Dashboard UX Overhaul (v0.17.0)
+- [x] `ToastProvider` — bottom-right toast queue (max 4, 5s auto-dismiss, slide-in animation); `useToast` hook
+- [x] `DashboardClientShell` — client wrapper with sticky header, `ToastProvider`, `SWRProvider`, footer
+- [x] `NotificationBell` moved to sticky header (was sidebar); detects new notifications via `prevIds` diff → auto-toast
+- [x] `src/lib/notifications.ts` — server helpers: `createNotification`, `notifyRole`, `notifyUsers`
+- [x] Document upload notification: koordinators notified on dosen upload with deep link
+- [x] Review flow notifications: full coverage for koordinator/prodi/kaprodi approve+reject actions
+- [x] Dosen dashboard: stat card progress bar + `#revisi` anchor; revision list as `<Link>` with reviewer + note; koordinator compact 3-stat row + pending review list with `timeAgo` + empty state
+- [x] Admin dashboard: conditional alert banners; 6-card urgency grid; matkul coverage table; activity feed; 3 nav cards with live counts
+- [x] Revision list polish: `FileText` icon, bold names, explicit "Buka" CTA, no em-dashes or HTML entities
+- [x] Fix: admin `orderBy: { createdAt }` → `{ id: 'desc' }` (User model has no `createdAt`)
+- [x] Plan docs: `docs/plan-dashboard-ux.md`, `docs/plan-master-pages.md`
+- [x] `lucide` package added
 
 ### Phase 16: Kaprodi Analytics Dashboard + Matkul List Overhaul (v0.16.0)
 - [x] `GET /api/analytics/kaprodi` — semester-filterable aggregation: doc counts by status, type × status breakdown, EPP metric averages

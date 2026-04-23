@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
+import { createNotification, notifyRole } from '@/lib/notifications';
+import { DocType, Role } from '@prisma/client';
+
+const DOC_LABEL: Record<DocType, string> = {
+  RPS: 'RPS',
+  SOAL_UTS: 'Soal UTS',
+  SOAL_UAS: 'Soal UAS',
+  LPP: 'Laporan Pelaksanaan Pembelajaran',
+  EPP: 'Evaluasi Pencapaian Program',
+  BERITA_ACARA: 'Berita Acara Perwalian',
+};
 
 // PATCH /api/documents/[docId]/review
 // Body: { reviewer: 'koordinator' | 'prodi' | 'kaprodi', action: 'approve' | 'reject', notes?: string }
-// Workflow (all doc types): Koordinator → Prodi → Kaprodi
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ docId: string }> }
@@ -17,7 +27,13 @@ export async function PATCH(
 
   const existingDoc = await prisma.academicDocument.findUnique({
     where: { id: docId },
-    select: { isKoordinatorApproved: true, isProdiApproved: true },
+    select: {
+      isKoordinatorApproved: true,
+      isProdiApproved: true,
+      dosenId: true,
+      matkulId: true,
+      type: true,
+    },
   });
   if (!existingDoc) return NextResponse.json({ error: 'Document not found' }, { status: 404 });
 
@@ -64,9 +80,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Prodi must approve first' }, { status: 400 });
     }
     if (action === 'approve') {
-      updateData = {
-        status: 'APPROVED',
-      };
+      updateData = { status: 'APPROVED' };
     } else {
       updateData = {
         status: 'REVISION',
@@ -93,6 +107,30 @@ export async function PATCH(
       updatedAt: true,
     },
   });
+
+  // Notifications
+  const matkulLink = `/dashboard/matkul/${existingDoc.matkulId}`;
+  const label = DOC_LABEL[existingDoc.type] ?? existingDoc.type;
+
+  if (reviewer === 'koordinator') {
+    if (action === 'approve') {
+      await notifyRole(Role.PRODI, `Dokumen ${label} telah disetujui Koordinator dan menunggu review PRODI.`, matkulLink);
+    } else {
+      await createNotification(existingDoc.dosenId, `Dokumen ${label} Anda dikembalikan untuk revisi oleh Koordinator.`, matkulLink);
+    }
+  } else if (reviewer === 'prodi') {
+    if (action === 'approve') {
+      await notifyRole(Role.KAPRODI, `Dokumen ${label} telah disetujui PRODI dan menunggu persetujuan Kaprodi.`, matkulLink);
+    } else {
+      await createNotification(existingDoc.dosenId, `Dokumen ${label} Anda dikembalikan untuk revisi oleh PRODI.`, matkulLink);
+    }
+  } else if (reviewer === 'kaprodi') {
+    if (action === 'approve') {
+      await createNotification(existingDoc.dosenId, `Dokumen ${label} Anda telah disetujui dan selesai!`, matkulLink);
+    } else {
+      await createNotification(existingDoc.dosenId, `Dokumen ${label} Anda dikembalikan untuk revisi oleh Kaprodi.`, matkulLink);
+    }
+  }
 
   return NextResponse.json(doc);
 }
