@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
+import { createNotification, notifyRole } from '@/lib/notifications';
 
 // PATCH /api/rps/[id]/review
 // Body: { reviewer: 'koordinator' | 'kaprodi', action: 'approve' | 'reject', notes?: string }
@@ -60,8 +61,28 @@ export async function PATCH(
       koordinatorNotes: true,
       kaprodiNotes: true,
       updatedAt: true,
+      dosenId: true,
+      matkulId: true,
+      matkul: { select: { code: true } },
     },
   });
+
+  const matkulCode = rps.matkul.code;
+  const matkulLink = `/dashboard/matkul/${rps.matkulId}`;
+
+  if (reviewer === 'koordinator') {
+    if (action === 'approve') {
+      await notifyRole('KAPRODI', `RPS ${matkulCode} telah disetujui Koordinator dan menunggu persetujuan Kaprodi.`, matkulLink);
+    } else {
+      await createNotification(rps.dosenId, `RPS ${matkulCode} Anda dikembalikan untuk revisi oleh Koordinator.`, matkulLink);
+    }
+  } else if (reviewer === 'kaprodi') {
+    if (action === 'approve') {
+      await createNotification(rps.dosenId, `RPS ${matkulCode} Anda telah disetujui oleh Kaprodi!`, matkulLink);
+    } else {
+      await createNotification(rps.dosenId, `RPS ${matkulCode} Anda dikembalikan untuk revisi oleh Kaprodi.`, matkulLink);
+    }
+  }
 
   return NextResponse.json(rps);
 }

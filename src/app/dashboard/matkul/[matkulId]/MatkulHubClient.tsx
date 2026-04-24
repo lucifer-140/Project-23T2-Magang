@@ -483,12 +483,15 @@ export default function MatkulHubClient({ matkul, dosens, koordinators, classes,
                   {status === 'UNSUBMITTED' ? 'Upload Dokumen' : 'Upload Ulang'}
                 </button>
               ) : status === 'APPROVED' ? (
-                doc?.finalPdfUrl && (
-                  <a href={doc.finalPdfUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm font-semibold text-uph-blue border border-uph-blue px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
-                    <Download size={14} /> PDF Final
-                  </a>
-                )
+                (() => {
+                  const approvedUrl = doc?.finalPdfUrl ?? doc?.koordinatorSignedPdfUrl ?? doc?.fileUrl;
+                  return approvedUrl ? (
+                    <a href={approvedUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm font-semibold text-uph-blue border border-uph-blue px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
+                      <Download size={14} /> PDF Disetujui
+                    </a>
+                  ) : null;
+                })()
               ) : (
                 <span className="flex items-center gap-1.5 text-xs text-gray-400">
                   <Lock size={12} /> Upload terkunci selama review

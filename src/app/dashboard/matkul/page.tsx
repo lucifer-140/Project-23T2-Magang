@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import MatkulListClient from './MatkulListClient';
+import AutoRefresh from '@/components/AutoRefresh';
 
 export default async function MatkulListPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const { filter } = await searchParams;
@@ -105,5 +106,10 @@ export default async function MatkulListPage({ searchParams }: { searchParams: P
     };
   });
 
-  return <MatkulListClient initialMatkuls={matkuls} semesters={semesters} initialFilter={filter} />;
+  return (
+    <>
+      <AutoRefresh />
+      <MatkulListClient initialMatkuls={matkuls} semesters={semesters} initialFilter={filter} />
+    </>
+  );
 }

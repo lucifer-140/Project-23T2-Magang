@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { notifyUsers } from '@/lib/notifications';
 import path from 'path';
 import { writeFile, readFile, unlink } from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync } from 'fs';
+import { getUploadDir, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
 
 const GOTENBERG_URL = process.env.GOTENBERG_URL ?? 'http://localhost:3001';
 
@@ -124,34 +126,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-  if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true });
-
-  const safeFileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  const uploadDir = getUploadDir('rps', 'drafts');
+  const safeFileName = `${rpsId ? rpsId + '_' : Date.now() + '_'}${sanitizeName(file.name)}`;
   const filePath = path.join(uploadDir, safeFileName);
   const bytes = await file.arrayBuffer();
   await writeFile(filePath, Buffer.from(bytes));
 
   // Convert DOCX to PDF if needed
-  let finalFilePath = filePath;
   let finalFileName = file.name;
-  let fileUrl = `/uploads/${safeFileName}`;
+  let fileUrl = `/uploads/rps/drafts/${safeFileName}`;
 
   const isDocx = /\.(docx?)$/i.test(file.name);
   if (isDocx) {
     const pdfPath = await convertDocxToPdf(filePath);
     if (pdfPath) {
-      // Delete the original DOCX and use the PDF
       await unlink(filePath).catch(() => {});
-      finalFilePath = pdfPath;
       finalFileName = file.name.replace(/\.(docx?)$/i, '.pdf');
-      fileUrl = `/uploads/${path.basename(pdfPath)}`;
+      fileUrl = `/uploads/rps/drafts/${path.basename(pdfPath)}`;
     }
-    // If conversion failed, keep the original DOCX (best-effort)
   }
 
   let rps;
   if (rpsId) {
+    // Clean up all old files before overwriting
+    const oldRps = await prisma.rPS.findUnique({
+      where: { id: rpsId },
+      select: { fileUrl: true, annotatedPdfUrl: true, koordinatorSigUrl: true, koordinatorSignedPdfUrl: true, kaprodiSigUrl: true, finalPdfUrl: true },
+    });
+    if (oldRps) {
+      await Promise.all([
+        unlinkIfExists(oldRps.fileUrl),
+        unlinkIfExists(oldRps.annotatedPdfUrl),
+        unlinkIfExists(oldRps.koordinatorSigUrl),
+        unlinkIfExists(oldRps.koordinatorSignedPdfUrl),
+        unlinkIfExists(oldRps.kaprodiSigUrl),
+        unlinkIfExists(oldRps.finalPdfUrl),
+      ]);
+    }
     // Delete all previous annotations - they reference the old file's coordinates
     await prisma.rpsAnnotation.deleteMany({ where: { rpsId } });
 
@@ -190,6 +201,20 @@ export async function POST(req: NextRequest) {
         status: 'SUBMITTED',
       },
     });
+  }
+
+  // Notify koordinators of this matkul
+  const matkul = await prisma.matkul.findUnique({
+    where: { id: matkulId },
+    select: { code: true, koordinators: { select: { id: true } } },
+  });
+  const dosen = await prisma.user.findUnique({ where: { id: dosenId }, select: { name: true } });
+  if (matkul && dosen && matkul.koordinators.length > 0) {
+    await notifyUsers(
+      matkul.koordinators.map(k => k.id),
+      `${dosen.name} mengupload RPS untuk ${matkul.code} dan menunggu review Anda.`,
+      `/dashboard/koordinator/rps`,
+    );
   }
 
   return NextResponse.json(rps, { status: 200 });

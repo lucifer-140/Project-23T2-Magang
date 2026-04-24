@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { FileText, CheckCircle, Clock, AlertCircle, Users, Bookmark, CalendarDays, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import AutoRefresh from '@/components/AutoRefresh';
 
 const docTypeLabel: Record<string, string> = {
   RPS: 'RPS', SOAL_UTS: 'Soal UTS', SOAL_UAS: 'Soal UAS',
@@ -121,6 +122,7 @@ export default async function KoordinatorDashboard() {
           </p>
         </div>
       )}
+      <AutoRefresh />
     </div>
   );
 }

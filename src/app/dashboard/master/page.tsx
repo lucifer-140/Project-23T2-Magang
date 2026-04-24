@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { Terminal, Database, Users, BookOpen, FileText, Activity, Server, Code } from 'lucide-react';
+import AutoRefresh from '@/components/AutoRefresh';
 
 export default async function MasterDashboard() {
   const [userCount, matkulCount, rpsCount, changeReqCount] = await Promise.all([
@@ -129,6 +130,7 @@ export default async function MasterDashboard() {
           <div><span className="text-gray-500">timestamp:    </span> {new Date().toISOString()}</div>
         </div>
       </div>
+      <AutoRefresh />
     </div>
   );
 }

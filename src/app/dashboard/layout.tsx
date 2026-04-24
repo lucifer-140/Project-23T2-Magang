@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
   LayoutDashboard, FileText, LogOut, BookOpen,
-  Users, Shield, Terminal, UserCheck, Library, BarChart2
+  Users, Shield, Terminal, UserCheck, Library, BarChart2, Database
 } from 'lucide-react';
 import SidebarNav from '@/components/SidebarNav';
 import { DashboardClientShell } from '@/components/DashboardClientShell';
@@ -58,6 +58,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       navItems: [
         { href: '/dashboard/admin', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
         { href: '/dashboard/admin/matkul', icon: <BookOpen size={18} />, label: 'Penugasan Matkul' },
+        { href: '/dashboard/admin/data-matkul', icon: <Database size={18} />, label: 'Data Matkul' },
         { href: '/dashboard/admin/users', icon: <Users size={18} />, label: 'Kelola Pengguna' },
         { href: '/dashboard/admin/approvals', icon: <UserCheck size={18} />, label: 'Persetujuan Akun' },
       ],

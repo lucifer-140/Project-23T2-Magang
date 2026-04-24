@@ -1,12 +1,26 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-23  
-**Current Version:** 0.17.0  
-**Status:** Active Development - Phase 17 Complete
+**Last Updated:** 2026-04-24  
+**Current Version:** 0.18.0  
+**Status:** Active Development - Phase 18 Complete
 
 ---
 
 ## Completed Milestones
+
+### Phase 18: KatalogMatkul + Upload Refactor + Notification Coverage (v0.18.0)
+- [x] `KatalogMatkul` model — canonical course catalog decoupled from semester-scoped `Matkul` instances
+- [x] `MatkulChangeRequest` migrated to `katalogMatkulId` FK + `requestedById` FK
+- [x] `GET /api/katalog/[id]/change-request` — new catalog-level change request endpoint
+- [x] `src/lib/upload-paths.ts` — `getUploadDir`, `sanitizeName`, `unlinkIfExists` shared helpers
+- [x] Upload dirs organized: `/uploads/<type>/<sub>/` (e.g. `/uploads/rps/drafts/`)
+- [x] RPS re-upload cleans all old associated files (draft, annotations, sigs, final PDF)
+- [x] `Notification` model: `@@index([userId, createdAt(sort: Desc)])` for query performance
+- [x] Assignment notifications: dosen and koordinator notified on matkul assign/unassign
+- [x] Matkul deletion notification: affected dosens, koordinators, and KAPRODI notified
+- [x] `MatkulCombobox` receives live `katalog` prop from server — no hardcoded catalog
+- [x] `User.changeRequests` relation added (was missing)
+- [x] Legacy flat `public/uploads/` files removed from repo tracking
 
 ### Phase 1: Foundation (v0.5.0)
 - [x] Authentication & RBAC
@@ -217,7 +231,7 @@
 | Role | Features | Status |
 |---|---|---|
 | **MASTER** | System monitoring, audit logs, user management, account approvals | Complete |
-| **ADMIN** | Matkul CRUD (with catalog combobox + unified assign modal), user management, change requests, account approvals | Complete (v0.9.0) |
+| **ADMIN** | Matkul CRUD (live catalog combobox from `KatalogMatkul`, unified assign modal), user management, change requests, account approvals | Complete (v0.18.0) |
 | **KAPRODI** | Analytics dashboard (EPP charts, doc breakdown, semester filter), document review queue, PDF annotation, approval workflow, PRODI role assignment | Complete (v0.16.0) |
 | **KOORDINATOR** | Stage-1 review for all doc types, PDF annotation, digital signature stamping | Complete (v0.13.0) |
 | **PRODI** | Stage-2 review for LPP & EPP system-wide, PDF annotation, digital signature stamping | Complete (v0.13.0) |

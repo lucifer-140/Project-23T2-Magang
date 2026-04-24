@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { PDFDocument } from 'pdf-lib';
 import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
+import { getUploadDir, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
 
 // POST /api/rps/[id]/sign
 // Body: JSON {
@@ -32,7 +32,13 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid reviewer' }, { status: 400 });
   }
 
-  const rps = await prisma.rPS.findUnique({ where: { id } });
+  const rps = await prisma.rPS.findUnique({
+    where: { id },
+    include: {
+      matkul: { include: { semester: { include: { tahunAkademik: true } } } },
+      dosen: { select: { name: true } },
+    },
+  });
   if (!rps) return NextResponse.json({ error: 'RPS not found' }, { status: 404 });
 
   // Determine the source PDF to stamp
@@ -48,9 +54,6 @@ export async function POST(
   if (!sourcePdfUrl) {
     return NextResponse.json({ error: 'No source PDF found' }, { status: 400 });
   }
-
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-  if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true });
 
   // Load source PDF bytes
   const sourcePdfPath = path.join(process.cwd(), 'public', sourcePdfUrl);
@@ -97,18 +100,38 @@ export async function POST(
     opacity: 0.9,
   });
 
-  // Save stamped PDF
+  // Save stamped PDF and signature image
   const stampedBytes = await pdfDoc.save();
-  const outFileName = `${Date.now()}_signed_${reviewer}_${id}.pdf`;
-  const outFilePath = path.join(uploadDir, outFileName);
-  await writeFile(outFilePath, stampedBytes);
-  const outFileUrl = `/uploads/${outFileName}`;
+  let outFileUrl: string;
+  let sigImageUrl: string;
 
-  // Save signature image for record
-  const sigImageFileName = `${Date.now()}_sig_${reviewer}_${id}.png`;
-  const sigImagePath = path.join(uploadDir, sigImageFileName);
-  await writeFile(sigImagePath, sigBuffer);
-  const sigImageUrl = `/uploads/${sigImageFileName}`;
+  if (reviewer === 'koordinator') {
+    await unlinkIfExists(rps.koordinatorSigUrl);
+    await unlinkIfExists(rps.koordinatorSignedPdfUrl);
+    const sigDir = getUploadDir('rps', 'signatures');
+    const signedDir = getUploadDir('rps', 'signed');
+    const sigFileName = `${id}_sig_koordinator.png`;
+    await writeFile(path.join(sigDir, sigFileName), sigBuffer);
+    sigImageUrl = `/uploads/rps/signatures/${sigFileName}`;
+    const signedFileName = `${id}_signed_koordinator.pdf`;
+    await writeFile(path.join(signedDir, signedFileName), stampedBytes);
+    outFileUrl = `/uploads/rps/signed/${signedFileName}`;
+  } else {
+    await unlinkIfExists(rps.kaprodiSigUrl);
+    await unlinkIfExists(rps.finalPdfUrl);
+    const sigDir = getUploadDir('rps', 'signatures');
+    const finalDir = getUploadDir('rps', 'final');
+    const sigFileName = `${id}_sig_kaprodi.png`;
+    await writeFile(path.join(sigDir, sigFileName), sigBuffer);
+    sigImageUrl = `/uploads/rps/signatures/${sigFileName}`;
+    const matkulCode = sanitizeName(rps.matkul?.code ?? 'UNKNOWN');
+    const dosenName = sanitizeName(rps.dosen?.name ?? 'Unknown');
+    const tahun = (rps.matkul?.semester?.tahunAkademik?.tahun ?? '').replace('/', '-');
+    const semNama = sanitizeName(rps.matkul?.semester?.nama ?? '');
+    const finalFileName = `RPS_${matkulCode}_${dosenName}_${tahun}_${semNama}.pdf`;
+    await writeFile(path.join(finalDir, finalFileName), stampedBytes);
+    outFileUrl = `/uploads/rps/final/${finalFileName}`;
+  }
 
   // Update database
   let updateData: Record<string, unknown>;

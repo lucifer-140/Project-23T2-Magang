@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { createNotification } from '@/lib/notifications';
 
 // POST /api/matkul/[id]/classes/[classId]/assign
 // Body: { dosenId: string, action: 'add' | 'remove' }
@@ -26,10 +27,15 @@ export async function POST(
       data: { dosens: { connect: { id: dosenId } } },
     });
     // Also ensure dosen is in matkul-level relation (for existing code compatibility)
-    await prisma.matkul.update({
+    const matkul = await prisma.matkul.update({
       where: { id: matkulId },
       data: { dosens: { connect: { id: dosenId } } },
     });
+    await createNotification(
+      dosenId,
+      `Anda telah ditugaskan sebagai Dosen untuk matkul ${matkul.code} - ${matkul.name} (Kelas ${cls.name}).`,
+      `/dashboard/matkul/${matkulId}`,
+    ).catch(() => {});
   } else if (action === 'remove') {
     // Remove dosen from this class
     await prisma.matkulClass.update({
@@ -41,11 +47,18 @@ export async function POST(
       where: { matkulId, dosens: { some: { id: dosenId } } },
     });
     // If no other class, remove from matkul-level relation too
+    const matkul = await prisma.matkul.findUnique({ where: { id: matkulId } });
     if (!otherClasses) {
       await prisma.matkul.update({
         where: { id: matkulId },
         data: { dosens: { disconnect: { id: dosenId } } },
       });
+    }
+    if (matkul) {
+      await createNotification(
+        dosenId,
+        `Anda telah dilepas dari penugasan matkul ${matkul.code} - ${matkul.name} (Kelas ${cls.name}).`,
+      ).catch(console.error);
     }
   } else {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

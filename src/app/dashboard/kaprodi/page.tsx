@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { FileText, Bell, UserCheck, ChevronRight, CalendarDays, BarChart2 } from 'lucide-react';
 import Link from 'next/link';
 import KaprodiDashboardWrapper from './KaprodiDashboardWrapper';
+import AutoRefresh from '@/components/AutoRefresh';
 
 const docTypeLabel: Record<string, string> = {
   RPS: 'RPS', SOAL_UTS: 'Soal UTS', SOAL_UAS: 'Soal UAS',
@@ -114,6 +115,7 @@ export default async function KaprodiDashboard() {
           <p className="text-sm text-gray-400 mt-1">Tidak ada dokumen yang menunggu review Kaprodi.</p>
         </div>
       )}
+      <AutoRefresh />
     </div>
   );
 }

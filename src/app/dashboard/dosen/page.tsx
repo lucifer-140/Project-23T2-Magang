@@ -5,6 +5,7 @@ import {
   BookOpen, CalendarDays, ChevronRight, ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import AutoRefresh from '@/components/AutoRefresh';
 
 const DOC_LABEL: Record<string, string> = {
   RPS: 'RPS', SOAL_UTS: 'Soal UTS', SOAL_UAS: 'Soal UAS',
@@ -293,6 +294,7 @@ export default async function DosenDashboard() {
           )}
         </section>
       )}
+      <AutoRefresh />
     </div>
   );
 }

@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented here.
 
+## [0.18.0] - 2026-04-24
+
+### Added
+- **`KatalogMatkul` model** — separates the course catalog (canonical codes/names/SKS) from semester-scoped `Matkul` instances. `Matkul` now has optional `katalogMatkulId` FK.
+- **`MatkulChangeRequest` migrated to catalog** — change requests now reference `KatalogMatkul` instead of `Matkul`; added `requestedById` FK (User who submitted).
+- **`GET /api/katalog/[id]/change-request`** — new API for catalog-level change requests.
+- **`src/lib/upload-paths.ts`** — shared upload utilities: `getUploadDir(typeFolder, sub)`, `sanitizeName()`, `unlinkIfExists()`. Replaces inline `mkdirSync` in each upload route.
+- **Organized upload directory structure** — files now stored in `/public/uploads/<type>/<sub>/` (e.g. `/uploads/rps/drafts/`) instead of flat `/public/uploads/`.
+- **Old file cleanup on re-upload** — RPS re-upload now deletes all previous associated files (draft, annotated PDF, koordinator/kaprodi sig PNG, signed PDFs, finalPdf) before writing new upload.
+- **`Notification` index** — `@@index([userId, createdAt(sort: Desc)])` added for faster notification queries.
+- **Assignment notifications** — Dosen notified on add/remove to matkul (`/api/matkul/[id]/assign`); Koordinator notified on assign/unassign (`/api/matkul/[id]/assign-coordinator`).
+- **Matkul deletion notification** — all affected dosens, koordinators, and KAPRODI role notified when a matkul is deleted.
+- **`MatkulCombobox` refactored** — now receives live `katalog: KatalogItem[]` prop from server instead of hardcoded `MATKUL_CATALOG`; selects full `KatalogItem` (includes `id` and `sks`).
+
+### Changed
+- `POST /api/matkul` accepts optional `katalogMatkulId` and passes it to Prisma create.
+- `GET /api/change-requests` maps `katalogMatkul` fields instead of `matkul` fields.
+- `DELETE /api/matkul/[id]` removes orphaned `MatkulChangeRequest.deleteMany` (change requests now live on catalog, not on matkul instance); sends deletion notifications.
+- `MatkulClientPage` `Props` extended with `katalog: KatalogItem[]`; hardcoded catalog array removed.
+- RPS upload route uses `getUploadDir` / `sanitizeName` / `unlinkIfExists` from shared lib.
+- `public/uploads/` flat-file accumulation cleared — legacy uploaded files removed from repo tracking.
+
+### Fixed
+- `User` model missing `changeRequests` relation — added `changeRequests MatkulChangeRequest[]`.
+
+---
+
 ## [0.17.0] - 2026-04-23
 
 ### Added

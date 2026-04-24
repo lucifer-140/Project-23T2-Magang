@@ -3,17 +3,10 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Plus, Edit2, Users, AlertTriangle, X, Trash2, Search,
+  Plus, Users, AlertTriangle, X, Trash2, Search,
   GraduationCap, ChevronDown, UserCog, Tag, ArrowLeft,
 } from 'lucide-react';
 
-const MATKUL_CATALOG = [
-  { code: 'CS101', name: 'Algoritma & Pemrograman' },
-  { code: 'CS202', name: 'Struktur Data' },
-  { code: 'CS301', name: 'Basis Data' },
-  { code: 'CS405', name: 'Rekayasa Perangkat Lunak' },
-  { code: 'CS410', name: 'Keamanan Informasi' },
-];
 
 type DosenRef = { id: string; name: string; email: string };
 type MatkulClassData = { id: string; name: string; dosens: DosenRef[] };
@@ -32,20 +25,23 @@ type Matkul = {
   classes: MatkulClassData[];
 };
 
+type KatalogItem = { id: string; code: string; name: string; sks: number };
+
 type Props = {
   semester: SemesterData;
   matkuls: Matkul[];
   dosens: DosenRef[];
   koordinators: DosenRef[];
+  katalog: KatalogItem[];
 };
 
 // ─── Combobox ─────────────────────────────────────────────────────────────────
 function MatkulCombobox({
-  value, onChange, onCatalogSelect,
+  value, catalog, onSelect,
 }: {
   value: { code: string; name: string };
-  onChange: (v: { code: string; name: string }) => void;
-  onCatalogSelect?: (selected: boolean) => void;
+  catalog: KatalogItem[];
+  onSelect: (item: KatalogItem) => void;
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -54,10 +50,10 @@ function MatkulCombobox({
 
   const displayValue = focused ? query : (value.code ? `${value.code} - ${value.name}` : '');
   const filtered = useMemo(() =>
-    MATKUL_CATALOG.filter(m =>
+    catalog.filter(m =>
       m.code.toLowerCase().includes(query.toLowerCase()) ||
       m.name.toLowerCase().includes(query.toLowerCase())
-    ), [query]);
+    ), [catalog, query]);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -69,8 +65,8 @@ function MatkulCombobox({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  function select(item: { code: string; name: string }) {
-    onChange(item); onCatalogSelect?.(true);
+  function select(item: KatalogItem) {
+    onSelect(item);
     setQuery(''); setOpen(false); setFocused(false);
   }
 
@@ -83,11 +79,7 @@ function MatkulCombobox({
           placeholder="Cari kode atau nama matkul..."
           value={displayValue}
           onFocus={() => { setFocused(true); setQuery(''); setOpen(true); }}
-          onChange={e => {
-            setQuery(e.target.value); setOpen(true); onCatalogSelect?.(false);
-            const parts = e.target.value.split(' - ');
-            onChange({ code: parts[0]?.trim() ?? '', name: parts[1]?.trim() ?? '' });
-          }}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
         />
         <button type="button"
           onMouseDown={e => { e.preventDefault(); if (!focused) { setFocused(true); setQuery(''); } setOpen(o => !o); }}
@@ -181,16 +173,15 @@ function DosenClassPicker({
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, koordinators }: Props) {
+export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, koordinators, katalog }: Props) {
   const router = useRouter();
   const [matkuls, setMatkuls] = useState(initialMatkuls);
 
   // Add modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({
-    code: '', name: '', sks: '3',
+    code: '', name: '', sks: '3', katalogMatkulId: '',
   });
-  const [catalogSelected, setCatalogSelected] = useState(false);
   const [addError, setAddError] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -203,10 +194,6 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
   // Confirmations
   const [removingKoordinator, setRemovingKoordinator] = useState<{ id: string; name: string } | null>(null);
   const [removingDosen, setRemovingDosen] = useState<{ dosenId: string; dosenName: string; classId: string } | null>(null);
-
-  // Change request
-  const [changingMatkul, setChangingMatkul] = useState<Matkul | null>(null);
-  const [changeForm, setChangeForm] = useState({ proposedName: '', proposedCode: '', proposedSks: '', reason: '' });
 
   // Delete
   const [deletingMatkul, setDeletingMatkul] = useState<Matkul | null>(null);
@@ -242,8 +229,7 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
   }
 
   function resetAddForm() {
-    setAddForm({ code: '', name: '', sks: '3' });
-    setCatalogSelected(false);
+    setAddForm({ code: '', name: '', sks: '3', katalogMatkulId: '' });
     setAddError('');
   }
 
@@ -262,6 +248,7 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
           name: addForm.name,
           sks: addForm.sks,
           semesterId: semester.id,
+          katalogMatkulId: addForm.katalogMatkulId || null,
         }),
       });
       const data = await res.json();
@@ -394,19 +381,6 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
     setRemovingDosen(null);
   }
 
-  async function handleSubmitChangeRequest(e: React.FormEvent) {
-    e.preventDefault();
-    if (!changingMatkul) return;
-    await fetch(`/api/matkul/${changingMatkul.id}/change-request`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(changeForm),
-    });
-    setChangingMatkul(null);
-    setChangeForm({ proposedName: '', proposedCode: '', proposedSks: '', reason: '' });
-    alert('Permintaan perubahan telah dikirim ke Kaprodi untuk di-review.');
-  }
-
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div>
@@ -501,14 +475,6 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
                       <UserCog size={13} className="mr-1" /> Assign Roles
                     </button>
                     <div className="flex gap-1.5">
-                      <button
-                        onClick={() => {
-                          setChangingMatkul(m);
-                          setChangeForm({ proposedName: m.name, proposedCode: m.code, proposedSks: String(m.sks), reason: '' });
-                        }}
-                        className="inline-flex items-center px-2 py-1.5 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-[11px] font-bold rounded transition-colors">
-                        <Edit2 size={13} /> Edit Data
-                      </button>
                       <button onClick={() => setDeletingMatkul(m)}
                         className="inline-flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-[11px] font-bold rounded transition-colors">
                         <Trash2 size={13} /> Hapus
@@ -543,38 +509,31 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
               )}
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Pilih dari Katalog</label>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Pilih dari Katalog *</label>
                 <MatkulCombobox
                   value={{ code: addForm.code, name: addForm.name }}
-                  onChange={({ code, name }) => setAddForm(p => ({ ...p, code, name }))}
-                  onCatalogSelect={setCatalogSelected}
+                  catalog={katalog}
+                  onSelect={item => setAddForm(p => ({ ...p, code: item.code, name: item.name, sks: String(item.sks), katalogMatkulId: item.id }))}
                 />
-                <p className="text-[11px] text-gray-400 mt-1">Atau isi manual di bawah.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Kode *</label>
-                  <input required value={addForm.code} readOnly={catalogSelected}
-                    onChange={catalogSelected ? undefined : e => setAddForm(p => ({ ...p, code: e.target.value }))}
-                    placeholder="CS101"
-                    className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none ${catalogSelected ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-200 focus:border-uph-blue'}`} />
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Kode</label>
+                  <input readOnly value={addForm.code} placeholder="—"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-not-allowed" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">SKS *</label>
-                  <input type="number" required min={1} max={6} value={addForm.sks} readOnly={catalogSelected}
-                    onChange={catalogSelected ? undefined : e => setAddForm(p => ({ ...p, sks: e.target.value }))}
-                    placeholder="3"
-                    className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none ${catalogSelected ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-200 focus:border-uph-blue'}`} />
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">SKS</label>
+                  <input readOnly value={addForm.sks} placeholder="—"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-not-allowed" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Nama Mata Kuliah *</label>
-                <input required value={addForm.name} readOnly={catalogSelected}
-                  onChange={catalogSelected ? undefined : e => setAddForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="Cth: Algoritma & Pemrograman"
-                  className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none ${catalogSelected ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-200 focus:border-uph-blue'}`} />
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Nama Mata Kuliah</label>
+                <input readOnly value={addForm.name} placeholder="—"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-not-allowed" />
               </div>
 
               <div className="p-3 bg-uph-blue/5 rounded-lg border border-uph-blue/10 text-sm text-uph-blue font-medium">
@@ -584,7 +543,7 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setShowAddModal(false); resetAddForm(); }}
                   className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">Batal</button>
-                <button type="submit" disabled={isAdding}
+                <button type="submit" disabled={isAdding || !addForm.katalogMatkulId}
                   className="flex-1 py-2.5 bg-uph-blue text-white text-sm font-bold rounded-lg hover:bg-[#111c33] disabled:opacity-60">
                   {isAdding ? 'Menyimpan...' : 'Tambahkan'}
                 </button>
@@ -808,55 +767,6 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
         </div>
       )}
 
-      {/* ── Request Change ────────────────────────────────────────────────────── */}
-      {changingMatkul && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-yellow-50">
-              <div>
-                <h2 className="text-lg font-bold text-gray-800">Ajukan Perubahan Data</h2>
-                <p className="text-sm text-yellow-700 font-medium">Perlu persetujuan Kaprodi</p>
-              </div>
-              <button onClick={() => setChangingMatkul(null)} className="p-1 hover:bg-yellow-200 rounded-full"><X size={18} /></button>
-            </div>
-            <form onSubmit={handleSubmitChangeRequest} className="p-6 space-y-4">
-              <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-600 border border-gray-200">
-                <strong>Data saat ini:</strong> {changingMatkul.code} - {changingMatkul.name} ({changingMatkul.sks} SKS)
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Nama Baru (opsional)</label>
-                <input value={changeForm.proposedName} onChange={e => setChangeForm(p => ({ ...p, proposedName: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-yellow-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Kode Baru (opsional)</label>
-                <input value={changeForm.proposedCode} onChange={e => setChangeForm(p => ({ ...p, proposedCode: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-yellow-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">SKS Baru (opsional)</label>
-                <input type="number" min={1} max={6} value={changeForm.proposedSks}
-                  onChange={e => setChangeForm(p => ({ ...p, proposedSks: e.target.value }))}
-                  placeholder="Kosongkan jika tidak berubah"
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-yellow-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Alasan Perubahan *</label>
-                <textarea required value={changeForm.reason}
-                  onChange={e => setChangeForm(p => ({ ...p, reason: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-yellow-500 min-h-[80px] resize-none"
-                  placeholder="Jelaskan alasan perubahan ini..." />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setChangingMatkul(null)}
-                  className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">Batal</button>
-                <button type="submit"
-                  className="flex-1 py-2.5 bg-yellow-500 text-white text-sm font-bold rounded-lg hover:bg-yellow-600">Kirim Permintaan</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

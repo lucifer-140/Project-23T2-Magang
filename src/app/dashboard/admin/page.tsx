@@ -4,6 +4,7 @@ import {
   UserCheck, ChevronRight, Activity, ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import AutoRefresh from '@/components/AutoRefresh';
 
 function timeAgo(date: Date): string {
   const diff = Date.now() - date.getTime();
@@ -53,7 +54,7 @@ export default async function AdminDashboard() {
     prisma.matkulChangeRequest.findMany({
       orderBy: { createdAt: 'desc' },
       take: 5,
-      include: { matkul: { select: { name: true, code: true } } },
+      include: { katalogMatkul: { select: { name: true, code: true } } },
     }),
   ]);
 
@@ -63,7 +64,7 @@ export default async function AdminDashboard() {
 
   const activity: ActivityItem[] = [
     ...recentUsers.map(u => ({ kind: 'user' as const, name: u.name, status: u.status, roles: u.roles, date: null as Date | null })),
-    ...recentChangeReqs.map(cr => ({ kind: 'cr' as const, matkulName: cr.matkul.name, matkulCode: cr.matkul.code, status: cr.status, date: cr.createdAt })),
+    ...recentChangeReqs.map(cr => ({ kind: 'cr' as const, matkulName: cr.katalogMatkul.name, matkulCode: cr.katalogMatkul.code, status: cr.status, date: cr.createdAt })),
   ].slice(0, 8);
 
   return (
@@ -253,6 +254,7 @@ export default async function AdminDashboard() {
           <ChevronRight size={16} className="text-gray-400 group-hover:text-amber-500 transition-colors" />
         </Link>
       </div>
+      <AutoRefresh />
     </div>
   );
 }

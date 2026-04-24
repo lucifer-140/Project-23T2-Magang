@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import path from 'path';
 import { writeFile } from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
+import { getUploadDir, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
 
 // POST /api/bap/[bapId]/upload
 // FormData: { slot: 'lembarKehadiran' | 'absensi' | 'beritaAcara', file: File }
@@ -30,12 +30,21 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid slot or missing file' }, { status: 400 });
   }
 
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-  if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true });
+  const slotSubfolder: Record<string, string> = {
+    lembarKehadiran: 'lembar-kehadiran',
+    absensi: 'absensi',
+    beritaAcara: 'berita-acara',
+  };
+  const subfolder = slotSubfolder[slot];
+  const uploadDir = getUploadDir('bap', subfolder);
 
-  const safeFileName = `${Date.now()}_bap_${slot}_${bapId}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  // Unlink old file for this slot if it exists
+  const oldUrl = bap[`${slot}Url` as keyof typeof bap] as string | null | undefined;
+  await unlinkIfExists(oldUrl);
+
+  const safeFileName = `${bapId}_${slot}_${sanitizeName(file.name)}`;
   await writeFile(path.join(uploadDir, safeFileName), Buffer.from(await file.arrayBuffer()));
-  const fileUrl = `/uploads/${safeFileName}`;
+  const fileUrl = `/uploads/bap/${subfolder}/${safeFileName}`;
 
   const updated = await prisma.beritaAcaraPerwalian.update({
     where: { id: bapId },

@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { PDFDocument, rgb, LineCapStyle } from 'pdf-lib';
 import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
+import { getUploadDir, unlinkIfExists } from '@/lib/upload-paths';
 
 // POST /api/rps/[id]/annotations/flatten
 // Burns all saved annotations into the PDF and stores the result.
@@ -143,13 +143,12 @@ export async function POST(
   }
 
   const flatBytes = await pdfDoc.save();
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-  if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true });
-
-  const outFileName = `${Date.now()}_annotated_${id}.pdf`;
+  const uploadDir = getUploadDir('rps', 'annotated');
+  await unlinkIfExists(rps.annotatedPdfUrl);
+  const outFileName = `${id}_annotated.pdf`;
   const outPath = path.join(uploadDir, outFileName);
   await writeFile(outPath, flatBytes);
-  const annotatedPdfUrl = `/uploads/${outFileName}`;
+  const annotatedPdfUrl = `/uploads/rps/annotated/${outFileName}`;
 
   await prisma.rPS.update({
     where: { id },

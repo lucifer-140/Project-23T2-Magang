@@ -24,17 +24,17 @@ export async function GET(_req: NextRequest) {
 
   const rows = await prisma.matkulChangeRequest.findMany({
     include: {
-      matkul: { select: { id: true, name: true, code: true, sks: true } },
+      katalogMatkul: { select: { id: true, name: true, code: true, sks: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
 
   const payload: ChangeRequest[] = rows.map((r) => ({
     id: r.id,
-    matkulId: r.matkulId,
-    matkulName: r.matkul.name,
-    matkulCode: r.matkul.code,
-    currentSks: r.matkul.sks,
+    matkulId: r.katalogMatkulId,
+    matkulName: r.katalogMatkul.name,
+    matkulCode: r.katalogMatkul.code,
+    currentSks: r.katalogMatkul.sks,
     proposedName: r.proposedName,
     proposedCode: r.proposedCode,
     proposedSks: r.proposedSks,

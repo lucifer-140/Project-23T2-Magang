@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { PDFDocument, rgb, LineCapStyle } from 'pdf-lib';
 import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
+import { docTypeToFolder, getUploadDir, unlinkIfExists } from '@/lib/upload-paths';
 
 // POST /api/documents/[docId]/annotations/flatten
 export async function POST(
@@ -99,12 +99,12 @@ export async function POST(
   }
 
   const flatBytes = await pdfDoc.save();
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-  if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true });
-
-  const outFileName = `${Date.now()}_annotated_${docId}.pdf`;
+  const typeFolder = docTypeToFolder(doc.type);
+  const uploadDir = getUploadDir(typeFolder, 'annotated');
+  await unlinkIfExists(doc.annotatedPdfUrl);
+  const outFileName = `${docId}_annotated.pdf`;
   await writeFile(path.join(uploadDir, outFileName), flatBytes);
-  const annotatedPdfUrl = `/uploads/${outFileName}`;
+  const annotatedPdfUrl = `/uploads/${typeFolder}/annotated/${outFileName}`;
 
   await prisma.academicDocument.update({ where: { id: docId }, data: { annotatedPdfUrl } });
 

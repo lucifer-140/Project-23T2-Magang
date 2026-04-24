@@ -22,11 +22,19 @@ export default function NotificationBell() {
   const { addToast } = useToast();
 
   const fetchNotifs = async () => {
-    const res = await fetch('/api/notifications');
+    const res = await fetch('/api/notifications', { cache: 'no-store' });
     if (!res.ok) return;
     const data: Notif[] = await res.json();
 
-    if (initialized.current) {
+    if (!initialized.current) {
+      // First load: toast unread notifications that arrived in the last 60s
+      const cutoff = Date.now() - 60_000;
+      for (const n of data) {
+        if (!n.isRead && new Date(n.createdAt).getTime() > cutoff) {
+          addToast({ message: n.message, link: n.link });
+        }
+      }
+    } else {
       for (const n of data) {
         if (!prevIds.current.has(n.id)) {
           addToast({ message: n.message, link: n.link });
@@ -41,7 +49,7 @@ export default function NotificationBell() {
 
   useEffect(() => {
     fetchNotifs();
-    const id = setInterval(fetchNotifs, 5000);
+    const id = setInterval(fetchNotifs, 2500);
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

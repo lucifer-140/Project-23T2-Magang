@@ -30,7 +30,7 @@ export default async function ApplicationLogsPage() {
   });
 
   const changeRequestLogs = await prisma.matkulChangeRequest.findMany({
-    include: { matkul: { select: { code: true, name: true } } },
+    include: { katalogMatkul: { select: { code: true, name: true } } },
     orderBy: { updatedAt: 'desc' },
     take: 50,
   });
@@ -59,7 +59,7 @@ export default async function ApplicationLogsPage() {
           : c.status === 'REJECTED'
             ? 'bg-yellow-100 text-yellow-700'
             : 'bg-gray-100 text-gray-500',
-      message: `Permintaan perubahan matkul "${c.matkul.name}" (${c.matkul.code}) - ${c.status}`,
+      message: `Permintaan perubahan matkul "${c.katalogMatkul.name}" (${c.katalogMatkul.code}) - ${c.status}`,
       actor: 'Admin',
       action: 'CHANGE_REQUEST',
     })),

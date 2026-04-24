@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
+import { docTypeToFolder, getUploadDir, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
 
 // POST /api/documents/[docId]/sign
 // Body: { reviewer: 'koordinator' | 'kaprodi', sigData, sigX, sigY, sigPage, sigWidth }
@@ -25,7 +25,13 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid reviewer' }, { status: 400 });
   }
 
-  const doc = await prisma.academicDocument.findUnique({ where: { id: docId } });
+  const doc = await prisma.academicDocument.findUnique({
+    where: { id: docId },
+    include: {
+      matkul: { include: { semester: { include: { tahunAkademik: true } } } },
+      dosen: { select: { name: true } },
+    },
+  });
   if (reviewer === 'kaprodi' && !doc?.isProdiApproved) {
     return NextResponse.json({ error: 'Prodi must approve first' }, { status: 400 });
   }
@@ -40,8 +46,7 @@ export async function POST(
   }
   if (!sourcePdfUrl) return NextResponse.json({ error: 'No source PDF found' }, { status: 400 });
 
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-  if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true });
+  const typeFolder = docTypeToFolder(doc.type);
 
   const sourcePdfPath = path.join(process.cwd(), 'public', sourcePdfUrl);
   let pdfBytes: Uint8Array;
@@ -86,13 +91,43 @@ export async function POST(
   }
 
   const stampedBytes = await pdfDoc.save();
-  const outFileName = `${Date.now()}_signed_${reviewer}_${docId}.pdf`;
-  await writeFile(path.join(uploadDir, outFileName), stampedBytes);
-  const outFileUrl = `/uploads/${outFileName}`;
+  let outFileUrl: string;
+  let sigImageUrl: string;
 
-  const sigImageFileName = `${Date.now()}_sig_${reviewer}_${docId}.png`;
-  await writeFile(path.join(uploadDir, sigImageFileName), sigBuffer);
-  const sigImageUrl = `/uploads/${sigImageFileName}`;
+  if (reviewer === 'koordinator') {
+    await unlinkIfExists(doc.koordinatorSigUrl);
+    await unlinkIfExists(doc.koordinatorSignedPdfUrl);
+    const sigDir = getUploadDir(typeFolder, 'signatures');
+    const signedDir = getUploadDir(typeFolder, 'signed');
+    const sigFileName = `${docId}_sig_koordinator.png`;
+    await writeFile(path.join(sigDir, sigFileName), sigBuffer);
+    sigImageUrl = `/uploads/${typeFolder}/signatures/${sigFileName}`;
+    const signedFileName = `${docId}_signed_koordinator.pdf`;
+    await writeFile(path.join(signedDir, signedFileName), stampedBytes);
+    outFileUrl = `/uploads/${typeFolder}/signed/${signedFileName}`;
+  } else if (reviewer === 'prodi') {
+    await unlinkIfExists(doc.koordinatorSignedPdfUrl);
+    const signedDir = getUploadDir(typeFolder, 'signed');
+    sigImageUrl = '';
+    const signedFileName = `${docId}_signed_prodi.pdf`;
+    await writeFile(path.join(signedDir, signedFileName), stampedBytes);
+    outFileUrl = `/uploads/${typeFolder}/signed/${signedFileName}`;
+  } else {
+    await unlinkIfExists(doc.kaprodiSigUrl);
+    await unlinkIfExists(doc.finalPdfUrl);
+    const sigDir = getUploadDir(typeFolder, 'signatures');
+    const finalDir = getUploadDir(typeFolder, 'final');
+    const sigFileName = `${docId}_sig_kaprodi.png`;
+    await writeFile(path.join(sigDir, sigFileName), sigBuffer);
+    sigImageUrl = `/uploads/${typeFolder}/signatures/${sigFileName}`;
+    const matkulCode = sanitizeName(doc.matkul?.code ?? 'UNKNOWN');
+    const dosenName = sanitizeName(doc.dosen?.name ?? 'Unknown');
+    const tahun = (doc.matkul?.semester?.tahunAkademik?.tahun ?? '').replace('/', '-');
+    const semNama = sanitizeName(doc.matkul?.semester?.nama ?? '');
+    const finalFileName = `${doc.type}_${matkulCode}_${dosenName}_${tahun}_${semNama}.pdf`;
+    await writeFile(path.join(finalDir, finalFileName), stampedBytes);
+    outFileUrl = `/uploads/${typeFolder}/final/${finalFileName}`;
+  }
 
   let updateData: Record<string, unknown>;
   if (reviewer === 'koordinator') {

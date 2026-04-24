@@ -71,6 +71,7 @@ model User {
   kelasDosenPa              Kelas[]                @relation("DosenPaKelas")
   prodiBAPReviews           BeritaAcaraPerwalian[] @relation("ProdiBAP")
   notifications             Notification[]
+  changeRequests            MatkulChangeRequest[]
 }
 
 model TahunAkademik {
@@ -93,21 +94,33 @@ model Semester {
   @@unique([tahunAkademikId, nama])
 }
 
-model Matkul {
-  id             String               @id @default(cuid())
-  code           String
+model KatalogMatkul {
+  id             String                @id @default(cuid())
+  code           String                @unique
   name           String
   sks            Int
-  semesterId     String?
-  semester       Semester?            @relation(fields: [semesterId], references: [id])
-  dosens         User[]               @relation("DosenMatkul")
-  koordinators   User[]               @relation("KoordinatorMatkul")
-  classes        MatkulClass[]
-  rps            RPS[]
-  academicDocs   AcademicDocument[]
+  matkuls        Matkul[]
   changeRequests MatkulChangeRequest[]
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+}
+
+model Matkul {
+  id              String               @id @default(cuid())
+  code            String
+  name            String
+  sks             Int
+  semesterId      String?
+  semester        Semester?            @relation(fields: [semesterId], references: [id])
+  katalogMatkulId String?
+  katalogMatkul   KatalogMatkul?       @relation(fields: [katalogMatkulId], references: [id])
+  dosens          User[]               @relation("DosenMatkul")
+  koordinators    User[]               @relation("KoordinatorMatkul")
+  classes         MatkulClass[]
+  rps             RPS[]
+  academicDocs    AcademicDocument[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   @@unique([code, semesterId])
 }
@@ -124,16 +137,18 @@ model MatkulClass {
 
 
 model MatkulChangeRequest {
-  id            String              @id @default(cuid())
-  matkulId      String
-  matkul        Matkul              @relation(fields: [matkulId], references: [id])
-  proposedName  String?
-  proposedCode  String?
-  proposedSks   Int?
-  reason        String?
-  status        ChangeRequestStatus @default(PENDING)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  id                String              @id @default(cuid())
+  katalogMatkulId   String
+  katalogMatkul     KatalogMatkul       @relation(fields: [katalogMatkulId], references: [id])
+  requestedById     String?
+  requestedBy       User?               @relation(fields: [requestedById], references: [id])
+  proposedName      String?
+  proposedCode      String?
+  proposedSks       Int?
+  reason            String?
+  status            ChangeRequestStatus @default(PENDING)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
 
 model RPS {
@@ -272,6 +287,8 @@ model Notification {
   link      String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model AcademicDocAnnotation {

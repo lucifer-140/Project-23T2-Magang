@@ -14,13 +14,14 @@ const INCLUDE_FULL = {
 // POST /api/matkul - Create new Matkul
 export async function POST(req: NextRequest) {
   try {
-    const { code, name, sks, semesterId, classes } = await req.json();
+    const { code, name, sks, semesterId, katalogMatkulId, classes } = await req.json();
     const matkul = await prisma.matkul.create({
       data: {
         code,
         name,
         sks: parseInt(sks),
         semesterId: semesterId ?? null,
+        katalogMatkulId: katalogMatkulId ?? null,
         classes: classes?.length
           ? { create: (classes as string[]).map((n: string) => ({ name: n.trim() })) }
           : undefined,
