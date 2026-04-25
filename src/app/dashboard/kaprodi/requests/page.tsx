@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { ChangeRequestsClient } from './ChangeRequestsClient';
+import AutoRefresh from '@/components/AutoRefresh';
 
 export default async function ChangeRequestsPage() {
   const requests = await prisma.matkulChangeRequest.findMany({
@@ -25,5 +26,6 @@ export default async function ChangeRequestsPage() {
         createdAt: r.createdAt.toISOString(),
       }))}
     />
+    <AutoRefresh />
   );
 }

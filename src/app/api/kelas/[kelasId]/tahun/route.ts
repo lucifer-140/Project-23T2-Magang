@@ -21,13 +21,16 @@ export async function POST(
   const kelas = await prisma.kelas.findUnique({ where: { id: kelasId } });
   if (!kelas) return NextResponse.json({ error: 'Kelas not found' }, { status: 404 });
 
+  const tahunAkademik = await prisma.tahunAkademik.findUnique({ where: { id: tahunAkademikId } });
+  if (!tahunAkademik) return NextResponse.json({ error: 'Tahun akademik not found' }, { status: 404 });
+
   const semesters = await prisma.semester.findMany({
     where: { tahunAkademikId },
     include: { tahunAkademik: true },
   });
 
   if (semesters.length === 0) {
-    return NextResponse.json({ error: 'No semesters found for this tahun akademik' }, { status: 400 });
+    return NextResponse.json({ error: 'Tahun akademik belum memiliki semester. Hubungi admin.' }, { status: 400 });
   }
 
   // Check if any BAP already exists for this kelas+tahun

@@ -93,12 +93,12 @@ export default function KelasDetailClient({ kelas: initialKelas, tahunList: init
         <div className="flex items-start justify-between">
           <h1 className="font-playfair text-2xl font-bold text-uph-blue">Kelas {kelas.name}</h1>
           {/* Tambah Tahun Akademik — blocked pending review of auto-create flow */}
-          {/* {isKaprodi && availableTahun.length > 0 && (
+          {isKaprodi && availableTahun.length > 0 && (
             <button onClick={() => setShowAdd(true)}
               className="flex items-center gap-2 px-4 py-2 bg-uph-blue text-white rounded-lg text-sm font-bold hover:bg-uph-blue/90 transition-colors">
               <Plus size={16} /> Tambah Tahun Akademik
             </button>
-          )} */}
+          )}
         </div>
 
         {/* Dosen PA info bar */}

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { TahunAkademikClient } from './TahunAkademikClient';
+import AutoRefresh from '@/components/AutoRefresh';
 
 export default async function MatkulPage() {
   const items = await prisma.tahunAkademik.findMany({
@@ -12,5 +13,5 @@ export default async function MatkulPage() {
     },
   });
 
-  return <TahunAkademikClient items={items} />;
+  return <><TahunAkademikClient items={items} /><AutoRefresh /></>;
 }

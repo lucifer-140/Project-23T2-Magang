@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import type { LogEntry } from '@/lib/api-types';
 
+// Maps doc status to log level label + Tailwind color for the activity feed
 function getStatusMeta(status: string): { label: string; color: string } {
   switch (status) {
     case 'APPROVED':

@@ -8,6 +8,7 @@ import { getUploadDir, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
 
 const GOTENBERG_URL = process.env.GOTENBERG_URL ?? 'http://localhost:3001';
 
+// Tries 3 strategies in order: Gotenberg (Docker) → LibreOffice CLI → Mammoth+Puppeteer. Returns PDF path or null.
 async function convertDocxToPdf(docxPath: string): Promise<string | null> {
   const pdfPath = docxPath.replace(/\.(docx?)$/i, '.pdf');
 
@@ -30,7 +31,6 @@ async function convertDocxToPdf(docxPath: string): Promise<string | null> {
     if (res.ok) {
       const pdfBytes = Buffer.from(await res.arrayBuffer());
       await writeFile(pdfPath, pdfBytes);
-      console.log('[DOCX→PDF] Gotenberg conversion succeeded:', pdfPath);
       return pdfPath;
     }
     console.warn('[DOCX→PDF] Gotenberg returned', res.status, await res.text().catch(() => ''));

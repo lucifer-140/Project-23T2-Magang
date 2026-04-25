@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ApprovalsClient } from './ApprovalsClient';
+import AutoRefresh from '@/components/AutoRefresh';
 
 export default async function AdminApprovalsPage() {
   const cookieStore = await cookies();
@@ -17,5 +18,5 @@ export default async function AdminApprovalsPage() {
     orderBy: { name: 'asc' },
   });
 
-  return <ApprovalsClient initialUsers={pendingUsers} callerIsMaster={isMaster} />;
+  return <><ApprovalsClient initialUsers={pendingUsers} callerIsMaster={isMaster} /><AutoRefresh /></>;
 }

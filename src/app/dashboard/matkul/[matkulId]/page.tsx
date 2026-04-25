@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import MatkulHubClient from './MatkulHubClient';
+import AutoRefresh from '@/components/AutoRefresh';
 
 interface Props {
   params: Promise<{ matkulId: string }>;
@@ -91,5 +92,6 @@ export default async function MatkulHubPage({ params, searchParams }: Props) {
       initialSemesterId={activeSemester?.id ?? null}
       semesters={semesters}
     />
+    <AutoRefresh />
   );
 }

@@ -56,16 +56,5 @@ export async function POST(
     include: { kelas: { include: { dosenPa: { select: { id: true, name: true } } } }, semester: { include: { tahunAkademik: true } } },
   });
 
-  // Auto-submit if all 3 slots filled
-  const allFilled = updated.lembarKehadiranUrl && updated.absensiUrl && updated.beritaAcaraUrl;
-  if (allFilled && updated.status === 'UNSUBMITTED') {
-    const submitted = await prisma.beritaAcaraPerwalian.update({
-      where: { id: bapId },
-      data: { status: 'SUBMITTED' },
-      include: { kelas: { include: { dosenPa: { select: { id: true, name: true } } } }, semester: { include: { tahunAkademik: true } } },
-    });
-    return NextResponse.json(submitted);
-  }
-
   return NextResponse.json(updated);
 }

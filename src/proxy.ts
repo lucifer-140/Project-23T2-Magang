@@ -27,7 +27,7 @@ export function proxy(request: NextRequest) {
       roles = [decodedRoleStr];
     }
 
-    // Determine fallback dashboard based on highest privilege
+    // Priority order: MASTER > ADMIN > DOSEN (covers KAPRODI/KOORDINATOR combinable roles)
     const getDefaultDashboard = (userRoles: string[]) => {
       if (userRoles.includes('MASTER')) return '/dashboard/master';
       if (userRoles.includes('ADMIN')) return '/dashboard/admin';

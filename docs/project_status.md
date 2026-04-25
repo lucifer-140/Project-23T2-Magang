@@ -1,12 +1,21 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-24  
-**Current Version:** 0.18.0  
-**Status:** Active Development - Phase 18 Complete
+**Last Updated:** 2026-04-25  
+**Current Version:** 1.0.0  
+**Status:** Production Ready
 
 ---
 
 ## Completed Milestones
+
+### v1.0.0 — Production Release (2026-04-25)
+- [x] BAP flow: dosen PA uploads 3 docs → manual submit → Kaprodi review (approve/reject)
+- [x] BAP notifications: unlock → dosenPa, submit → Kaprodi, approve/reject → dosenPa
+- [x] BapDetailClient: progress stepper, color-coded file slots, submit/re-submit CTA, approve modal
+- [x] TahunDetailClient: status-coded cards, pulsing review indicator, file progress bar
+- [x] AutoRefresh coverage: all dashboard sub-pages now poll for updates
+- [x] Notification system fully wired across all workflow events
+- [x] All known UI bugs fixed (locked state, await in callback, PRODI layer removed from BAP)
 
 ### Phase 18: KatalogMatkul + Upload Refactor + Notification Coverage (v0.18.0)
 - [x] `KatalogMatkul` model — canonical course catalog decoupled from semester-scoped `Matkul` instances

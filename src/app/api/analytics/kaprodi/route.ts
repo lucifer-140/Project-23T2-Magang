@@ -43,6 +43,7 @@ export async function GET(req: Request) {
     return row;
   });
 
+  // Average EPP metric scores across all approved EPP docs (null = no EPP data yet)
   // EPP averages
   const eppDocs = await prisma.academicDocument.findMany({
     where: {

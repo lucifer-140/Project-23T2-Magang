@@ -21,20 +21,31 @@ export async function PATCH(
   });
   if (!bap) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (bap.isUnlocked) return NextResponse.json({ error: 'Already unlocked' }, { status: 409 });
+  if (!bap.semester.isActive) {
+    return NextResponse.json(
+      { error: 'Semester ini belum diaktifkan oleh admin. Minta admin untuk mengaktifkan semester terlebih dahulu.' },
+      { status: 400 }
+    );
+  }
 
-  const [updated] = await prisma.$transaction([
-    prisma.beritaAcaraPerwalian.update({
-      where: { id: bapId },
-      data: { isUnlocked: true },
-    }),
-    prisma.notification.create({
-      data: {
-        userId: bap.kelas.dosenPaId,
-        message: `Kaprodi telah membuka akses BAP ${bap.semester.nama} ${bap.semester.tahunAkademik.tahun} untuk kelas ${bap.kelas.name}. Silakan upload dokumen.`,
-        link: `/dashboard/berita-acara/${bapId}`,
-      },
-    }),
-  ]);
+  const updated = await prisma.beritaAcaraPerwalian.update({
+    where: { id: bapId },
+    data: { isUnlocked: true },
+  });
+
+  // Only send notification if dosenPa is assigned and exists
+  if (bap.kelas.dosenPaId) {
+    const dosenPaExists = await prisma.user.findUnique({ where: { id: bap.kelas.dosenPaId }, select: { id: true } });
+    if (dosenPaExists) {
+      await prisma.notification.create({
+        data: {
+          userId: bap.kelas.dosenPaId,
+          message: `Kaprodi telah membuka akses BAP ${bap.semester.nama} ${bap.semester.tahunAkademik.tahun} untuk kelas ${bap.kelas.name}. Silakan upload dokumen.`,
+          link: `/dashboard/berita-acara/${bapId}`,
+        },
+      }).catch(console.error);
+    }
+  }
 
   return NextResponse.json({ isUnlocked: updated.isUnlocked });
 }

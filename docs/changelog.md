@@ -2,6 +2,38 @@
 
 All notable changes to this project are documented here.
 
+## [1.0.0] - 2026-04-25
+
+### Added
+- **BAP manual submit flow** — dosen PA now clicks "Ajukan ke Kaprodi" / "Kirim Ulang ke Kaprodi" button instead of auto-submit on 3rd upload. `POST /api/bap/[bapId]/submit` endpoint validates all 3 files, transitions status → SUBMITTED, notifies KAPRODI, clears stale `kaprodiNotes`.
+- **BAP review notifications** — `bap/review/route.ts` now notifies dosenPa on Kaprodi approve/reject; `bap/upload/route.ts` notifies KAPRODI on submit.
+- **BAP unlock notification guard** — unlock route checks dosenPa user exists before creating notification; unlock proceeds even if notification fails.
+- **AutoRefresh on sub-pages** — added `<AutoRefresh />` to `matkul/[matkulId]`, `kaprodi/requests`, `admin/approvals`, `admin/matkul`, `prodi/page` which previously had no auto-refresh.
+- **`POST /api/bap/[bapId]/submit`** — new manual submit endpoint replacing auto-submit logic.
+
+### Changed
+- **BAP flow simplified to dosen → Kaprodi** (PRODI reviewer layer removed from BAP). `bap/review/route.ts` only accepts `reviewer: 'kaprodi'`; Kaprodi reviews directly from `SUBMITTED` state.
+- **BapDetailClient** — full UI/UX overhaul:
+  - 3-step progress stepper (Upload → Menunggu Review → Selesai) for dosen PA
+  - File slot cards with color-coded borders (green = uploaded, dashed gray = missing)
+  - Submit banner on manual send, blue "sedang direview" banner when SUBMITTED
+  - Approved state replaced by large green ✓ card with approval date
+  - Revision state shows Kaprodi notes with re-upload + re-submit CTA
+  - Kaprodi view: document list with timestamps + approve confirmation modal
+- **TahunDetailClient** — card grid redesigned:
+  - Color-coded borders per status (amber = SUBMITTED, green = APPROVED, red = REVISION)
+  - Pulsing amber dot on SUBMITTED cards for Kaprodi
+  - 3-segment file progress bar per card
+  - Pending review counter badge in page header
+  - Cleaner unlock modal with warning alert
+
+### Fixed
+- `BapDetailClient` `locked` logic no longer blocks uploads in REVISION state (was including `PENGECEKAN` and `REVISION` incorrectly).
+- `await` inside `setBap(prev => ...)` callback removed (was parse error in non-async function).
+- Stale PRODI-related `isProdiApproved` check removed from `canKaprodiReview`.
+
+---
+
 ## [0.18.0] - 2026-04-24
 
 ### Added
