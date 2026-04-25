@@ -1,10 +1,12 @@
 # Sistem Administrasi Prodi Informatika Medan
 
-![Version](https://img.shields.io/badge/version-0.18.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
 ![Stack](https://img.shields.io/badge/stack-Next.js%2016%20%7C%20Prisma%207%20%7C%20PostgreSQL-informational)
 
 Portal administrasi akademik terpadu untuk Dosen dan Kaprodi — mendigitalisasi pengelolaan dokumen akademik (RPS, Soal UTS/UAS, LPP, EPP, Berita Acara) dengan alur kerja multi-level approval, anotasi PDF inline, dan tanda tangan digital.
+
+---
 
 ## Fitur Utama
 
@@ -19,6 +21,8 @@ Portal administrasi akademik terpadu untuk Dosen dan Kaprodi — mendigitalisasi
 - **DOCX → PDF:** Konversi otomatis via Gotenberg → LibreOffice → Puppeteer (fallback chain)
 - **Manajemen Matkul:** Hierarki TahunAkademik → Semester → Matkul → Kelas; live catalog dari KatalogMatkul
 
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -31,6 +35,168 @@ Portal administrasi akademik terpadu untuk Dosen dan Kaprodi — mendigitalisasi
 | PDF Processing | pdf-lib, PDF.js, react-pdf, Puppeteer, Mammoth |
 | Charts | Recharts |
 | Icons | Lucide React |
+
+---
+
+## Arsitektur Sistem
+
+### Alur Approval Dokumen (State Machine)
+
+```mermaid
+stateDiagram-v2
+    [*] --> UNSUBMITTED : Dosen ditugaskan matkul
+    UNSUBMITTED --> SUBMITTED : Dosen upload file
+    SUBMITTED --> PENGECEKAN : Koordinator mulai review
+    PENGECEKAN --> REVISION : Koordinator tolak\n(annotasi + flatten PDF)
+    REVISION --> SUBMITTED : Dosen re-upload
+    PENGECEKAN --> PENGECEKAN : Koordinator setujui\n→ Kaprodi review\n(isKoordinatorApproved=true)
+    PENGECEKAN --> APPROVED : Kaprodi setujui\n+ tanda tangan digital
+    PENGECEKAN --> REVISION : Kaprodi tolak\n(annotasi + flatten PDF)
+    APPROVED --> [*]
+```
+
+### Alur Approval 3-Level (dengan PRODI)
+
+```mermaid
+flowchart LR
+    D[Dosen\nUpload Dokumen]
+    K[Koordinator\nLevel 1]
+    P[PRODI\nLevel 2]
+    KP[Kaprodi\nLevel 3]
+    DONE([Dokumen\nAPPROVED ✓])
+
+    D -->|Submit| K
+    K -->|Setuju| P
+    K -->|Tolak| D
+    P -->|Setuju| KP
+    P -->|Tolak| D
+    KP -->|Setuju + TTD| DONE
+    KP -->|Tolak| D
+```
+
+### Struktur Role & Akses Dashboard
+
+```mermaid
+graph TD
+    MASTER --> M[/dashboard/master]
+    ADMIN --> A[/dashboard/admin]
+    KAPRODI --> KP[/dashboard/kaprodi]
+    KAPRODI --> KPD[/dashboard/dosen]
+    KOORDINATOR --> KO[/dashboard/koordinator]
+    KOORDINATOR --> KOD[/dashboard/dosen]
+    PRODI --> PR[/dashboard/prodi]
+    DOSEN --> DO[/dashboard/dosen]
+```
+
+> KAPRODI, KOORDINATOR, dan DOSEN bisa digabung dalam satu akun.
+
+### Skema Database (Relasi Utama)
+
+```mermaid
+erDiagram
+    User {
+        string id PK
+        string email
+        string name
+        Role[] roles
+        UserStatus status
+    }
+    TahunAkademik {
+        string id PK
+        string tahun
+        boolean isActive
+    }
+    Semester {
+        string id PK
+        string nama
+        boolean isActive
+    }
+    KatalogMatkul {
+        string id PK
+        string code
+        string name
+        int sks
+    }
+    Matkul {
+        string id PK
+        string code
+        string name
+        int sks
+    }
+    MatkulClass {
+        string id PK
+        string name
+    }
+    RPS {
+        string id PK
+        RpsStatus status
+        boolean isKoordinatorApproved
+        string fileUrl
+        string finalPdfUrl
+    }
+    AcademicDocument {
+        string id PK
+        DocType type
+        DocStatus status
+        boolean isKoordinatorApproved
+        boolean isProdiApproved
+    }
+    Kelas {
+        string id PK
+        string name
+    }
+    BeritaAcaraPerwalian {
+        string id PK
+        DocStatus status
+        boolean isUnlocked
+        boolean isProdiApproved
+    }
+
+    TahunAkademik ||--o{ Semester : "punya"
+    Semester ||--o{ Matkul : "punya"
+    KatalogMatkul ||--o{ Matkul : "instansiasi"
+    Matkul ||--o{ MatkulClass : "kelas"
+    Matkul ||--o{ RPS : "per dosen"
+    Matkul ||--o{ AcademicDocument : "per dosen"
+    User }o--o{ Matkul : "mengajar"
+    User }o--o{ Matkul : "koordinasi"
+    User ||--o{ RPS : "submit"
+    User ||--o{ AcademicDocument : "submit"
+    Kelas ||--o{ BeritaAcaraPerwalian : "per semester"
+    User ||--o{ Kelas : "DosenPA"
+```
+
+### Alur Upload & Anotasi PDF
+
+```mermaid
+sequenceDiagram
+    participant D as Dosen
+    participant R as Reviewer (Koor/Kaprodi)
+    participant API as API Server
+    participant DB as Database
+    participant FS as /public/uploads/
+
+    D->>API: POST /api/rps/upload (file)
+    API->>FS: Simpan file (timestamp prefix)
+    API->>DB: Buat/update RPS record, reset status=SUBMITTED, hapus anotasi lama
+
+    R->>API: POST /api/rps/[id]/annotations
+    API->>DB: Simpan RpsAnnotation (type, x%, y%, page)
+
+    R->>API: POST /api/rps/[id]/annotations/flatten
+    API->>FS: Baca PDF, burn anotasi via pdf-lib
+    API->>DB: Set annotatedPdfUrl
+
+    R->>API: POST /api/rps/[id]/review {action: reject}
+    API->>DB: status=REVISION, simpan notes
+    API->>DB: Buat Notification untuk Dosen
+
+    R->>API: POST /api/rps/[id]/review {action: approve}
+    API->>DB: isKoordinatorApproved=true ATAU status=APPROVED + finalPdfUrl
+    API->>DB: Buat Notification untuk Dosen
+```
+
+---
 
 ## Panduan Lokal (Development)
 
@@ -45,13 +211,13 @@ Portal administrasi akademik terpadu untuk Dosen dan Kaprodi — mendigitalisasi
 # 1. Install dependencies
 npm install
 
-# 2. Copy environment file and fill in DATABASE_URL
+# 2. Copy environment file dan isi DATABASE_URL
 cp .env.example .env
 
-# 3. Start the database container
+# 3. Start database container
 docker compose up -d
 
-# 4. Apply schema and seed data
+# 4. Apply schema dan seed data
 npx prisma migrate dev
 npm run seed
 npm run seed:katalog
@@ -62,37 +228,41 @@ npm run dev
 
 Buka [http://localhost:3000](http://localhost:3000).
 
+---
+
 ## Deployment (Local Server)
 
 **Target:** Ubuntu 24.04 LTS · Node.js 22 LTS · PM2 · PostgreSQL via Docker
 
 ```bash
-# 1. Clone and install
+# 1. Clone dan install
 git clone <repo> && cd <repo>
 npm install
 
-# 2. Configure environment
+# 2. Konfigurasi environment
 cp .env.example .env
 # Edit .env — set DATABASE_URL
 
 # 3. Start database
 docker compose up -d
 
-# 4. Run migrations and seed
+# 4. Migrasi dan seed
 npx prisma migrate deploy
 npm run seed
 npm run seed:katalog
 
-# 5. Build and start
+# 5. Build dan start
 npm run build
 pm2 start npm --name uph-admin -- start
 pm2 save
-pm2 startup   # follow instructions to auto-start on reboot
+pm2 startup   # ikuti instruksi untuk auto-start saat reboot
 ```
 
-Access via `http://<server-ip>:3000`. Optionally configure Nginx as reverse proxy on port 80.
+Akses via `http://<server-ip>:3000`. Opsional: konfigurasi Nginx sebagai reverse proxy di port 80.
 
 > **MacBook sebagai server:** Tahan **Option** saat boot untuk pilih USB installer. Install Ubuntu 24.04 LTS headless. Gunakan Ethernet saat setup — WiFi Broadcom mungkin perlu `bcmwl-kernel-source`. Aktifkan OpenSSH saat install untuk remote management.
+
+---
 
 ## Seed Accounts
 
@@ -105,6 +275,8 @@ Access via `http://<server-ip>:3000`. Optionally configure Nginx as reverse prox
 | dosen@test.com | dosen123 | DOSEN |
 | dosen2@test.com | dosen123 | DOSEN |
 | prodi@test.com | prodi123 | DOSEN + PRODI |
+
+---
 
 ## Useful Commands
 
@@ -121,25 +293,31 @@ docker compose up -d          # Start Postgres
 docker compose down           # Stop Postgres
 ```
 
+---
+
 ## Known Limitations
 
-- **Passwords plain text** — intentional for development; hash with bcrypt/argon2 before real-user production use
+- **Passwords plain text** — intentional for development; hash dengan bcrypt/argon2 sebelum produksi
 - **No email notifications** — in-app only; Resend atau Gmail OAuth2 integration planned
-- **No HTTPS enforcement** — acceptable for local LAN; required for internet-facing deployment
-- **No automated backups** — set up PostgreSQL scheduled dumps before going live
+- **No HTTPS enforcement** — acceptable untuk local LAN; required untuk internet-facing deployment
+- **No automated backups** — setup PostgreSQL scheduled dumps sebelum go-live
 
-## Documentation
+---
 
-| File | Description |
+## Dokumentasi
+
+| File | Deskripsi |
 |---|---|
-| [docs/architecture.md](docs/architecture.md) | System design and data flow |
+| [docs/architecture.md](docs/architecture.md) | System design dan data flow |
 | [docs/changelog.md](docs/changelog.md) | Full version history |
-| [docs/project_status.md](docs/project_status.md) | Current progress and known issues |
-| [docs/alur-sistem.md](docs/alur-sistem.md) | User workflow guide (Indonesian) |
+| [docs/project_status.md](docs/project_status.md) | Progress saat ini dan known issues |
+| [docs/alur-sistem.md](docs/alur-sistem.md) | Panduan alur pengguna (Indonesian) |
 | [docs/roadmap-active-semester.md](docs/roadmap-active-semester.md) | Planned: active semester auto-detection |
 | [docs/roadmap-master-pages.md](docs/roadmap-master-pages.md) | Planned: Master account pages |
 | [docs/roadmap-pwa-mobile.md](docs/roadmap-pwa-mobile.md) | Planned: PWA + mobile responsive |
 | [docs/roadmap-dashboard-ux.md](docs/roadmap-dashboard-ux.md) | Planned: deferred dashboard UX features |
+
+---
 
 ## Versioning
 
