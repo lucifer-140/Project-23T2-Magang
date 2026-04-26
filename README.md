@@ -44,14 +44,20 @@ Portal administrasi akademik terpadu untuk Dosen dan Kaprodi — mendigitalisasi
 
 ```mermaid
 stateDiagram-v2
-    [*] --> UNSUBMITTED : Dosen ditugaskan matkul
+    [*] --> UNSUBMITTED : Dosen ditugaskan
     UNSUBMITTED --> SUBMITTED : Dosen upload file
-    SUBMITTED --> PENGECEKAN : Koordinator mulai review
-    PENGECEKAN --> REVISION : Koordinator tolak\n(annotasi + flatten PDF)
+    
+    SUBMITTED --> CEK_KOORDINATOR : Koordinator mulai review
+    
+    CEK_KOORDINATOR --> REVISION : Koordinator tolak<br/>(annotasi + flatten PDF)
     REVISION --> SUBMITTED : Dosen re-upload
-    PENGECEKAN --> PENGECEKAN : Koordinator setujui\n→ Kaprodi review\n(isKoordinatorApproved=true)
-    PENGECEKAN --> APPROVED : Kaprodi setujui\n+ tanda tangan digital
-    PENGECEKAN --> REVISION : Kaprodi tolak\n(annotasi + flatten PDF)
+    
+    CEK_KOORDINATOR --> CEK_KAPRODI : Koordinator setujui<br/>(isKoordinatorApproved=true)
+    
+    CEK_KAPRODI --> REVISION : Kaprodi tolak<br/>(annotasi + flatten PDF)
+    
+    CEK_KAPRODI --> APPROVED : Kaprodi setujui<br/>+ tanda tangan digital
+    
     APPROVED --> [*]
 ```
 
@@ -59,12 +65,14 @@ stateDiagram-v2
 
 ```mermaid
 flowchart LR
-    D[Dosen\nUpload Dokumen]
-    K[Koordinator\nLevel 1]
-    P[PRODI\nLevel 2]
-    KP[Kaprodi\nLevel 3]
-    DONE([Dokumen\nAPPROVED ✓])
+    START([Mulai])
+    D[Dosen<br/>Upload Dokumen]
+    K[Koordinator<br/>Level 1]
+    P[PRODI<br/>Level 2]
+    KP[Kaprodi<br/>Level 3]
+    DONE([Dokumen<br/>APPROVED])
 
+    START --> D
     D -->|Submit| K
     K -->|Setuju| P
     K -->|Tolak| D
@@ -78,14 +86,14 @@ flowchart LR
 
 ```mermaid
 graph TD
-    MASTER --> M[/dashboard/master]
-    ADMIN --> A[/dashboard/admin]
-    KAPRODI --> KP[/dashboard/kaprodi]
-    KAPRODI --> KPD[/dashboard/dosen]
-    KOORDINATOR --> KO[/dashboard/koordinator]
-    KOORDINATOR --> KOD[/dashboard/dosen]
-    PRODI --> PR[/dashboard/prodi]
-    DOSEN --> DO[/dashboard/dosen]
+    MASTER --> M["/dashboard/master"]
+    ADMIN --> A["/dashboard/admin"]
+    KAPRODI --> KP["/dashboard/kaprodi"]
+    KAPRODI --> KPD["/dashboard/dosen"]
+    KOORDINATOR --> KO["/dashboard/koordinator"]
+    KOORDINATOR --> KOD["/dashboard/dosen"]
+    PRODI --> PR["/dashboard/prodi"]
+    DOSEN --> DO["/dashboard/dosen"]
 ```
 
 > KAPRODI, KOORDINATOR, dan DOSEN bisa digabung dalam satu akun.
