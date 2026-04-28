@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## [1.1.0] - 2026-04-28
+
+### Added
+- **Historical data import pipeline** — scripts to seed legacy academic documents (2022–2025) into the database from canonical  directory structure
+  -  — normalizes dosen folder names from full academic titles to canonical names
+  -  — normalizes matkul folder names, resolves typos and case variants
+  -  — generates  and  templates from folder structure
+  -  — full DB seeder: upserts Users, KatalogMatkul, TahunAkademik, Semester, Matkul, MatkulClass, RPS, AcademicDocument from  tree; supports - **27 dosen accounts** seeded with  emails; Ferawaty set as - **42 KatalogMatkul** entries seeded with official UPH course codes and SKS
+- **441 historical PDFs** copied to  with all records marked -  — step-by-step import guide and checklist
+-  — architecture plan for katalog-based matkul routing (next milestone)
+-  port updated  to avoid Windows Hyper-V port reservation conflict
+
 ## [1.0.0] - 2026-04-25
 
 ### Added

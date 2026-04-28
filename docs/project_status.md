@@ -1,12 +1,23 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-25  
-**Current Version:** 1.0.0  
+**Last Updated:** 2026-04-28  
+**Current Version:** 1.1.0  
 **Status:** Production Ready
 
 ---
 
 ## Completed Milestones
+
+### v1.1.0 — Historical Data Import (2026-04-28)
+- [x] Canonical  directory structure organized (2022–2025 academic years)
+- [x] Dosen folder rename script (full academic titles → canonical names)
+- [x] Matkul folder rename script (typos/case variants → canonical names)
+- [x] CSV template generation script
+- [x] Full historical import script with  support
+- [x] 27 dosen accounts seeded, 42 KatalogMatkul entries, 441 PDFs imported
+- [x] All historical records marked APPROVED (RPS + AcademicDocument)
+- [x] Docker port conflict resolved (5460)
+- [ ] **Next:** Katalog-centric matkul hub refactor (see )
 
 ### v1.0.0 — Production Release (2026-04-25)
 - [x] BAP flow: dosen PA uploads 3 docs → manual submit → Kaprodi review (approve/reject)
