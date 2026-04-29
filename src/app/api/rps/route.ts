@@ -23,9 +23,10 @@ export async function GET(_req: NextRequest) {
   // Only return DOSEN view if user is pure DOSEN (no reviewer roles)
   // OR has DOSEN + KOORDINATOR but NOT KAPRODI
   if (roles.includes('DOSEN') && !roles.includes('KAPRODI') && !roles.includes('KOORDINATOR')) {
-    const assignedMatkuls = await prisma.matkul.findMany({
+    const assignedClasses = await prisma.matkulClass.findMany({
       where: { dosens: { some: { id: userId } } },
       include: {
+        matkul: { select: { id: true, code: true, name: true, sks: true } },
         rps: {
           where: { dosenId: userId },
           select: {
@@ -45,25 +46,27 @@ export async function GET(_req: NextRequest) {
           take: 1,
         },
       },
-      orderBy: { code: 'asc' },
+      orderBy: [{ matkul: { code: 'asc' } }, { name: 'asc' }],
     });
 
-    const matkulRpsData: MatkulRps[] = assignedMatkuls.map((m) => ({
-      matkulId: m.id,
-      matkulCode: m.code,
-      matkulName: m.name,
-      sks: m.sks,
-      rpsId: m.rps[0]?.id ?? null,
-      status: m.rps[0]?.status ?? 'UNSUBMITTED',
-      isKoordinatorApproved: m.rps[0]?.isKoordinatorApproved ?? false,
-      fileName: m.rps[0]?.fileName ?? null,
-      fileUrl: m.rps[0]?.fileUrl ?? null,
-      finalPdfUrl: m.rps[0]?.finalPdfUrl ?? null,
-      annotatedPdfUrl: m.rps[0]?.annotatedPdfUrl ?? null,
-      notes: m.rps[0]?.notes ?? null,
-      koordinatorNotes: m.rps[0]?.koordinatorNotes ?? null,
-      kaprodiNotes: m.rps[0]?.kaprodiNotes ?? null,
-      updatedAt: m.rps[0]?.updatedAt?.toISOString() ?? null,
+    const matkulRpsData: MatkulRps[] = assignedClasses.map((c) => ({
+      matkulId: c.matkulId,
+      matkulClassId: c.id,
+      matkulClassName: c.name,
+      matkulCode: c.matkul.code,
+      matkulName: c.matkul.name,
+      sks: c.matkul.sks,
+      rpsId: c.rps[0]?.id ?? null,
+      status: c.rps[0]?.status ?? 'UNSUBMITTED',
+      isKoordinatorApproved: c.rps[0]?.isKoordinatorApproved ?? false,
+      fileName: c.rps[0]?.fileName ?? null,
+      fileUrl: c.rps[0]?.fileUrl ?? null,
+      finalPdfUrl: c.rps[0]?.finalPdfUrl ?? null,
+      annotatedPdfUrl: c.rps[0]?.annotatedPdfUrl ?? null,
+      notes: c.rps[0]?.notes ?? null,
+      koordinatorNotes: c.rps[0]?.koordinatorNotes ?? null,
+      kaprodiNotes: c.rps[0]?.kaprodiNotes ?? null,
+      updatedAt: c.rps[0]?.updatedAt?.toISOString() ?? null,
     }));
 
     return NextResponse.json(matkulRpsData);
@@ -82,6 +85,7 @@ export async function GET(_req: NextRequest) {
           matkul: { select: { name: true, code: true } },
           dosen: { select: { name: true } },
           koordinator: { select: { name: true } },
+          matkulClass: { select: { name: true } },
         },
         orderBy: { updatedAt: 'desc' },
       }),
@@ -90,22 +94,29 @@ export async function GET(_req: NextRequest) {
           koordinators: { some: { id: userId } },
         },
         include: {
-          dosens: { select: { id: true, name: true } },
-          rps: true,
+          classes: {
+            include: {
+              dosens: { select: { id: true, name: true } },
+              rps: true,
+            },
+          },
         },
       }),
     ]);
 
     const assignments = matkulsWithDosens.flatMap((m) =>
-      m.dosens.map((d) => {
-        const rps = m.rps.find((r) => r.dosenId === d.id);
-        return {
-          dosenName: d.name,
-          matkulName: m.name,
-          rpsId: rps?.id ?? null,
-          defaultStatus: rps?.status ?? 'UNSUBMITTED',
-        };
-      })
+      m.classes.flatMap((cls) =>
+        cls.dosens.map((d) => {
+          const rps = cls.rps.find((r) => r.dosenId === d.id);
+          return {
+            dosenName: d.name,
+            matkulName: m.name,
+            matkulClassName: cls.name,
+            rpsId: rps?.id ?? null,
+            defaultStatus: rps?.status ?? 'UNSUBMITTED',
+          };
+        })
+      )
     );
 
     const payload: RpsApiResponse = {
@@ -113,6 +124,7 @@ export async function GET(_req: NextRequest) {
         id: s.id,
         matkulName: s.matkul.name,
         matkulCode: s.matkul.code,
+        matkulClassName: s.matkulClass?.name ?? null,
         dosenName: s.dosen.name,
         koordinatorName: s.koordinator?.name ?? null,
         status: s.status,
@@ -134,44 +146,50 @@ export async function GET(_req: NextRequest) {
   }
 
   // ── KAPRODI branch (default) ─────────────────────────────────────────────────
-  const [submissions, dosensWithMatkuls] = await Promise.all([
+  const [submissions, allMatkuls] = await Promise.all([
     prisma.rPS.findMany({
       include: {
         matkul: { select: { name: true, code: true, sks: true } },
         dosen: { select: { name: true } },
         koordinator: { select: { name: true } },
+        matkulClass: { select: { name: true } },
       },
       orderBy: { updatedAt: 'desc' },
     }),
-    prisma.user.findMany({
-      where: { dosenMatkuls: { some: {} } },
+    prisma.matkul.findMany({
       include: {
-        dosenMatkuls: {
-          include: { rps: true },
+        classes: {
+          include: {
+            dosens: { select: { id: true, name: true } },
+            rps: true,
+          },
         },
       },
     }),
   ]);
 
-  const assignments: RpsApiResponse['assignments'] = [];
-  dosensWithMatkuls.forEach((d) => {
-    d.dosenMatkuls.forEach((m) => {
-      const rpsForDosen = m.rps.find((r) => r.dosenId === d.id);
-      assignments.push({
-        dosenName: d.name,
-        matkulName: m.name,
-        rpsId: rpsForDosen?.id ?? null,
-        defaultStatus: rpsForDosen?.status ?? 'UNSUBMITTED',
-        isKoordinatorApproved: rpsForDosen?.isKoordinatorApproved ?? false,
-      });
-    });
-  });
+  const assignments: RpsApiResponse['assignments'] = allMatkuls.flatMap((m) =>
+    m.classes.flatMap((cls) =>
+      cls.dosens.map((d) => {
+        const rpsForDosen = cls.rps.find((r) => r.dosenId === d.id);
+        return {
+          dosenName: d.name,
+          matkulName: m.name,
+          matkulClassName: cls.name,
+          rpsId: rpsForDosen?.id ?? null,
+          defaultStatus: rpsForDosen?.status ?? 'UNSUBMITTED',
+          isKoordinatorApproved: rpsForDosen?.isKoordinatorApproved ?? false,
+        };
+      })
+    )
+  );
 
   const payload: RpsApiResponse = {
     submissions: submissions.map((s) => ({
       id: s.id,
       matkulName: s.matkul.name,
       matkulCode: s.matkul.code,
+      matkulClassName: s.matkulClass?.name ?? null,
       dosenName: s.dosen.name,
       koordinatorName: s.koordinator?.name ?? null,
       status: s.status,

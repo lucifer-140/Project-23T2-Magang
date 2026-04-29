@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   ]);
 
   // Doc counts by type + status (for stacked bar chart)
-  const docTypes = ['RPS', 'SOAL_UTS', 'SOAL_UAS', 'LPP', 'EPP', 'BERITA_ACARA'] as const;
+  const docTypes = ['RPS', 'SOAL_UTS', 'SOAL_UAS', 'LPP', 'EPP_UTS', 'EPP_UAS', 'BERITA_ACARA'] as const;
   const statuses = ['APPROVED', 'SUBMITTED', 'REVISION', 'PENGECEKAN', 'UNSUBMITTED'] as const;
 
   const typeBreakdownRaw = await prisma.academicDocument.groupBy({
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
   const eppDocs = await prisma.academicDocument.findMany({
     where: {
       ...semesterFilter,
-      type: 'EPP',
+      type: { in: ['EPP_UTS', 'EPP_UAS'] },
       eppPersentaseMateri: { not: null },
     },
     select: {

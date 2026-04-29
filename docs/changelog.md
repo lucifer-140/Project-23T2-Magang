@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented here.
 
+## [1.2.0] - 2026-04-29
+
+### Added
+- **Katalog-centric matkul hub** — `[matkulId]` route replaced by `[katalogId]`; hub now shows all semester instances of a course under one URL with a semester dropdown switcher
+- **Completion status badge** on matkul list cards and table — "Semua Selesai" (green), "Ada Revisi" (red), "Dalam Review" (amber), "Belum Lengkap" / "Belum Ada Data" (gray)
+- **Accordion class sections** in matkul hub (dosen + reviewer views) — all classes rendered inline, collapsible via header click; replaces previous tab-based class switching
+- **`scripts/update-matkul-codes.ts`** — one-shot script to rename `-OLD` placeholder codes to official UPH codes across `KatalogMatkul` and all linked `Matkul` instances
+
+### Changed
+- **`GET /api/matkul/mine`** — now groups by `katalogMatkulId`; returns one entry per `KatalogMatkul` with `docCounts` from latest semester instance only (fixes inflated progress bar)
+- **`/dashboard/matkul` page** — same katalog-grouping logic as API; `id` = `katalogId` for navigation
+- **`GET /api/matkul/[id]/documents`** — `[id]` is now `katalogId`; resolves to `matkulId` via `semesterId` param
+- **`POST /api/matkul/[id]/documents/upload`** — same katalog → matkul resolution; notification URL updated to katalog route
+- **17 KatalogMatkul codes** updated from `-OLD` placeholders to official codes (e.g. `TI-AP-OLD` → `IFT09102`); 43 Matkul instances updated in-place
+- **`import-data/metadata/matkul.csv`** updated with correct official codes
+- **Bulk-approved** 4 remaining SUBMITTED/PENGECEKAN documents so all historical data is APPROVED
+
+### Fixed
+- Doc progress bar on matkul list cards no longer inflates by aggregating across all semesters — shows latest semester instance only
+- Class switching in hub was silently showing same content — replaced index-based tab state with accordion rendering all classes simultaneously
+
 ## [1.1.0] - 2026-04-28
 
 ### Added

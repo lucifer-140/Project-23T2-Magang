@@ -8,7 +8,7 @@ import { Clock, CheckCircle, AlertCircle, FileText, Search, Filter } from 'lucid
 
 const DOC_TYPE_LABELS: Record<string, string> = {
   RPS: 'RPS', SOAL_UTS: 'Soal UTS', SOAL_UAS: 'Soal UAS',
-  LPP: 'LPP', EPP: 'EPP', BERITA_ACARA: 'Berita Acara',
+  LPP: 'LPP', EPP_UTS: 'EPP UTS', EPP_UAS: 'EPP UAS', BERITA_ACARA: 'Berita Acara',
 };
 
 const EPP_METRIC_LABELS: { key: string; label: string }[] = [

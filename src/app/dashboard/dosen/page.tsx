@@ -9,7 +9,7 @@ import AutoRefresh from '@/components/AutoRefresh';
 
 const DOC_LABEL: Record<string, string> = {
   RPS: 'RPS', SOAL_UTS: 'Soal UTS', SOAL_UAS: 'Soal UAS',
-  LPP: 'LPP', EPP: 'EPP', BERITA_ACARA: 'Berita Acara',
+  LPP: 'LPP', EPP: 'EPP', EPP_UTS: 'EPP UTS', EPP_UAS: 'EPP UAS', BERITA_ACARA: 'Berita Acara',
 };
 
 function timeAgo(date: Date): string {

@@ -10,6 +10,8 @@ const DOC_LABEL: Record<DocType, string> = {
   SOAL_UAS: 'Soal UAS',
   LPP: 'Laporan Pelaksanaan Pembelajaran',
   EPP: 'Evaluasi Pencapaian Program',
+  EPP_UTS: 'Evaluasi Pencapaian Program UTS',
+  EPP_UAS: 'Evaluasi Pencapaian Program UAS',
   BERITA_ACARA: 'Berita Acara Perwalian',
 };
 import path from 'path';
@@ -54,12 +56,13 @@ async function convertDocxToPdf(docxPath: string): Promise<string | null> {
 }
 
 // POST /api/matkul/[id]/documents/upload
+// [id] = katalogId (or legacy matkulId). Resolves Matkul instance via katalogMatkulId + semesterId.
 // FormData: { type: DocType, semesterId: string, file: File }
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: matkulId } = await params;
+  const { id } = await params;
 
   const cookieStore = await cookies();
   const dosenId = cookieStore.get('userId')?.value;
@@ -69,19 +72,24 @@ export async function POST(
   const file = formData.get('file') as File | null;
   const typeRaw = formData.get('type') as string;
   const semesterId = formData.get('semesterId') as string;
+  const matkulClassId = (formData.get('matkulClassId') as string | null) || null;
 
-  if (!typeRaw || !semesterId) {
+  if (!typeRaw || !semesterId || !matkulClassId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
+
+  // Resolve matkulId: try katalog lookup first, then legacy direct lookup
+  const byKatalog = await prisma.matkul.findFirst({ where: { katalogMatkulId: id, semesterId } });
+  const matkulId = byKatalog ? byKatalog.id : id;
 
   const parseEppFloat = (v: FormDataEntryValue | null) => {
     if (v === null || v === '') return null;
     const n = Number(v);
     return isNaN(n) ? null : n;
   };
-  // Only include EPP fields that were explicitly sent in the FormData
+  // Only include EPP fields for EPP-type docs
   const eppFields: Record<string, number | null> = {};
-  if (typeRaw === 'EPP') {
+  if (typeRaw === 'EPP' || typeRaw === 'EPP_UTS' || typeRaw === 'EPP_UAS') {
     for (const name of ['eppPersentaseMateri', 'eppPersentaseCpmk', 'eppPersentaseKehadiran', 'eppPersentaseNilaiB', 'eppPersentaseKkmToB']) {
       const v = formData.get(name);
       if (v !== null) eppFields[name] = parseEppFloat(v);
@@ -94,9 +102,9 @@ export async function POST(
   }
   const type = typeRaw as DocType;
 
-  // Check if already approved - locked
-  const existing = await prisma.academicDocument.findUnique({
-    where: { matkulId_dosenId_semesterId_type: { matkulId, dosenId, semesterId, type } },
+  // Check if already approved - locked (use findFirst since unique now includes nullable matkulClassId)
+  const existing = await prisma.academicDocument.findFirst({
+    where: { matkulId, dosenId, semesterId, type, matkulClassId },
   });
   if (existing?.status === 'APPROVED') {
     return NextResponse.json({ error: 'Document already approved and locked' }, { status: 409 });
@@ -109,7 +117,7 @@ export async function POST(
     }
     const doc = existing
       ? await prisma.academicDocument.update({ where: { id: existing.id }, data: eppFields })
-      : await prisma.academicDocument.create({ data: { matkulId, dosenId, semesterId, type, status: 'UNSUBMITTED', ...eppFields } });
+      : await prisma.academicDocument.create({ data: { matkulId, dosenId, semesterId, type, matkulClassId, status: 'UNSUBMITTED', ...eppFields } });
     return NextResponse.json(doc, { status: 200 });
   }
 
@@ -174,7 +182,7 @@ export async function POST(
     });
   } else {
     doc = await prisma.academicDocument.create({
-      data: { matkulId, dosenId, semesterId, type, fileName: finalFileName, fileUrl, status: 'SUBMITTED', ...eppFields },
+      data: { matkulId, dosenId, semesterId, type, matkulClassId, fileName: finalFileName, fileUrl, status: 'SUBMITTED', ...eppFields },
     });
   }
 
@@ -192,7 +200,7 @@ export async function POST(
     await notifyUsers(
       matkul.koordinators.map(k => k.id),
       `${dosen.name} mengupload ${label} untuk ${matkul.code} dan menunggu review Anda.`,
-      `/dashboard/matkul/${matkulId}`,
+      `/dashboard/matkul/${id}`,
     );
   }
 

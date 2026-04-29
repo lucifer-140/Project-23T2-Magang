@@ -41,6 +41,8 @@ enum DocType {
   SOAL_UAS
   LPP
   EPP
+  EPP_UTS
+  EPP_UAS
   BERITA_ACARA
 }
 
@@ -131,6 +133,8 @@ model MatkulClass {
   matkul   Matkul  @relation(fields: [matkulId], references: [id], onDelete: Cascade)
   name     String  // e.g. "23TI1", "23TI2"
   dosens   User[]  @relation("ClassDosen")
+  rps          RPS[]
+  academicDocs AcademicDocument[]
 
   @@unique([matkulId, name])
 }
@@ -179,11 +183,15 @@ model RPS {
   kaprodiSigPage          Int?
   kaprodiSigWidth         Float?
   finalPdfUrl             String?   // fully signed PDF (after kaprodi stamps)
+  matkulClassId           String?
+  matkulClass             MatkulClass? @relation(fields: [matkulClassId], references: [id])
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
   dosenId                 String
   dosen                   User      @relation("DosenRPS", fields: [dosenId], references: [id])
   annotations             RpsAnnotation[]
+
+  @@unique([matkulId, dosenId, matkulClassId])
 }
 
 model AcademicDocument {
@@ -228,17 +236,20 @@ model AcademicDocument {
 
   annotations AcademicDocAnnotation[]
 
-  // EPP-specific fields (nullable, only used when type = EPP)
+  // EPP-specific fields (nullable, only used when type = EPP/EPP_UTS/EPP_UAS)
   eppPersentaseMateri     Float?
   eppPersentaseCpmk       Float?
   eppPersentaseKehadiran  Float?
   eppPersentaseNilaiB     Float?
   eppPersentaseKkmToB     Float?
 
+  matkulClassId String?
+  matkulClass   MatkulClass? @relation(fields: [matkulClassId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([matkulId, dosenId, semesterId, type])
+  @@unique([matkulId, dosenId, semesterId, type, matkulClassId])
 }
 
 model Kelas {

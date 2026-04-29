@@ -1,12 +1,23 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-28  
-**Current Version:** 1.1.0  
+**Last Updated:** 2026-04-29  
+**Current Version:** 1.2.0  
 **Status:** Production Ready
 
 ---
 
 ## Completed Milestones
+
+### v1.2.0 — Katalog-Centric Hub + Data Cleanup (2026-04-29)
+- [x] `[matkulId]` route replaced by `[katalogId]` — hub groups all semester instances under one URL
+- [x] Semester dropdown in hub switches between historical instances
+- [x] `GET /api/matkul/mine` groups by `katalogMatkulId`; `docCounts` from latest instance only (fixes inflated progress bar)
+- [x] Completion status badge on matkul list cards and table (Semua Selesai / Ada Revisi / Dalam Review / Belum Lengkap)
+- [x] Accordion class sections in hub — all classes visible inline, collapsible, replaces broken tab switching
+- [x] 17 KatalogMatkul codes updated from `-OLD` placeholders to official UPH codes; 43 Matkul instances updated
+- [x] `import-data/metadata/matkul.csv` updated with correct codes
+- [x] `scripts/update-matkul-codes.ts` — reusable code-rename script
+- [x] Bulk-approved all remaining SUBMITTED/PENGECEKAN historical documents (4 docs)
 
 ### v1.1.0 — Historical Data Import (2026-04-28)
 - [x] Canonical  directory structure organized (2022–2025 academic years)

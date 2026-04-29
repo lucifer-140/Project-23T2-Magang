@@ -3,8 +3,8 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 
 // GET /api/matkul/mine
-// Returns all matkuls where caller is dosen, koordinator, or kaprodi (union, deduplicated)
-// Each matkul includes a `userRoles` field: ['dosen'] | ['koordinator'] | ['kaprodi'] | combinations
+// Returns KatalogMatkul-grouped list. Each entry's `id` = katalogId (or matkulId for legacy rows).
+// Aggregates docCounts across all instances of the same katalog.
 export async function GET() {
   const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
@@ -39,40 +39,48 @@ export async function GET() {
 
   let kaprodiMatkuls: typeof dosenMatkuls = [];
   if (isKaprodi) {
-    kaprodiMatkuls = await prisma.matkul.findMany({
-      include: semesterInclude,
-      orderBy: { code: 'asc' },
-    });
+    kaprodiMatkuls = await prisma.matkul.findMany({ include: semesterInclude, orderBy: { code: 'asc' } });
   }
 
   let prodiMatkuls: typeof dosenMatkuls = [];
   if (isProdi && !isKaprodi) {
-    prodiMatkuls = await prisma.matkul.findMany({
-      include: semesterInclude,
-      orderBy: { code: 'asc' },
-    });
+    prodiMatkuls = await prisma.matkul.findMany({ include: semesterInclude, orderBy: { code: 'asc' } });
   }
 
-  const map = new Map<string, (typeof dosenMatkuls[0]) & { userRoles: string[] }>();
-
+  // Build per-matkulId map with userRoles
+  const matkulMap = new Map<string, (typeof dosenMatkuls[0]) & { userRoles: string[] }>();
   for (const m of kaprodiMatkuls) {
-    if (!map.has(m.id)) map.set(m.id, { ...m, userRoles: ['kaprodi'] });
-    else map.get(m.id)!.userRoles.push('kaprodi');
+    if (!matkulMap.has(m.id)) matkulMap.set(m.id, { ...m, userRoles: ['kaprodi'] });
+    else if (!matkulMap.get(m.id)!.userRoles.includes('kaprodi')) matkulMap.get(m.id)!.userRoles.push('kaprodi');
   }
   for (const m of prodiMatkuls) {
-    if (!map.has(m.id)) map.set(m.id, { ...m, userRoles: ['prodi'] });
-    else if (!map.get(m.id)!.userRoles.includes('prodi')) map.get(m.id)!.userRoles.push('prodi');
+    if (!matkulMap.has(m.id)) matkulMap.set(m.id, { ...m, userRoles: ['prodi'] });
+    else if (!matkulMap.get(m.id)!.userRoles.includes('prodi')) matkulMap.get(m.id)!.userRoles.push('prodi');
   }
   for (const m of koordinatorMatkuls) {
-    if (!map.has(m.id)) map.set(m.id, { ...m, userRoles: ['koordinator'] });
-    else if (!map.get(m.id)!.userRoles.includes('koordinator')) map.get(m.id)!.userRoles.push('koordinator');
+    if (!matkulMap.has(m.id)) matkulMap.set(m.id, { ...m, userRoles: ['koordinator'] });
+    else if (!matkulMap.get(m.id)!.userRoles.includes('koordinator')) matkulMap.get(m.id)!.userRoles.push('koordinator');
   }
   for (const m of dosenMatkuls) {
-    if (!map.has(m.id)) map.set(m.id, { ...m, userRoles: ['dosen'] });
-    else if (!map.get(m.id)!.userRoles.includes('dosen')) map.get(m.id)!.userRoles.push('dosen');
+    if (!matkulMap.has(m.id)) matkulMap.set(m.id, { ...m, userRoles: ['dosen'] });
+    else if (!matkulMap.get(m.id)!.userRoles.includes('dosen')) matkulMap.get(m.id)!.userRoles.push('dosen');
   }
 
-  const matkulIds = Array.from(map.keys());
+  // Group by katalogMatkulId; null katalog → key = matkulId (legacy)
+  type Entry = (typeof dosenMatkuls[0]) & { userRoles: string[] };
+  const katalogMap = new Map<string, { instances: Entry[]; userRoles: string[] }>();
+  for (const m of matkulMap.values()) {
+    const key = m.katalogMatkulId ?? m.id;
+    if (!katalogMap.has(key)) katalogMap.set(key, { instances: [], userRoles: [] });
+    const g = katalogMap.get(key)!;
+    g.instances.push(m);
+    for (const r of m.userRoles) {
+      if (!g.userRoles.includes(r)) g.userRoles.push(r);
+    }
+  }
+
+  // Doc counts per matkulId
+  const matkulIds = Array.from(matkulMap.keys());
   const docCountsRaw = matkulIds.length > 0
     ? await prisma.academicDocument.groupBy({
         by: ['matkulId', 'status'],
@@ -80,25 +88,44 @@ export async function GET() {
         _count: { id: true },
       })
     : [];
-
   const dcMap = new Map<string, Record<string, number>>();
   for (const row of docCountsRaw) {
     if (!dcMap.has(row.matkulId)) dcMap.set(row.matkulId, {});
     dcMap.get(row.matkulId)![row.status] = row._count.id;
   }
 
-  const result = Array.from(map.values()).map(m => {
-    const dc = dcMap.get(m.id) ?? {};
+  function semOrder(m: Entry): string {
+    const tahun = m.semester?.tahunAkademik?.tahun ?? '';
+    const ord = m.semester?.nama === 'Genap' ? '2' : m.semester?.nama === 'Ganjil' ? '1' : '0';
+    return `${tahun}__${ord}`;
+  }
+
+  const result = Array.from(katalogMap.entries()).map(([key, g]) => {
+    const sorted = [...g.instances].sort((a, b) => semOrder(b).localeCompare(semOrder(a)));
+    const latest = sorted[0];
+
+    // Show counts for the latest instance only — aggregating all semesters would inflate the bar
+    const dc = dcMap.get(latest.id) ?? {};
+    const agg = {
+      SUBMITTED:   dc.SUBMITTED   ?? 0,
+      APPROVED:    dc.APPROVED    ?? 0,
+      REVISION:    dc.REVISION    ?? 0,
+      PENGECEKAN:  dc.PENGECEKAN  ?? 0,
+      UNSUBMITTED: dc.UNSUBMITTED ?? 0,
+      total: Object.values(dc).reduce((a, b) => a + b, 0),
+    };
+
     return {
-      ...m,
-      docCounts: {
-        SUBMITTED: dc.SUBMITTED ?? 0,
-        APPROVED: dc.APPROVED ?? 0,
-        REVISION: dc.REVISION ?? 0,
-        PENGECEKAN: dc.PENGECEKAN ?? 0,
-        UNSUBMITTED: dc.UNSUBMITTED ?? 0,
-        total: Object.values(dc).reduce((a, b) => a + b, 0),
-      },
+      id: key,  // katalogId or matkulId — used as navigation URL segment
+      code: latest.code,
+      name: latest.name,
+      sks: latest.sks,
+      userRoles: g.userRoles,
+      semester: latest.semester,
+      dosens: latest.dosens,
+      koordinators: latest.koordinators,
+      classes: latest.classes,
+      docCounts: agg,
     };
   });
 

@@ -121,6 +121,7 @@ export async function POST(req: NextRequest) {
   const matkulId = formData.get('matkulId') as string;
   const dosenId = formData.get('dosenId') as string;
   const rpsId = formData.get('rpsId') as string | null;
+  const matkulClassId = (formData.get('matkulClassId') as string | null) || null;
 
   if (!file || !matkulId || !dosenId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -196,6 +197,7 @@ export async function POST(req: NextRequest) {
       data: {
         matkulId,
         dosenId,
+        matkulClassId,
         fileName: finalFileName,
         fileUrl,
         status: 'SUBMITTED',

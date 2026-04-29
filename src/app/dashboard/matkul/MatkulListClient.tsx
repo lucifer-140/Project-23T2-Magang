@@ -18,19 +18,11 @@ interface DocCounts {
   total: number;
 }
 
-interface SemesterOption {
-  id: string;
-  nama: string;
-  isActive: boolean;
-  tahunAkademik: { tahun: string };
-}
-
 interface Matkul {
-  id: string;
+  id: string;  // katalogId or matkulId (for navigation)
   code: string;
   name: string;
   sks: number;
-  semesterId: string | null;
   userRoles: string[];
   dosens: { id: string; name: string }[];
   koordinators: { id: string; name: string }[];
@@ -41,7 +33,6 @@ interface Matkul {
 
 interface Props {
   initialMatkuls: (Matkul & { docCounts: DocCounts })[];
-  semesters: SemesterOption[];
   initialFilter?: string;
 }
 
@@ -75,6 +66,14 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
+function completionStatus(counts: DocCounts): { label: string; cls: string; dot: string } {
+  if (counts.total === 0) return { label: 'Belum Ada Data', cls: 'text-gray-400 bg-gray-50 border-gray-200', dot: 'bg-gray-300' };
+  if (counts.APPROVED === counts.total) return { label: 'Semua Selesai', cls: 'text-green-700 bg-green-50 border-green-200', dot: 'bg-green-500' };
+  if (counts.REVISION > 0) return { label: 'Ada Revisi', cls: 'text-red-600 bg-red-50 border-red-200', dot: 'bg-red-500' };
+  if (counts.UNSUBMITTED > 0) return { label: 'Belum Lengkap', cls: 'text-gray-500 bg-gray-50 border-gray-200', dot: 'bg-gray-400' };
+  return { label: 'Dalam Review', cls: 'text-amber-700 bg-amber-50 border-amber-200', dot: 'bg-amber-400' };
+}
+
 function DocStatusBar({ counts }: { counts: DocCounts }) {
   if (counts.total === 0) return <span className="text-xs text-gray-300">—</span>;
   const pct = (n: number) => `${Math.round((n / counts.total) * 100)}%`;
@@ -95,11 +94,14 @@ function DocStatusBar({ counts }: { counts: DocCounts }) {
 
 function MatkulCard({ m, onClick }: { m: Matkul & { docCounts: DocCounts }; onClick: () => void }) {
   const semLabel = m.semester ? `${m.semester.nama} ${m.semester.tahunAkademik.tahun}` : null;
+  const cs = completionStatus(m.docCounts);
   return (
     <div
       onClick={onClick}
-      className="bg-white border border-uph-border rounded-xl p-4 cursor-pointer hover:border-uph-blue hover:shadow-md transition-all group flex flex-col gap-3"
+      className="bg-white border border-uph-border rounded-xl p-4 cursor-pointer hover:border-uph-blue hover:shadow-md transition-all group flex flex-col gap-3 overflow-hidden relative"
     >
+      {/* completion accent stripe */}
+      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${cs.dot}`} />
       {/* Header — same atoms as table */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -145,11 +147,17 @@ function MatkulCard({ m, onClick }: { m: Matkul & { docCounts: DocCounts }; onCl
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-        <DocStatusBar counts={m.docCounts} />
-        <div className="flex flex-wrap gap-1 justify-end">
-          {m.userRoles.map(r => <RoleBadge key={r} role={r} />)}
+      <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
+        <div className="flex items-center justify-between">
+          <DocStatusBar counts={m.docCounts} />
+          <div className="flex flex-wrap gap-1 justify-end">
+            {m.userRoles.map(r => <RoleBadge key={r} role={r} />)}
+          </div>
         </div>
+        <span className={`self-start inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${cs.cls}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${cs.dot}`} />
+          {cs.label}
+        </span>
       </div>
     </div>
   );
@@ -180,7 +188,7 @@ function SemesterGroupHeader({ label, count, pendingCount, revisionCount }: { la
   );
 }
 
-export default function MatkulListClient({ initialMatkuls, semesters: _semesters, initialFilter }: Props) {
+export default function MatkulListClient({ initialMatkuls, initialFilter }: Props) {
   const router = useRouter();
 
   const [search,          setSearch]          = useState('');
@@ -306,6 +314,7 @@ export default function MatkulListClient({ initialMatkuls, semesters: _semesters
                 <th className="px-4 py-3 text-left">Kelas</th>
                 <th className="px-4 py-3 text-left">Pengajar</th>
                 <th className="px-4 py-3 text-left">Peran</th>
+                <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -353,6 +362,13 @@ export default function MatkulListClient({ initialMatkuls, semesters: _semesters
                     <div className="flex gap-1">
                       {m.userRoles.map(r => <RoleBadge key={r} role={r} />)}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {(() => { const cs = completionStatus(m.docCounts); return (
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${cs.cls}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${cs.dot}`} />{cs.label}
+                      </span>
+                    ); })()}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <ChevronRight size={16} className="text-gray-300 group-hover:text-uph-blue transition-colors" />

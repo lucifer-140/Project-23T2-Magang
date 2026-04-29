@@ -3,6 +3,7 @@ export type RpsSubmission = {
   id: string;
   matkulName: string;
   matkulCode: string;
+  matkulClassName: string | null;
   dosenName: string;
   koordinatorName: string | null;
   status: string;
@@ -18,10 +19,11 @@ export type RpsSubmission = {
   updatedAt: string;
 };
 
-// Assignment row (dosen × matkul)
+// Assignment row (dosen × matkul × class)
 export type RpsAssignment = {
   dosenName: string;
   matkulName: string;
+  matkulClassName?: string | null;
   rpsId: string | null;
   defaultStatus: string;
   isKoordinatorApproved?: boolean;
@@ -36,6 +38,8 @@ export type RpsApiResponse = {
 // Dosen-specific row from GET /api/rps (role DOSEN)
 export type MatkulRps = {
   matkulId: string;
+  matkulClassId: string;
+  matkulClassName: string;
   matkulCode: string;
   matkulName: string;
   sks: number;
