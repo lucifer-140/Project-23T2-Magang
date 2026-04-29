@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here.
 
+## [1.2.1] - 2026-04-29
+
+### Added
+- **`DELETE /api/tahun-akademik/[tahunId]`** — delete TahunAkademik; blocked if any linked Matkul exists (returns 409 with count)
+- **Delete TahunAkademik button** in `TahunAkademikClient` — inline delete with per-row error state
+
+### Changed
+- **Matkul list table** — sortable columns (Kode, Nama Matkul, SKS, Semester); default view changed from card to table
+- **Matkul list table** — wider name column (`max-w-72`), wider Pengajar column (`max-w-48`), `matkulId` used as React key to avoid duplicate-key warnings on multi-semester catalogs
+- **Login page** — removed test account cheat-sheet box from UI
+- **`/api/matkul/mine`** — cleaned up query; now returns `matkulId` alongside `id` (katalogId) for stable React keys
+
+### Fixed
+- `kaprodi/requests/page.tsx` — missing JSX fragment wrapper around `<ChangeRequestsClient>` + `<AutoRefresh>` caused render error
+
 ## [1.2.0] - 2026-04-29
 
 ### Added

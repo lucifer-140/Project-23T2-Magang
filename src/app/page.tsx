@@ -138,18 +138,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </p>
           </div>
 
-          <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-            <p className="text-[11px] text-gray-400 text-center font-semibold uppercase tracking-wider mb-2">Akun Test (Selalu gunakan password: [nama]123)</p>
-            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-gray-500">
-              <span>master@test.com</span>
-              <span>kaprodi@test.com</span>
-              <span>admin@test.com</span>
-              <span>dosen@test.com</span>
-              <span>koordinator@test.com</span>
-              <span>dosen2@test.com (dosen123)</span>
-            </div>
-          </div>
-
           <p className="text-center mt-5 text-xs text-gray-400">
             © 2026 <span className="text-uph-blue font-semibold">lucifer-140</span>. All rights reserved.
           </p>

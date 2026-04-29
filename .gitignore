@@ -42,3 +42,11 @@ next-env.d.ts
 .claude/
 CLAUDE.md
 .claudeprofile
+
+# Raw data files (not part of source)
+/files/
+/toSort/
+matkul.xlsx
+
+# Uploaded user files
+/public/uploads/

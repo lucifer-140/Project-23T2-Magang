@@ -1,12 +1,22 @@
 # Project Status Report
 
 **Last Updated:** 2026-04-29  
-**Current Version:** 1.2.0  
+**Current Version:** 1.2.1  
 **Status:** Production Ready
 
 ---
 
 ## Completed Milestones
+
+### v1.2.1 — Table UX + Admin Fixes (2026-04-29)
+- [x] Sortable columns on matkul list table (Kode / Nama / SKS / Semester)
+- [x] Default view changed to table mode
+- [x] `matkulId` as React key — no duplicate-key warnings for multi-semester catalogs
+- [x] `DELETE /api/tahun-akademik/[tahunId]` — guarded delete with matkul count check
+- [x] Delete TahunAkademik button in admin UI with inline error feedback
+- [x] Login page: removed test-account cheat-sheet box
+- [x] Fix: JSX fragment wrapper in `kaprodi/requests/page.tsx`
+- [x] `GET /api/matkul/mine` cleaned up; returns `matkulId` for stable keying
 
 ### v1.2.0 — Katalog-Centric Hub + Data Cleanup (2026-04-29)
 - [x] `[matkulId]` route replaced by `[katalogId]` — hub groups all semester instances under one URL

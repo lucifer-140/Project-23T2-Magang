@@ -3,8 +3,8 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 
 // GET /api/matkul/mine
-// Returns KatalogMatkul-grouped list. Each entry's `id` = katalogId (or matkulId for legacy rows).
-// Aggregates docCounts across all instances of the same katalog.
+// Returns one entry per matkul instance (not grouped by katalog) so all semesters are visible.
+// Each entry's `id` = katalogId (for hub navigation) or matkulId (legacy). `matkulId` is the unique instance id.
 export async function GET() {
   const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
@@ -66,19 +66,6 @@ export async function GET() {
     else if (!matkulMap.get(m.id)!.userRoles.includes('dosen')) matkulMap.get(m.id)!.userRoles.push('dosen');
   }
 
-  // Group by katalogMatkulId; null katalog → key = matkulId (legacy)
-  type Entry = (typeof dosenMatkuls[0]) & { userRoles: string[] };
-  const katalogMap = new Map<string, { instances: Entry[]; userRoles: string[] }>();
-  for (const m of matkulMap.values()) {
-    const key = m.katalogMatkulId ?? m.id;
-    if (!katalogMap.has(key)) katalogMap.set(key, { instances: [], userRoles: [] });
-    const g = katalogMap.get(key)!;
-    g.instances.push(m);
-    for (const r of m.userRoles) {
-      if (!g.userRoles.includes(r)) g.userRoles.push(r);
-    }
-  }
-
   // Doc counts per matkulId
   const matkulIds = Array.from(matkulMap.keys());
   const docCountsRaw = matkulIds.length > 0
@@ -94,18 +81,9 @@ export async function GET() {
     dcMap.get(row.matkulId)![row.status] = row._count.id;
   }
 
-  function semOrder(m: Entry): string {
-    const tahun = m.semester?.tahunAkademik?.tahun ?? '';
-    const ord = m.semester?.nama === 'Genap' ? '2' : m.semester?.nama === 'Ganjil' ? '1' : '0';
-    return `${tahun}__${ord}`;
-  }
-
-  const result = Array.from(katalogMap.entries()).map(([key, g]) => {
-    const sorted = [...g.instances].sort((a, b) => semOrder(b).localeCompare(semOrder(a)));
-    const latest = sorted[0];
-
-    // Show counts for the latest instance only — aggregating all semesters would inflate the bar
-    const dc = dcMap.get(latest.id) ?? {};
+  // One row per matkul instance — older semesters (e.g. 2022/2023) are never hidden
+  const result = Array.from(matkulMap.values()).map(m => {
+    const dc = dcMap.get(m.id) ?? {};
     const agg = {
       SUBMITTED:   dc.SUBMITTED   ?? 0,
       APPROVED:    dc.APPROVED    ?? 0,
@@ -114,17 +92,17 @@ export async function GET() {
       UNSUBMITTED: dc.UNSUBMITTED ?? 0,
       total: Object.values(dc).reduce((a, b) => a + b, 0),
     };
-
     return {
-      id: key,  // katalogId or matkulId — used as navigation URL segment
-      code: latest.code,
-      name: latest.name,
-      sks: latest.sks,
-      userRoles: g.userRoles,
-      semester: latest.semester,
-      dosens: latest.dosens,
-      koordinators: latest.koordinators,
-      classes: latest.classes,
+      id: m.katalogMatkulId ?? m.id,
+      matkulId: m.id,
+      code: m.code,
+      name: m.name,
+      sks: m.sks,
+      userRoles: m.userRoles,
+      semester: m.semester,
+      dosens: m.dosens,
+      koordinators: m.koordinators,
+      classes: m.classes,
       docCounts: agg,
     };
   });

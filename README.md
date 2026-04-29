@@ -1,6 +1,6 @@
 # Sistem Administrasi Prodi Informatika Medan
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.1-blue)
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
 ![Stack](https://img.shields.io/badge/stack-Next.js%2016%20%7C%20Prisma%207%20%7C%20PostgreSQL-informational)
 
@@ -19,7 +19,9 @@ Portal administrasi akademik terpadu untuk Dosen dan Kaprodi — mendigitalisasi
 - **Notifikasi Real-Time:** In-app toast queue + bell icon; polling 5 detik
 - **Kaprodi Analytics:** Chart EPP, breakdown dokumen per tipe/status, filter per semester
 - **DOCX → PDF:** Konversi otomatis via Gotenberg → LibreOffice → Puppeteer (fallback chain)
-- **Manajemen Matkul:** Hierarki TahunAkademik → Semester → Matkul → Kelas; live catalog dari KatalogMatkul
+- **Manajemen Matkul:** Hierarki TahunAkademik → Semester → Matkul → Kelas; live catalog dari KatalogMatkul; sortable table columns
+- **Katalog-Centric Hub:** Satu URL per katalog matkul menampilkan semua instansi semester; completion badge per matkul
+- **Historical Data:** 441 dokumen historis (2022–2025) ter-import dan APPROVED; 42 KatalogMatkul dengan kode resmi UPH
 
 ---
 
@@ -324,6 +326,17 @@ docker compose down           # Stop Postgres
 | [docs/roadmap-master-pages.md](docs/roadmap-master-pages.md) | Planned: Master account pages |
 | [docs/roadmap-pwa-mobile.md](docs/roadmap-pwa-mobile.md) | Planned: PWA + mobile responsive |
 | [docs/roadmap-dashboard-ux.md](docs/roadmap-dashboard-ux.md) | Planned: deferred dashboard UX features |
+
+---
+
+## Changelog Singkat
+
+| Versi | Tanggal | Perubahan |
+|---|---|---|
+| **1.2.1** | 2026-04-29 | Sortable table columns, delete TahunAkademik, login cleanup, bug fixes |
+| **1.2.0** | 2026-04-29 | Katalog-centric hub, completion badges, accordion classes, kode resmi UPH |
+| **1.1.0** | 2026-04-28 | Historical data import pipeline, 441 PDFs, 27 dosen seeded |
+| **1.0.0** | 2026-04-25 | BAP workflow, full notification coverage, UI/UX overhaul |
 
 ---
 

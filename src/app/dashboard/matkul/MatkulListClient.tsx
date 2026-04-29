@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Search, X, BookOpen, Upload, ClipboardCheck, GraduationCap, ChevronRight,
   Filter, LayoutGrid, List, Users, Calendar, Hash, AlertCircle, Clock,
+  ChevronUp, ChevronDown,
 } from 'lucide-react';
 import useSWR from 'swr';
 import { SyncIndicator } from '@/components/SyncIndicator';
@@ -19,7 +20,8 @@ interface DocCounts {
 }
 
 interface Matkul {
-  id: string;  // katalogId or matkulId (for navigation)
+  id: string;       // katalogId or matkulId (for navigation)
+  matkulId?: string; // unique per instance (React key)
   code: string;
   name: string;
   sks: number;
@@ -198,8 +200,10 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
   const [selectedSks,     setSelectedSks]     = useState('');
   const [docStatus,       setDocStatus]       = useState(initialFilter === 'pending' ? 'pending' : '');
   const [showFilters,     setShowFilters]     = useState(initialFilter === 'pending');
-  const [viewMode,        setViewMode]        = useState<'card' | 'table'>('card');
+  const [viewMode,        setViewMode]        = useState<'card' | 'table'>('table');
   const [groupBySem,      setGroupBySem]      = useState(false);
+  const [sortKey,         setSortKey]         = useState<'code' | 'name' | 'sks' | 'semester' | null>(null);
+  const [sortDir,         setSortDir]         = useState<'asc' | 'desc'>('asc');
 
   const { data: swrData, isValidating, error } = useSWR<(Matkul & { docCounts: DocCounts })[]>(
     '/api/matkul/mine',
@@ -210,14 +214,14 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
   // Preserve docCounts from initial render (SWR may not always include them)
   const dcById = useMemo(() => {
     const map = new Map<string, DocCounts>();
-    for (const m of initialMatkuls) map.set(m.id, m.docCounts);
+    for (const m of initialMatkuls) map.set(m.matkulId ?? m.id, m.docCounts);
     return map;
   }, [initialMatkuls]);
 
   const matkuls = useMemo(() =>
     (swrData ?? initialMatkuls).map(m => ({
       ...m,
-      docCounts: m.docCounts ?? dcById.get(m.id) ?? EMPTY_COUNTS,
+      docCounts: m.docCounts ?? dcById.get(m.matkulId ?? m.id) ?? EMPTY_COUNTS,
     })),
   [swrData, initialMatkuls, dcById]);
 
@@ -264,6 +268,27 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
     });
   }, [matkuls, search, selectedTahun, selectedSemType, selectedRole, selectedSks, docStatus]);
 
+  const sortedFiltered = useMemo(() => {
+    if (!sortKey) return filtered;
+    return [...filtered].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'code') cmp = a.code.localeCompare(b.code);
+      else if (sortKey === 'name') cmp = a.name.localeCompare(b.name);
+      else if (sortKey === 'sks') cmp = a.sks - b.sks;
+      else if (sortKey === 'semester') {
+        const sa = a.semester ? `${a.semester.tahunAkademik.tahun}__${a.semester.nama === 'Genap' ? '2' : '1'}` : '';
+        const sb = b.semester ? `${b.semester.tahunAkademik.tahun}__${b.semester.nama === 'Genap' ? '2' : '1'}` : '';
+        cmp = sa.localeCompare(sb);
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  function toggleSort(key: typeof sortKey) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  }
+
   const grouped = useMemo(() => {
     if (!groupBySem) return null;
     const map = new Map<string, { label: string; items: typeof filtered }>();
@@ -292,25 +317,41 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
 
   function navigate(id: string) { router.push(`/dashboard/matkul/${id}`); }
 
-  function renderCards(items: typeof filtered) {
+  function renderCards(items: typeof sortedFiltered) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {items.map(m => <MatkulCard key={m.id} m={m} onClick={() => navigate(m.id)} />)}
+        {items.map(m => <MatkulCard key={m.matkulId ?? m.id} m={m} onClick={() => navigate(m.id)} />)}
       </div>
     );
   }
 
-  function renderTable(items: typeof filtered) {
+  function SortTh({ col, label }: { col: typeof sortKey; label: string }) {
+    const active = sortKey === col;
+    const Icon = active && sortDir === 'desc' ? ChevronDown : ChevronUp;
+    return (
+      <th
+        className="px-4 py-3 text-left cursor-pointer select-none group/th whitespace-nowrap"
+        onClick={() => toggleSort(col)}
+      >
+        <span className="inline-flex items-center gap-1">
+          {label}
+          <Icon size={12} className={active ? 'text-uph-blue' : 'text-gray-300 group-hover/th:text-gray-400'} />
+        </span>
+      </th>
+    );
+  }
+
+  function renderTable(items: typeof sortedFiltered) {
     return (
       <div className="bg-white border border-uph-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-uph-grayBg border-b border-uph-border text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                <th className="px-4 py-3 text-left">Kode</th>
-                <th className="px-4 py-3 text-left">Nama Matkul</th>
-                <th className="px-4 py-3 text-left">SKS</th>
-                <th className="px-4 py-3 text-left">Semester</th>
+                <SortTh col="code" label="Kode" />
+                <SortTh col="name" label="Nama Matkul" />
+                <SortTh col="sks" label="SKS" />
+                <SortTh col="semester" label="Semester" />
                 <th className="px-4 py-3 text-left">Kelas</th>
                 <th className="px-4 py-3 text-left">Pengajar</th>
                 <th className="px-4 py-3 text-left">Peran</th>
@@ -321,13 +362,13 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
             <tbody className="divide-y divide-uph-border">
               {items.map(m => (
                 <tr
-                  key={m.id}
+                  key={m.matkulId ?? m.id}
                   onClick={() => navigate(m.id)}
                   className="hover:bg-uph-grayBg cursor-pointer transition-colors group"
                 >
                   <td className="px-4 py-3 font-mono text-xs font-bold text-gray-500 whitespace-nowrap">{m.code}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="block max-w-56 truncate font-semibold text-sm text-gray-800 group-hover:text-uph-blue transition-colors" title={m.name}>{m.name}</span>
+                    <span className="block max-w-72 truncate font-semibold text-sm text-gray-800 group-hover:text-uph-blue transition-colors" title={m.name}>{m.name}</span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{m.sks} SKS</span>
@@ -347,12 +388,12 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
                   <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                     <div className="space-y-0.5">
                       {m.dosens.length > 0 && (
-                        <div className="max-w-40 truncate" title={m.dosens.map(d => d.name).join(', ')}>
+                        <div className="max-w-48 truncate" title={m.dosens.map(d => d.name).join(', ')}>
                           {m.dosens.map(d => d.name).join(', ')}
                         </div>
                       )}
                       {m.koordinators.length > 0 && (
-                        <div className="max-w-40 truncate text-gray-400" title={m.koordinators.map(k => k.name).join(', ')}>
+                        <div className="max-w-48 truncate text-gray-400" title={m.koordinators.map(k => k.name).join(', ')}>
                           {m.koordinators.map(k => k.name).join(', ')}
                         </div>
                       )}
@@ -597,7 +638,7 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
               </div>
             ))}
           </div>
-        ) : viewMode === 'card' ? renderCards(filtered) : renderTable(filtered)}
+        ) : viewMode === 'card' ? renderCards(sortedFiltered) : renderTable(sortedFiltered)}
       </div>
 
       <SyncIndicator isValidating={isValidating} error={error} />

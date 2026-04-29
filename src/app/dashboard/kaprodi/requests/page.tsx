@@ -11,21 +11,23 @@ export default async function ChangeRequestsPage() {
   });
 
   return (
-    <ChangeRequestsClient
-      requests={requests.map(r => ({
-        id: r.id,
-        matkulId: r.katalogMatkulId,
-        matkulName: r.katalogMatkul.name,
-        matkulCode: r.katalogMatkul.code,
-        currentSks: r.katalogMatkul.sks,
-        proposedName: r.proposedName,
-        proposedCode: r.proposedCode,
-        proposedSks: r.proposedSks,
-        reason: r.reason,
-        status: r.status,
-        createdAt: r.createdAt.toISOString(),
-      }))}
-    />
-    <AutoRefresh />
+    <>
+      <ChangeRequestsClient
+        requests={requests.map(r => ({
+          id: r.id,
+          matkulId: r.katalogMatkulId,
+          matkulName: r.katalogMatkul.name,
+          matkulCode: r.katalogMatkul.code,
+          currentSks: r.katalogMatkul.sks,
+          proposedName: r.proposedName,
+          proposedCode: r.proposedCode,
+          proposedSks: r.proposedSks,
+          reason: r.reason,
+          status: r.status,
+          createdAt: r.createdAt.toISOString(),
+        }))}
+      />
+      <AutoRefresh />
+    </>
   );
 }

@@ -13,7 +13,7 @@
 import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
-import { PrismaClient, DocType, DocStatus, RpsStatus, UserStatus, Role } from '@prisma/client';
+import { PrismaClient, DocType, DocStatus, UserStatus, Role } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
@@ -26,12 +26,12 @@ const METADATA_DIR = path.resolve('import-data', 'metadata');
 const UPLOAD_DEST = path.resolve('public', 'uploads', 'historical');
 
 const VALID_DOC_FILES: Record<string, DocType | 'RPS'> = {
-  'LPP.pdf': DocType.LPP,
-  'SOAL_UTS.pdf': DocType.SOAL_UTS,
-  'SOAL_UAS.pdf': DocType.SOAL_UAS,
-  'EPP_UTS.pdf': DocType.EPP_UTS,
-  'EPP_UAS.pdf': DocType.EPP_UAS,
-  'RPS.pdf': 'RPS',
+  'lpp.pdf': DocType.LPP,
+  'soal_uts.pdf': DocType.SOAL_UTS,
+  'soal_uas.pdf': DocType.SOAL_UAS,
+  'epp_uts.pdf': DocType.EPP_UTS,
+  'epp_uas.pdf': DocType.EPP_UAS,
+  'rps.pdf': 'RPS',
 };
 
 // ── CSV parsing ────────────────────────────────────────────────────────────────
@@ -271,36 +271,41 @@ async function main() {
           const classDir = path.join(dosenDir, folderName);
           for (const fileEntry of fs.readdirSync(classDir, { withFileTypes: true })) {
             if (!fileEntry.isFile()) continue;
-            const docType = VALID_DOC_FILES[fileEntry.name];
+            const normalizedName = fileEntry.name.toLowerCase();
+            const docType = VALID_DOC_FILES[normalizedName];
             if (!docType) {
-              console.warn(`    ⚠  Unknown file: ${fileEntry.name}`);
+              if (!fileEntry.name.startsWith('~$'))
+                console.warn(`    ⚠  Unknown file: ${fileEntry.name}`);
               warnCount++;
               continue;
             }
 
             const srcPath = path.join(classDir, fileEntry.name);
             const destRelDir = `historical/${tahun.replace('/', '_')}/${semName}/${dosenName}`;
-            const destFilename = `${className}_${matkulName}_${fileEntry.name}`;
+            const destFilename = `${className}_${matkulName}_${normalizedName}`;
             const destRelPath = path.join(destRelDir, destFilename);
             const destAbsPath = path.join(UPLOAD_DEST, '..', '..', 'uploads', destRelPath);
             const fileUrl = `/uploads/${destRelPath.replace(/\\/g, '/')}`;
 
             if (docType === 'RPS') {
-              log(`    → RPS: ${fileUrl}`);
+              log(`    → RPS (AcademicDoc): ${fileUrl}`);
               if (!DRY_RUN) {
                 fs.mkdirSync(path.dirname(destAbsPath), { recursive: true });
                 fs.copyFileSync(srcPath, destAbsPath);
-                await prisma.rPS.upsert({
-                  where: { matkulId_dosenId_matkulClassId: { matkulId, dosenId, matkulClassId } },
-                  update: { fileUrl, fileName: destFilename, status: RpsStatus.APPROVED, isKoordinatorApproved: true },
+                await prisma.academicDocument.upsert({
+                  where: { matkulId_dosenId_semesterId_type_matkulClassId: { matkulId, dosenId, semesterId: semId, type: docType as DocType, matkulClassId } },
+                  update: { fileUrl, fileName: destFilename, status: DocStatus.APPROVED, isKoordinatorApproved: true, isProdiApproved: true },
                   create: {
                     matkulId,
                     dosenId,
+                    semesterId: semId,
                     matkulClassId,
+                    type: docType as DocType,
                     fileUrl,
                     fileName: destFilename,
-                    status: RpsStatus.APPROVED,
+                    status: DocStatus.APPROVED,
                     isKoordinatorApproved: true,
+                    isProdiApproved: true,
                   },
                 });
               }
