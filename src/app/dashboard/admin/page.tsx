@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import {
   BookOpen, Users, Bell, AlertTriangle, CheckCircle,
-  UserCheck, ChevronRight, Activity, ArrowRight,
+  UserCheck, ChevronRight, Activity, ArrowRight, Mail,
 } from 'lucide-react';
 import Link from 'next/link';
 import AutoRefresh from '@/components/AutoRefresh';
@@ -209,8 +209,8 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* ── Quick Nav — 3 cards ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* ── Quick Nav — 4 cards ──────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <Link href="/dashboard/admin/matkul"
           className="group bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:border-uph-blue hover:shadow-md transition-all flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl bg-uph-blue/10 flex items-center justify-center group-hover:bg-uph-blue/20 transition-colors shrink-0">
@@ -252,6 +252,18 @@ export default async function AdminDashboard() {
             </p>
           </div>
           <ChevronRight size={16} className="text-gray-400 group-hover:text-amber-500 transition-colors" />
+        </Link>
+
+        <Link href="/dashboard/admin/email-config"
+          className="group bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:border-uph-blue hover:shadow-md transition-all flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-uph-blue/10 flex items-center justify-center group-hover:bg-uph-blue/20 transition-colors shrink-0">
+            <Mail size={22} className="text-uph-blue" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-gray-800">Konfigurasi Email</p>
+            <p className="text-xs text-gray-500 mt-0.5">Atur SMTP & notifikasi</p>
+          </div>
+          <ChevronRight size={16} className="text-gray-400 group-hover:text-uph-blue transition-colors" />
         </Link>
       </div>
       <AutoRefresh />

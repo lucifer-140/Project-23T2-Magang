@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
+import { sendAccountApprovedEmail, sendAccountRejectedEmail } from '@/lib/email';
 
 // PATCH /api/users/[id]/approve
 // Body: { action: 'approve' | 'reject', roles?: string[] }
@@ -50,6 +51,7 @@ export async function PATCH(
       data: { status: 'REJECTED' },
       select: { id: true, name: true, email: true, roles: true, status: true },
     });
+    sendAccountRejectedEmail(updated).catch(() => {});
     return NextResponse.json(updated);
   }
 
@@ -81,5 +83,6 @@ export async function PATCH(
     select: { id: true, name: true, email: true, roles: true, status: true },
   });
 
+  sendAccountApprovedEmail(updated).catch(() => {});
   return NextResponse.json(updated);
 }

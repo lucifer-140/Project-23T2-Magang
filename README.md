@@ -1,8 +1,14 @@
 # Sistem Administrasi Prodi Informatika Medan
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
 ![Stack](https://img.shields.io/badge/stack-Next.js%2016%20%7C%20Prisma%207%20%7C%20PostgreSQL-informational)
+![License](https://img.shields.io/badge/license-Proprietary-red)
+
+> **⚠️ Lisensi & Penggunaan**
+> Sistem ini dikembangkan secara eksklusif untuk **Universitas Pelita Harapan Medan**.
+> Repositori ini bersifat publik untuk keperluan portofolio dan tinjauan kode saja.
+> Penggunaan, penyalinan, atau deployment oleh pihak lain **tidak diizinkan**. Lihat [LICENSE](LICENSE).
 
 Portal administrasi akademik terpadu untuk Dosen dan Kaprodi — mendigitalisasi pengelolaan dokumen akademik (RPS, Soal UTS/UAS, LPP, EPP, Berita Acara) dengan alur kerja multi-level approval, anotasi PDF inline, dan tanda tangan digital.
 
@@ -308,7 +314,7 @@ docker compose down           # Stop Postgres
 ## Known Limitations
 
 - **Passwords plain text** — intentional for development; hash dengan bcrypt/argon2 sebelum produksi
-- **No email notifications** — in-app only; Resend atau Gmail OAuth2 integration planned
+- **Email deliverability terbatas** — SMTP via Gmail/Office 365 tersedia; pengiriman ke domain Microsoft (`@student.uph.edu`) mungkin diblokir oleh Exchange Online Protection — gunakan layanan transaksional (Resend/SendGrid) untuk produksi
 - **No HTTPS enforcement** — acceptable untuk local LAN; required untuk internet-facing deployment
 - **No automated backups** — setup PostgreSQL scheduled dumps sebelum go-live
 
@@ -333,6 +339,7 @@ docker compose down           # Stop Postgres
 
 | Versi | Tanggal | Perubahan |
 |---|---|---|
+| **1.4.0** | 2026-04-30 | Email system: SMTP config UI, forgot password, reset password, signup/approval notifications |
 | **1.3.0** | 2026-04-30 | Collapsible sidebar, user menu dropdown, settings page, logout API |
 | **1.2.1** | 2026-04-29 | Sortable table columns, delete TahunAkademik, login cleanup, bug fixes |
 | **1.2.0** | 2026-04-29 | Katalog-centric hub, completion badges, accordion classes, kode resmi UPH |

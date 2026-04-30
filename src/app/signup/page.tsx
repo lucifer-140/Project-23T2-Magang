@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { prisma } from '@/lib/db';
+import { sendPendingApprovalEmail } from '@/lib/email';
 import Link from 'next/link';
 import { UserPlus } from 'lucide-react';
 
@@ -31,15 +32,18 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       }
 
       // Create new user with base DOSEN role and PENDING status
-      await prisma.user.create({
+      const newUser = await prisma.user.create({
         data: {
           name,
           email,
-          password, // NOTE: In a real app, hash this password here using bcrypt!
+          password,
           roles: ['DOSEN'],
           status: 'PENDING',
         }
       });
+
+      // Fire-and-forget — don't block redirect if email fails
+      sendPendingApprovalEmail(newUser).catch(() => {});
 
       // Redirect to lobby to wait for admin approval
       redirect('/lobby');

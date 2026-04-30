@@ -54,6 +54,28 @@ enum DocStatus {
   APPROVED
 }
 
+model EmailConfig {
+  id        Int      @id @default(1)
+  smtpHost  String   @default("")
+  smtpPort  Int      @default(587)
+  smtpUser  String   @default("")
+  smtpPass  String   @default("")
+  fromEmail String   @default("")
+  fromName  String   @default("UPH Admin")
+  secure    Boolean  @default(false)
+  enabled   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
 model User {
   id                  String     @id @default(cuid())
   email               String     @unique
@@ -61,7 +83,8 @@ model User {
   roles               Role[]     @default([DOSEN])
   name                String
   status              UserStatus @default(PENDING)
-  savedSignature      String?    // base64 PNG data URL of saved signature
+  savedSignature      String?
+  resetToken                PasswordResetToken?
   rps                       RPS[]              @relation("DosenRPS")
   koordinatorReviews        RPS[]              @relation("KoordinatorReview")
   dosenMatkuls              Matkul[]           @relation("DosenMatkul")
