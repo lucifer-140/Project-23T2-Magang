@@ -38,7 +38,7 @@ export default async function ProdiDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           { label: 'Menunggu Review', value: pendingReview,  color: 'border-l-yellow-500', icon: <Clock       size={15} className="text-yellow-500 opacity-50" /> },
           { label: 'Disetujui',       value: approvedCount,  color: 'border-l-green-500',  icon: <CheckCircle size={15} className="text-green-500 opacity-50"  /> },

@@ -1,12 +1,21 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-29  
-**Current Version:** 1.2.1  
+**Last Updated:** 2026-04-30  
+**Current Version:** 1.3.0  
 **Status:** Production Ready
 
 ---
 
 ## Completed Milestones
+
+### v1.3.0 — Collapsible Sidebar + User Settings (2026-04-30)
+- [x] `DashboardWrapper` — replaces `DashboardClientShell`; collapsible sidebar (icon-only at 64px / full at 256px) with `PanelLeftClose`/`PanelLeftOpen` toggle
+- [x] `SidebarNav` updated for collapsed state (icons only, no labels)
+- [x] `UserMenuButton` — avatar dropdown in sticky header with "Pengaturan" link and "Keluar" button
+- [x] `/dashboard/settings` — edit name, email, and password; role badges read-only
+- [x] `GET /api/users/me` — returns current user profile
+- [x] `PATCH /api/users/me` — update name/email/password; refreshes `userName` cookie on name change
+- [x] `POST /api/auth/logout` — clears session cookies
 
 ### v1.2.1 — Table UX + Admin Fixes (2026-04-29)
 - [x] Sortable columns on matkul list table (Kode / Nama / SKS / Semester)

@@ -41,7 +41,7 @@ export default async function MasterDashboard() {
       <p className="text-gray-500 mb-8">Developer dashboard - real-time system health & database overview.</p>
 
       {/* DB Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           { label: 'Users', value: userCount, icon: <Users size={18} />, color: 'bg-purple-50 text-purple-600 border-purple-200' },
           { label: 'Matkul', value: matkulCount, icon: <BookOpen size={18} />, color: 'bg-blue-50 text-uph-blue border-blue-200' },

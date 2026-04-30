@@ -1,12 +1,10 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
-  LayoutDashboard, FileText, LogOut, BookOpen,
-  Users, Shield, Terminal, UserCheck, Library, BarChart2, Database
+  LayoutDashboard, FileText, BookOpen,
+  Users, Shield, Terminal, UserCheck, Library, BarChart2, Database, Settings
 } from 'lucide-react';
-import SidebarNav from '@/components/SidebarNav';
-import { DashboardClientShell } from '@/components/DashboardClientShell';
-import Image from 'next/image';
+import DashboardWrapper from '@/components/DashboardWrapper';
 
 type RoleConfig = {
   label: string;
@@ -94,50 +92,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     };
   }
 
-  async function handleLogout() {
-    "use server";
-    const cookieStore = await cookies();
-    cookieStore.delete('userRole');
-    cookieStore.delete('userId');
-    cookieStore.delete('userName');
-    redirect('/');
-  }
+  config.navItems.push({ href: '/dashboard/settings', icon: <Settings size={18} />, label: 'Pengaturan' });
 
   return (
-    <div className="min-h-screen bg-uph-grayBg flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed inset-y-0 shadow-sm z-20">
-        <div className="p-5 border-b border-gray-100 flex flex-col items-center gap-2">
-          <Image src="/Gambar/Logo UPH.png" alt="Logo UPH" width={96} height={96} className="object-contain" />
-          <div className="flex flex-col items-center">
-            <span className="font-playfair font-bold text-uph-blue leading-tight text-lg">Portal</span>
-            <span className="text-xs text-gray-500 font-semibold tracking-wide uppercase">Akademik</span>
-          </div>
-        </div>
-
-        <SidebarNav navItems={config.navItems} />
-
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex items-center space-x-3 mb-4 px-4">
-            <div className={`w-9 h-9 rounded-full ${config.accentColor} text-white flex items-center justify-center font-bold text-sm`}>
-              {userName.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-gray-800 truncate">{userName}</span>
-              <span className="text-xs text-gray-500">{config.subtitle}</span>
-            </div>
-          </div>
-          <form action={handleLogout}>
-            <button className="flex w-full items-center space-x-3 text-sm font-semibold text-gray-600 hover:text-red-600 hover:bg-red-50 px-4 py-3 rounded-lg transition-colors">
-              <LogOut size={18} />
-              <span>Keluar</span>
-            </button>
-          </form>
-        </div>
-      </aside>
-
-      {/* Main Content — handled by client shell (ToastProvider + header + SWR) */}
-      <DashboardClientShell>{children}</DashboardClientShell>
-    </div>
+    <DashboardWrapper userName={userName} navItems={config.navItems}>
+      {children}
+    </DashboardWrapper>
   );
 }

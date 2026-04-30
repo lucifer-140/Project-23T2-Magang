@@ -315,12 +315,17 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
     setSelectedRole(''); setSelectedSks(''); setDocStatus('');
   }
 
-  function navigate(id: string) { router.push(`/dashboard/matkul/${id}`); }
+  function navigate(id: string, semesterId?: string | null) {
+    const url = semesterId
+      ? `/dashboard/matkul/${id}?semesterId=${encodeURIComponent(semesterId)}`
+      : `/dashboard/matkul/${id}`;
+    router.push(url);
+  }
 
   function renderCards(items: typeof sortedFiltered) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {items.map(m => <MatkulCard key={m.matkulId ?? m.id} m={m} onClick={() => navigate(m.id)} />)}
+        {items.map(m => <MatkulCard key={m.matkulId ?? m.id} m={m} onClick={() => navigate(m.id, m.semester?.id)} />)}
       </div>
     );
   }
@@ -363,7 +368,7 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
               {items.map(m => (
                 <tr
                   key={m.matkulId ?? m.id}
-                  onClick={() => navigate(m.id)}
+                  onClick={() => navigate(m.id, m.semester?.id)}
                   className="hover:bg-uph-grayBg cursor-pointer transition-colors group"
                 >
                   <td className="px-4 py-3 font-mono text-xs font-bold text-gray-500 whitespace-nowrap">{m.code}</td>

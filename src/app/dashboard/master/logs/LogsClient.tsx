@@ -33,7 +33,7 @@ export function LogsClient({ initialLogs }: Props) {
       <p className="text-gray-500 mb-8">Real-time audit trail - rekam jejak semua perubahan data di sistem.</p>
 
       {/* Log Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           { label: 'Total Logs', value: logs.length, color: 'border-gray-200 text-gray-700' },
           { label: 'INFO', value: logs.filter((l) => l.level === 'INFO').length, color: 'border-green-200 text-green-700' },

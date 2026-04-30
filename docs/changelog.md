@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here.
 
+## [1.3.0] - 2026-04-30
+
+### Added
+- **Collapsible sidebar** — `DashboardWrapper` replaces `DashboardClientShell`; sidebar toggles between 64px (icon-only) and 256px via `PanelLeftClose`/`PanelLeftOpen` button; `SidebarNav` updated to render icons-only when collapsed
+- **User menu dropdown** — `UserMenuButton` in sticky header: avatar initial button opens dropdown with user name, "Pengaturan" link, and "Keluar" button
+- **Settings page** — `/dashboard/settings`: edit name + email, change password (current-password verification required); role badges displayed read-only
+- **`GET /api/users/me`** — returns `{ id, name, email, roles }` for authenticated user
+- **`PATCH /api/users/me`** — update name, email (unique-checked), or password; refreshes `userName` cookie on name change
+- **`POST /api/auth/logout`** — clears all session cookies; called by `UserMenuButton`
+
+### Changed
+- **`DashboardClientShell` removed** — replaced by `DashboardWrapper` (same responsibilities: `ToastProvider`, `SWRProvider`, sticky header, footer, notification bell + collapsible sidebar)
+- **Dashboard layout** — uses `DashboardWrapper`; sidebar width dynamic (collapsed/expanded); main content margin adjusts accordingly
+- **`import-data/metadata/users.csv`** — updated
+
 ## [1.2.1] - 2026-04-29
 
 ### Added

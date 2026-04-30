@@ -43,7 +43,7 @@ export default async function KoordinatorDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           { label: 'Matkul Koordinasi', value: coordMatkuls.length, color: 'border-l-uph-blue',   icon: <Bookmark    size={15} className="text-uph-blue opacity-50"   /> },
           { label: 'Dosen Terlibat',   value: dosensSet.size,       color: 'border-l-teal-500',   icon: <Users       size={15} className="text-teal-500 opacity-50"   /> },

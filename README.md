@@ -1,6 +1,6 @@
 # Sistem Administrasi Prodi Informatika Medan
 
-![Version](https://img.shields.io/badge/version-1.2.1-blue)
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
 ![Stack](https://img.shields.io/badge/stack-Next.js%2016%20%7C%20Prisma%207%20%7C%20PostgreSQL-informational)
 
@@ -333,6 +333,7 @@ docker compose down           # Stop Postgres
 
 | Versi | Tanggal | Perubahan |
 |---|---|---|
+| **1.3.0** | 2026-04-30 | Collapsible sidebar, user menu dropdown, settings page, logout API |
 | **1.2.1** | 2026-04-29 | Sortable table columns, delete TahunAkademik, login cleanup, bug fixes |
 | **1.2.0** | 2026-04-29 | Katalog-centric hub, completion badges, accordion classes, kode resmi UPH |
 | **1.1.0** | 2026-04-28 | Historical data import pipeline, 441 PDFs, 27 dosen seeded |

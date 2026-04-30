@@ -146,6 +146,7 @@ export default function MatkulHubClient({
 }: Props) {
   const router = useRouter();
   const [semesterId, setSemesterId] = useState(initialSemesterId ?? instanceSemesters[0]?.semesterId ?? null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
   // Resolve active instance for selected semester
   const currentInst = instanceSemesters.find(s => s.semesterId === semesterId) ?? instanceSemesters[0];
@@ -494,7 +495,7 @@ export default function MatkulHubClient({
               {status === 'UNSUBMITTED' ? 'Upload Dokumen' : 'Upload Ulang'}
             </button>
           ) : status === 'APPROVED' ? (
-            (() => { const url = doc?.finalPdfUrl ?? doc?.koordinatorSignedPdfUrl ?? doc?.fileUrl; return url ? <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-uph-blue border border-uph-blue px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"><Download size={14} /> PDF Disetujui</a> : null; })()
+            (() => { const url = doc?.finalPdfUrl ?? doc?.koordinatorSignedPdfUrl ?? doc?.fileUrl; return url ? <button onClick={() => setPdfPreviewUrl(url)} className="flex items-center gap-2 text-sm font-semibold text-uph-blue border border-uph-blue px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"><Download size={14} /> PDF Disetujui</button> : null; })()
           ) : (
             <span className="flex items-center gap-1.5 text-xs text-gray-400"><Lock size={12} /> Upload terkunci selama review</span>
           )}
@@ -607,10 +608,11 @@ export default function MatkulHubClient({
                                   </div>
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     {doc.id && doc.status !== 'UNSUBMITTED' && (
-                                      <a href={doc.finalPdfUrl ?? doc.koordinatorSignedPdfUrl ?? doc.fileUrl ?? '#'} target="_blank" rel="noopener noreferrer"
+                                      <button
+                                        onClick={() => { const url = doc.finalPdfUrl ?? doc.koordinatorSignedPdfUrl ?? doc.fileUrl; if (url) setPdfPreviewUrl(url); }}
                                         className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 text-gray-500 border border-gray-200 rounded-lg hover:text-uph-blue hover:border-uph-blue transition-colors">
                                         <Eye size={12} /> Lihat
-                                      </a>
+                                      </button>
                                     )}
                                     {isPending && (
                                       <button onClick={() => openReview(doc)}
@@ -797,7 +799,7 @@ export default function MatkulHubClient({
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                       <div>
                         <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                           <PenLine size={16} className="text-uph-blue" />
@@ -917,8 +919,8 @@ export default function MatkulHubClient({
           <p className="text-sm text-gray-500 mt-0.5">{matkul.code} · {matkul.sks} SKS</p>
         </div>
 
-        {/* Semester selector */}
-        {instanceSemesters.length > 1 && (
+        {/* Semester selector — commented out; navigation now passes semesterId via URL query param from MatkulListClient */}
+        {/* {instanceSemesters.length > 1 && (
           <div className="mb-6">
             <div className="flex items-center gap-3 bg-white border border-uph-border rounded-xl px-4 py-3">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wider shrink-0">Semester</span>
@@ -937,7 +939,7 @@ export default function MatkulHubClient({
               <span className="text-xs text-gray-400">{instanceSemesters.length} semester tersedia</span>
             </div>
           </div>
-        )}
+        )} */}
         {instanceSemesters.length === 1 && currentInst && (
           <div className="mb-6">
             <span className="inline-flex items-center gap-1.5 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg">
@@ -1032,6 +1034,25 @@ export default function MatkulHubClient({
       </div>
 
       {renderReviewModal()}
+
+      {/* PDF preview modal */}
+      {pdfPreviewUrl && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-2" onClick={() => setPdfPreviewUrl(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden" style={{ height: '96vh' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50">
+              <span className="font-semibold text-gray-700 text-sm">Pratinjau Dokumen</span>
+              <div className="flex items-center gap-2">
+                <a href={pdfPreviewUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-uph-blue text-uph-blue rounded-lg hover:bg-blue-50 transition-colors">
+                  <Download size={12} /> Buka di Tab Baru
+                </a>
+                <button onClick={() => setPdfPreviewUrl(null)} className="p-2 rounded-lg hover:bg-gray-200 transition-colors"><X size={16} /></button>
+              </div>
+            </div>
+            <iframe src={pdfPreviewUrl} title="PDF Preview" style={{ width: '100%', height: 'calc(96vh - 53px)', display: 'block' }} />
+          </div>
+        </div>
+      )}
+
       <SyncIndicator isValidating={isValidating} error={error} />
     </>
   );

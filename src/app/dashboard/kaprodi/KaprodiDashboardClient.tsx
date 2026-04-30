@@ -104,7 +104,7 @@ export default function KaprodiDashboardClient() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           { label: 'Perlu Review',  value: stats?.needsReview  ?? '—', color: 'border-l-yellow-500', icon: <Clock       size={15} className="text-yellow-500 opacity-50" /> },
           { label: 'Pengecekan',    value: stats?.pengecekan   ?? '—', color: 'border-l-blue-500',   icon: <Search      size={15} className="text-blue-500 opacity-50"   /> },
@@ -123,7 +123,7 @@ export default function KaprodiDashboardClient() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
         {/* Doc Type Breakdown */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">

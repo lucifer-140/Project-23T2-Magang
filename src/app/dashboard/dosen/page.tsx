@@ -120,7 +120,7 @@ export default async function DosenDashboard() {
         </div>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">
           {[
             { label: 'Total Matkul', value: totalMatkul, color: 'border-l-uph-blue',   icon: <BookOpen    size={15} className="text-uph-blue opacity-50"   />, href: null },
             { label: 'Belum Upload', value: unsubmitted, color: 'border-l-gray-400',   icon: <FileText    size={15} className="text-gray-400 opacity-50"   />, href: '/dashboard/matkul' },
