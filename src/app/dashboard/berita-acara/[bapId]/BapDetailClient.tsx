@@ -11,7 +11,7 @@ interface Bap {
   id: string;
   kelasId: string;
   isUnlocked: boolean;
-  kelas: { id: string; name: string; dosenPaId: string; dosenPa: { id: string; name: string } };
+  kelas: { id: string; name: string; dosenPaId: string | null; dosenPa: { id: string; name: string } | null };
   semesterId: string;
   semester: { id: string; nama: string; tahunAkademik: { id: string; tahun: string } };
   lembarKehadiranUrl: string | null;
@@ -252,7 +252,7 @@ export default function BapDetailClient({ bap: initialBap, isKaprodi, isProdi, i
       {/* Info row */}
       <div className="flex items-center gap-2 mb-6 text-sm text-gray-500">
         <Users size={14} className="text-uph-blue" />
-        <span>Dosen PA: <strong className="text-gray-800">{bap.kelas.dosenPa.name}</strong></span>
+        <span>Dosen PA: <strong className="text-gray-800">{bap.kelas.dosenPa?.name ?? '-'}</strong></span>
       </div>
 
       {/* ── Dosen PA view ──────────────────────────────────────── */}

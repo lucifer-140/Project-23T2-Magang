@@ -35,18 +35,28 @@ export async function PATCH(
   let roles: string[] = [];
   try { if (roleRaw) roles = JSON.parse(decodeURIComponent(roleRaw)); } catch { roles = []; }
 
-  if (!roles.includes('KAPRODI')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const canManage = roles.includes('KAPRODI') || roles.includes('ADMIN') || roles.includes('MASTER');
+  if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { dosenPaId } = await req.json();
-  if (!dosenPaId) return NextResponse.json({ error: 'Missing dosenPaId' }, { status: 400 });
+  const body = await req.json();
+  const data: Record<string, unknown> = {};
+  if (body.dosenPaId !== undefined) data.dosenPaId = body.dosenPaId;
+  if (body.name !== undefined) data.name = body.name.trim().toUpperCase();
+  if (body.isLocked !== undefined) data.isLocked = body.isLocked;
 
-  const updated = await prisma.kelas.update({
-    where: { id: kelasId },
-    data: { dosenPaId },
-    include: { dosenPa: { select: { id: true, name: true } } },
-  });
-
-  return NextResponse.json(updated);
+  try {
+    const updated = await prisma.kelas.update({
+      where: { id: kelasId },
+      data,
+      include: {
+        dosenPa: { select: { id: true, name: true } },
+        _count: { select: { baps: true, matkulClasses: true } },
+      },
+    });
+    return NextResponse.json(updated);
+  } catch {
+    return NextResponse.json({ error: 'Nama kelas sudah digunakan' }, { status: 409 });
+  }
 }
 
 export async function DELETE(
@@ -59,7 +69,16 @@ export async function DELETE(
   let roles: string[] = [];
   try { if (roleRaw) roles = JSON.parse(decodeURIComponent(roleRaw)); } catch { roles = []; }
 
-  if (!roles.includes('KAPRODI')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const canManage = roles.includes('KAPRODI') || roles.includes('ADMIN') || roles.includes('MASTER');
+  if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const inUse = await prisma.matkulClass.count({ where: { kelasId } });
+  if (inUse > 0) {
+    return NextResponse.json(
+      { error: `Kelas ini digunakan di ${inUse} kelas mata kuliah dan tidak dapat dihapus` },
+      { status: 409 }
+    );
+  }
 
   await prisma.beritaAcaraPerwalian.deleteMany({ where: { kelasId } });
   await prisma.kelas.delete({ where: { id: kelasId } });

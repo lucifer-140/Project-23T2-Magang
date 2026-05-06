@@ -155,6 +155,8 @@ model MatkulClass {
   matkulId String
   matkul   Matkul  @relation(fields: [matkulId], references: [id], onDelete: Cascade)
   name     String  // e.g. "23TI1", "23TI2"
+  kelasId  String?
+  kelas    Kelas?  @relation(fields: [kelasId], references: [id])
   dosens   User[]  @relation("ClassDosen")
   rps          RPS[]
   academicDocs AcademicDocument[]
@@ -278,9 +280,11 @@ model AcademicDocument {
 model Kelas {
   id        String   @id @default(cuid())
   name      String   @unique
-  dosenPaId String
-  dosenPa   User     @relation("DosenPaKelas", fields: [dosenPaId], references: [id])
+  isLocked  Boolean  @default(false)
+  dosenPaId String?
+  dosenPa   User?    @relation("DosenPaKelas", fields: [dosenPaId], references: [id])
   baps      BeritaAcaraPerwalian[]
+  matkulClasses MatkulClass[]
   createdAt DateTime @default(now())
 }
 

@@ -17,10 +17,9 @@ export async function DELETE(
       },
     });
 
-    // Delete RPS related to this matkul first
     await prisma.rPS.deleteMany({ where: { matkulId: id } });
-    
-    // Delete the Matkul itself (disconnects dosens and koordinators automatically)
+    await prisma.academicDocument.deleteMany({ where: { matkulId: id } });
+
     await prisma.matkul.delete({ where: { id } });
 
     if (matkul) {

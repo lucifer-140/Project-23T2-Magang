@@ -7,7 +7,10 @@ const INCLUDE_FULL = {
   koordinators: { select: { id: true, name: true, email: true } },
   classes: {
     orderBy: { name: 'asc' as const },
-    include: { dosens: { select: { id: true, name: true, email: true } } },
+    include: {
+      dosens: { select: { id: true, name: true, email: true } },
+      kelas: { select: { id: true, name: true } },
+    },
   },
 };
 

@@ -20,7 +20,7 @@ interface Bap {
 }
 
 interface Props {
-  kelas: { id: string; name: string; dosenPa: { id: string; name: string } };
+  kelas: { id: string; name: string; dosenPa: { id: string; name: string } | null };
   tahunAkademik: { id: string; tahun: string; isActive: boolean };
   baps: Bap[];
   isKaprodi: boolean;
@@ -125,7 +125,7 @@ export default function TahunDetailClient({ kelas, tahunAkademik, baps: initialB
           <h1 className="font-playfair text-2xl font-bold text-uph-blue">
             Kelas {kelas.name} — {tahunAkademik.tahun}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">Dosen PA: <strong className="text-gray-700">{kelas.dosenPa.name}</strong></p>
+          <p className="text-sm text-gray-500 mt-0.5">Dosen PA: <strong className="text-gray-700">{kelas.dosenPa?.name ?? '-'}</strong></p>
         </div>
         {isKaprodi && pendingReviewCount > 0 && (
           <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full border border-amber-200">
@@ -151,7 +151,7 @@ export default function TahunDetailClient({ kelas, tahunAkademik, baps: initialB
               </div>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Dosen PA <strong>{kelas.dosenPa.name}</strong> akan mendapat notifikasi dan dapat mengupload dokumen BAP untuk semester <strong>{confirmUnlock.semester.nama}</strong>.
+              Dosen PA <strong>{kelas.dosenPa?.name ?? '-'}</strong> akan mendapat notifikasi dan dapat mengupload dokumen BAP untuk semester <strong>{confirmUnlock.semester.nama}</strong>.
             </p>
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2">
               <AlertCircle size={15} className="text-amber-500 flex-shrink-0 mt-0.5" />

@@ -9,7 +9,7 @@ import {
 
 
 type DosenRef = { id: string; name: string; email: string };
-type MatkulClassData = { id: string; name: string; dosens: DosenRef[] };
+type MatkulClassData = { id: string; name: string; kelas?: { id: string; name: string } | null; dosens: DosenRef[] };
 type SemesterData = {
   id: string;
   nama: string;
@@ -26,6 +26,7 @@ type Matkul = {
 };
 
 type KatalogItem = { id: string; code: string; name: string; sks: number };
+type KelasItem = { id: string; name: string };
 
 type Props = {
   semester: SemesterData;
@@ -33,6 +34,7 @@ type Props = {
   dosens: DosenRef[];
   koordinators: DosenRef[];
   katalog: KatalogItem[];
+  allKelas: KelasItem[];
 };
 
 // ─── Combobox ─────────────────────────────────────────────────────────────────
@@ -104,76 +106,137 @@ function MatkulCombobox({
 
 // ─── Per-dosen class selector dropdown ───────────────────────────────────────
 function DosenClassPicker({
-  dosen, assignedClasses, allClasses, onAdd, onRemove,
+  dosen, assignedClasses, matkulClasses, allKelas, onAdd, onAddNew, onRemove,
 }: {
   dosen: DosenRef;
   assignedClasses: MatkulClassData[];
-  allClasses: MatkulClassData[];
+  matkulClasses: MatkulClassData[];
+  allKelas: KelasItem[];
   onAdd: (classId: string) => void;
+  onAddNew: (kelasId: string) => void;
   onRemove: (classId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
-  const unassignedClasses = allClasses.filter(c => !assignedClasses.some(a => a.id === c.id));
+
+  const assignedClassIds = new Set(assignedClasses.map(c => c.id));
+  const assignedKelasIds = new Set(matkulClasses.map(c => c.kelas?.id).filter(Boolean));
+
+  const availableMatkulClasses = matkulClasses.filter(c =>
+    !assignedClassIds.has(c.id) && (c.kelas?.name ?? c.name).toLowerCase().includes(search.toLowerCase())
+  );
+  const availableNewKelas = allKelas.filter(k =>
+    !assignedKelasIds.has(k.id) && k.name.toLowerCase().includes(search.toLowerCase())
+  );
+  const hasOptions = matkulClasses.filter(c => !assignedClassIds.has(c.id)).length > 0
+    || allKelas.filter(k => !assignedKelasIds.has(k.id)).length > 0;
+
+  const isAssigned = assignedClasses.length > 0;
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch('');
+      }
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-xl border bg-white border-gray-200 hover:bg-gray-50 transition-colors">
+    <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+      isAssigned
+        ? 'bg-teal-50 border-teal-300'
+        : 'bg-white border-gray-200 hover:bg-gray-50'
+    }`}>
       <div className="min-w-0 flex-1">
-        <p className="font-semibold text-sm text-gray-800">{dosen.name}</p>
+        <p className="font-semibold text-sm text-gray-800 flex items-center gap-2">
+          {dosen.name}
+          {isAssigned && (
+            <span className="text-[10px] bg-teal-600 text-white px-1.5 py-0.5 rounded font-bold">
+              {assignedClasses.length} kelas
+            </span>
+          )}
+        </p>
         <p className="text-xs text-gray-500">{dosen.email}</p>
-        {/* Assigned class chips */}
-        {assignedClasses.length > 0 && (
+        {isAssigned && (
           <div className="flex flex-wrap gap-1 mt-1.5">
             {assignedClasses.map(cls => (
               <span key={cls.id}
-                className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                <Tag size={9} /> {cls.name}
+                className="inline-flex items-center gap-1 bg-white text-teal-700 border border-teal-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                <Tag size={9} /> {cls.kelas?.name ?? cls.name}
                 <button type="button" onClick={() => onRemove(cls.id)}
                   className="hover:text-red-500 transition-colors ml-0.5"><X size={9} /></button>
               </span>
             ))}
           </div>
         )}
-        {assignedClasses.length === 0 && (
-          <p className="text-[11px] text-gray-400 mt-1 italic">Belum ada kelas</p>
+        {!isAssigned && (
+          <p className="text-[11px] text-gray-400 mt-0.5 italic">Belum ditugaskan ke kelas</p>
         )}
       </div>
 
-      {/* Add to class dropdown */}
-      {allClasses.length > 0 && (
-        <div ref={ref} className="relative ml-3 flex-shrink-0">
-          <button type="button" onClick={() => setOpen(o => !o)}
-            disabled={unassignedClasses.length === 0}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] font-bold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-            <Plus size={12} /> Kelas
-          </button>
-          {open && unassignedClasses.length > 0 && (
-            <ul className="absolute right-0 z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden min-w-[100px]">
-              {unassignedClasses.map(cls => (
-                <li key={cls.id}
-                  onMouseDown={() => { onAdd(cls.id); setOpen(false); }}
-                  className="px-3 py-2 text-sm text-gray-700 hover:bg-teal-50 cursor-pointer font-medium flex items-center gap-1.5">
-                  <Tag size={11} className="text-indigo-400" /> {cls.name}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      <div ref={ref} className="relative ml-3 flex-shrink-0">
+        <button type="button" onClick={() => { setOpen(o => !o); setSearch(''); }}
+          disabled={!hasOptions}
+          className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            isAssigned
+              ? 'bg-white text-teal-700 border border-teal-200 hover:bg-teal-100'
+              : 'bg-teal-50 hover:bg-teal-100 text-teal-700'
+          }`}>
+          <Plus size={12} /> Kelas
+        </button>
+        {open && (
+          <div className="absolute right-0 z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl w-56 overflow-hidden">
+            <div className="p-2 border-b border-gray-100">
+              <input
+                autoFocus
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Cari kelas..."
+                className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-teal-400"
+              />
+            </div>
+            <div className="max-h-52 overflow-y-auto">
+              {availableMatkulClasses.length > 0 && (
+                <>
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sudah di matkul ini</p>
+                  {availableMatkulClasses.map(cls => (
+                    <button key={cls.id} type="button"
+                      onMouseDown={() => { onAdd(cls.id); setOpen(false); setSearch(''); }}
+                      className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-teal-50 flex items-center gap-2 transition-colors">
+                      <Tag size={11} className="text-indigo-400 flex-shrink-0" /> {cls.kelas?.name ?? cls.name}
+                    </button>
+                  ))}
+                </>
+              )}
+              {availableNewKelas.length > 0 && (
+                <>
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tambah ke matkul</p>
+                  {availableNewKelas.map(k => (
+                    <button key={k.id} type="button"
+                      onMouseDown={() => { onAddNew(k.id); setOpen(false); setSearch(''); }}
+                      className="w-full text-left px-3 py-2.5 text-sm text-gray-600 hover:bg-teal-50 flex items-center gap-2 transition-colors">
+                      <Plus size={11} className="text-teal-500 flex-shrink-0" /> {k.name}
+                    </button>
+                  ))}
+                </>
+              )}
+              {availableMatkulClasses.length === 0 && availableNewKelas.length === 0 && (
+                <p className="px-3 py-4 text-xs text-gray-400 text-center italic">Tidak ada kelas yang cocok</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, koordinators, katalog }: Props) {
+export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, koordinators, katalog, allKelas }: Props) {
   const router = useRouter();
   const [matkuls, setMatkuls] = useState(initialMatkuls);
 
@@ -189,7 +252,6 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
   const [assigningMatkul, setAssigningMatkul] = useState<Matkul | null>(null);
   const [assignTab, setAssignTab] = useState<'koordinator' | 'dosen'>('koordinator');
   const [assignSearch, setAssignSearch] = useState('');
-  const [newClassName, setNewClassName] = useState('');
 
   // Confirmations
   const [removingKoordinator, setRemovingKoordinator] = useState<{ id: string; name: string } | null>(null);
@@ -225,7 +287,6 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
     setAssigningMatkul(matkul);
     setAssignTab(tab);
     setAssignSearch('');
-    setNewClassName('');
   }
 
   function resetAddForm() {
@@ -313,22 +374,6 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
     });
   }
 
-  async function handleAddClass() {
-    if (!assigningMatkul || !newClassName.trim()) return;
-    const name = newClassName.trim().toUpperCase();
-    const res = await fetch(`/api/matkul/${assigningMatkul.id}/classes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'add', className: name }),
-    });
-    if (res.ok) {
-      const cls = await res.json();
-      const updated = { ...assigningMatkul, classes: [...assigningMatkul.classes, cls] };
-      setAssigningMatkul(updated);
-      setMatkuls(prev => prev.map(m => m.id === assigningMatkul.id ? updated : m));
-      setNewClassName('');
-    }
-  }
 
   // Add dosen to a specific class
   async function handleAddDosenToClass(dosenId: string, classId: string) {
@@ -351,6 +396,37 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
       setAssigningMatkul(updated);
       setMatkuls(prev => prev.map(m => m.id === assigningMatkul.id ? updated : m));
     }
+  }
+
+  // Add dosen to a new kelas (create MatkulClass if needed, then assign)
+  async function handleAddDosenToNewKelas(dosenId: string, kelasId: string) {
+    if (!assigningMatkul) return;
+    // Step 1: ensure the MatkulClass exists
+    const classRes = await fetch(`/api/matkul/${assigningMatkul.id}/classes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'add', kelasId }),
+    });
+    if (!classRes.ok) return;
+    const cls = await classRes.json();
+    // Step 2: assign dosen to that class
+    const assignRes = await fetch(`/api/matkul/${assigningMatkul.id}/classes/${cls.id}/assign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dosenId, action: 'add' }),
+    });
+    if (!assignRes.ok) return;
+    const updatedCls = await assignRes.json();
+    const existingIdx = assigningMatkul.classes.findIndex(c => c.id === cls.id);
+    const newClasses = existingIdx >= 0
+      ? assigningMatkul.classes.map(c => c.id === cls.id ? updatedCls : c)
+      : [...assigningMatkul.classes, updatedCls];
+    const allDosens = Array.from(
+      new Map(newClasses.flatMap(c => c.dosens).map(d => [d.id, d])).values()
+    );
+    const updated = { ...assigningMatkul, classes: newClasses, dosens: allDosens };
+    setAssigningMatkul(updated);
+    setMatkuls(prev => prev.map(m => m.id === assigningMatkul.id ? updated : m));
   }
 
   // Remove dosen from a specific class (with confirmation)
@@ -440,7 +516,7 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
                     <div className="flex flex-wrap gap-1">
                       {m.classes.map(c => (
                         <span key={c.id} className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-full">
-                          {c.name}{c.dosens.length > 0 && <span className="ml-1 opacity-60">({c.dosens.length})</span>}
+                          {c.kelas?.name ?? c.name}{c.dosens.length > 0 && <span className="ml-1 opacity-60">({c.dosens.length})</span>}
                         </span>
                       ))}
                     </div>
@@ -615,33 +691,22 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
                 </>
               )}
 
-              {/* Dosen tab: dosen-first, assign to class via dropdown */}
+              {/* Dosen tab */}
               {assignTab === 'dosen' && (
                 <>
-                  {/* Manage classes row */}
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
-                    <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Tag size={12} /> Kelola Kelas
-                    </p>
-                    <div className="flex gap-2 mb-2">
-                      <input value={newClassName} onChange={e => setNewClassName(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddClass(); } }}
-                        placeholder="Tambah kelas, cth: 23TI1"
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue bg-white" />
-                      <button type="button" onClick={handleAddClass}
-                        className="px-3 py-2 bg-uph-blue text-white text-sm font-bold rounded-lg hover:bg-[#111c33]">
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                    {assigningMatkul.classes.length > 0 && (
+                  {assigningMatkul.classes.length > 0 && (
+                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <Tag size={12} /> Kelas aktif di matkul ini
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
                         {assigningMatkul.classes.map(cls => (
                           <span key={cls.id}
                             className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-bold px-2.5 py-1 rounded-full">
-                            <Tag size={10} /> {cls.name}
+                            <Tag size={10} /> {cls.kelas?.name ?? cls.name}
                             <button type="button"
                               onClick={async () => {
-                                if (!confirm(`Hapus kelas "${cls.name}"?`)) return;
+                                if (!confirm(`Hapus kelas "${cls.kelas?.name ?? cls.name}"?`)) return;
                                 const res = await fetch(`/api/matkul/${assigningMatkul.id}/classes`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
@@ -657,31 +722,28 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
                           </span>
                         ))}
                       </div>
-                    )}
-                    {assigningMatkul.classes.length === 0 && (
-                      <p className="text-xs text-gray-400 italic">Belum ada kelas.</p>
-                    )}
-                  </div>
-
-                  <div className="border-t border-gray-100 pt-1" />
-
-                  {/* Dosen list */}
-                  {filteredDosens.length === 0 && (
-                    <p className="text-center text-sm text-gray-400 py-2">Tidak ada dosen.</p>
+                    </div>
                   )}
-                  {assigningMatkul.classes.length === 0 && filteredDosens.length > 0 && (
+
+                  {allKelas.length === 0 && (
                     <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                       <AlertTriangle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-amber-700">Tambahkan kelas terlebih dahulu sebelum assign dosen.</p>
+                      <p className="text-xs text-amber-700">Belum ada kelas aktif. Tambah di <strong>Kelola Kelas</strong>.</p>
                     </div>
+                  )}
+
+                  {filteredDosens.length === 0 && (
+                    <p className="text-center text-sm text-gray-400 py-2">Tidak ada dosen.</p>
                   )}
                   {filteredDosens.map(d => (
                     <DosenClassPicker
                       key={d.id}
                       dosen={d}
                       assignedClasses={dosenClassMap.get(d.id) ?? []}
-                      allClasses={assigningMatkul.classes}
+                      matkulClasses={assigningMatkul.classes}
+                      allKelas={allKelas}
                       onAdd={classId => handleAddDosenToClass(d.id, classId)}
+                      onAddNew={kelasId => handleAddDosenToNewKelas(d.id, kelasId)}
                       onRemove={classId => requestRemoveDosenFromClass(d.id, classId)}
                     />
                   ))}
@@ -726,7 +788,7 @@ export function MatkulClientPage({ semester, matkuls: initialMatkuls, dosens, ko
             <div className="p-6 space-y-4">
               <p className="text-sm text-gray-700">
                 Hapus <strong>{removingDosen.dosenName}</strong> dari kelas{' '}
-                <strong>{assigningMatkul?.classes.find(c => c.id === removingDosen.classId)?.name}</strong>?
+                <strong>{assigningMatkul?.classes.find(c => c.id === removingDosen.classId)?.kelas?.name ?? assigningMatkul?.classes.find(c => c.id === removingDosen.classId)?.name}</strong>?
               </p>
               <div className="flex gap-3">
                 <button onClick={() => setRemovingDosen(null)}

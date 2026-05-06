@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented here.
 
+## [1.5.0] - 2026-05-06
+
+### Added
+- **Admin Kelas management page** — `/dashboard/admin/kelas`: CRUD for Kelas records; lock/unlock toggle per row; Dosen PA assignment; delete with confirmation modal
+- **"Kelola Kelas" sidebar entry** for ADMIN (`School` icon, links to `/dashboard/admin/kelas`)
+- **`Kelas.isLocked` field** — boolean flag (`@default(false)`) for admin-controlled lock independent of BAP state
+- **`MatkulClass.kelasId` FK** — links `MatkulClass` rows to parent `Kelas` entity; `SET NULL` on Kelas delete
+- **`prisma/sync-kelas.ts`** — one-shot backfill script: upserts `Kelas` from distinct `MatkulClass.name` values and sets `kelasId` on all matched rows. Run: `npx tsx prisma/sync-kelas.ts`
+
+### Changed
+- **`Kelas.dosenPaId`** made nullable — Kelas can now exist without an assigned Dosen PA
+- **`GET/POST /api/kelas`** — auth fixed (403 for non-admin/non-master callers); `name` trimmed before uniqueness check
+- **`GET /api/matkul/[id]/classes`** — includes `kelasId` in response; minor query fixes
+- **`POST /api/matkul/[id]/assign-coordinator`** — minor auth fix
+
+### Schema
+- `Kelas`: +`isLocked Boolean @default(false)`; `dosenPaId` now optional
+- `MatkulClass`: +`kelasId Text?` FK → `Kelas`
+- Migration: `20260505143007_kelas_is_locked_matkul_class_kelas_id`
+
 ## [1.3.0] - 2026-04-30
 
 ### Added

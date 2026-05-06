@@ -133,7 +133,11 @@ function MatkulCard({ m, onClick }: { m: Matkul & { docCounts: DocCounts }; onCl
         {m.koordinators.length > 0 && (
           <div className="flex items-center gap-1.5">
             <GraduationCap size={11} className="text-gray-300 shrink-0" />
-            <span className="truncate">{m.koordinators.map(k => k.name).join(', ')}</span>
+            <span className="truncate">
+              {m.koordinators.map((k, i) => (
+                <span key={k.id}>{i > 0 && ', '}{k.name} <span className="font-semibold text-amber-600">(K)</span></span>
+              ))}
+            </span>
           </div>
         )}
         {m.classes.length > 0 && (
@@ -398,8 +402,10 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
                         </div>
                       )}
                       {m.koordinators.length > 0 && (
-                        <div className="max-w-48 truncate text-gray-400" title={m.koordinators.map(k => k.name).join(', ')}>
-                          {m.koordinators.map(k => k.name).join(', ')}
+                        <div className="max-w-48 truncate text-gray-400" title={m.koordinators.map(k => `${k.name} (K)`).join(', ')}>
+                          {m.koordinators.map((k, i) => (
+                            <span key={k.id}>{i > 0 && ', '}{k.name} <span className="font-semibold text-amber-600">(K)</span></span>
+                          ))}
                         </div>
                       )}
                     </div>

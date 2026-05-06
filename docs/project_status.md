@@ -1,12 +1,21 @@
 # Project Status Report
 
-**Last Updated:** 2026-04-30  
-**Current Version:** 1.3.0  
+**Last Updated:** 2026-05-06  
+**Current Version:** 1.5.0  
 **Status:** Production Ready
 
 ---
 
 ## Completed Milestones
+
+### v1.5.0 — Admin Kelas Management + MatkulClass–Kelas Link (2026-05-06)
+- [x] `/dashboard/admin/kelas` — CRUD page for Kelas: create, edit name/Dosen PA, lock/unlock, delete
+- [x] Admin sidebar: "Kelola Kelas" nav item (`School` icon)
+- [x] `Kelas.isLocked` field — admin-controlled lock flag independent of BAP state
+- [x] `MatkulClass.kelasId` FK — links class records to parent Kelas entity
+- [x] `Kelas.dosenPaId` made nullable
+- [x] `prisma/sync-kelas.ts` — backfill script linking existing MatkulClass rows to Kelas
+- [x] API fixes: `GET/POST /api/kelas` auth + validation; `GET /api/matkul/[id]/classes` includes kelasId
 
 ### v1.3.0 — Collapsible Sidebar + User Settings (2026-04-30)
 - [x] `DashboardWrapper` — replaces `DashboardClientShell`; collapsible sidebar (icon-only at 64px / full at 256px) with `PanelLeftClose`/`PanelLeftOpen` toggle

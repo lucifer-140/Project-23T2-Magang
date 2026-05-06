@@ -6,7 +6,7 @@ import { ArrowLeft, Plus, CalendarDays, FileText, Loader2, Trash2, UserCog } fro
 import Link from 'next/link';
 
 interface Props {
-  kelas: { id: string; name: string; dosenPa: { id: string; name: string }; createdAt: string };
+  kelas: { id: string; name: string; dosenPa: { id: string; name: string } | null; createdAt: string };
   tahunList: { tahunAkademik: { id: string; tahun: string; isActive: boolean }; bapCount: number }[];
   availableTahun: { id: string; tahun: string; isActive: boolean }[];
   dosens: { id: string; name: string }[];
@@ -24,7 +24,7 @@ export default function KelasDetailClient({ kelas: initialKelas, tahunList: init
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; tahun: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showReassign, setShowReassign] = useState(false);
-  const [reassignId, setReassignId] = useState(initialKelas.dosenPa.id);
+  const [reassignId, setReassignId] = useState(initialKelas.dosenPa?.id ?? '');
   const [reassigning, setReassigning] = useState(false);
 
   useEffect(() => {
@@ -107,12 +107,12 @@ export default function KelasDetailClient({ kelas: initialKelas, tahunList: init
             <UserCog size={18} className="text-uph-blue flex-shrink-0" />
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Dosen PA</p>
-              <p className="font-semibold text-gray-800">{kelas.dosenPa.name}</p>
+              <p className="font-semibold text-gray-800">{kelas.dosenPa?.name ?? '-'}</p>
             </div>
           </div>
           {isKaprodi && (
             <button
-              onClick={() => { setReassignId(kelas.dosenPa.id); setShowReassign(true); }}
+              onClick={() => { setReassignId(kelas.dosenPa?.id ?? ''); setShowReassign(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-uph-blue border border-uph-blue rounded-lg hover:bg-blue-50 transition-colors">
               <UserCog size={14} /> Ganti Dosen PA
             </button>
@@ -184,7 +184,7 @@ export default function KelasDetailClient({ kelas: initialKelas, tahunList: init
               </div>
               <h2 className="font-playfair text-lg font-bold text-uph-blue">Ganti Dosen PA</h2>
             </div>
-            <p className="text-sm text-gray-500">Dosen PA saat ini: <span className="font-semibold text-gray-700">{kelas.dosenPa.name}</span></p>
+            <p className="text-sm text-gray-500">Dosen PA saat ini: <span className="font-semibold text-gray-700">{kelas.dosenPa?.name ?? '-'}</span></p>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Dosen PA Baru</label>
               <select value={reassignId} onChange={e => setReassignId(e.target.value)}
@@ -200,7 +200,7 @@ export default function KelasDetailClient({ kelas: initialKelas, tahunList: init
                 className="px-4 py-2 text-sm font-bold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
                 Batal
               </button>
-              <button onClick={handleReassign} disabled={reassigning || reassignId === kelas.dosenPa.id}
+              <button onClick={handleReassign} disabled={reassigning || reassignId === (kelas.dosenPa?.id ?? '')}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-uph-blue rounded-lg hover:bg-uph-blue/90 disabled:opacity-50">
                 {reassigning && <Loader2 size={14} className="animate-spin" />} Konfirmasi Ganti
               </button>

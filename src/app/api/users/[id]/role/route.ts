@@ -8,13 +8,30 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { roles: passedRoles, role } = await req.json();
+  const { roles: passedRoles, role, action } = await req.json();
+
+  // RBAC checks (needed for remove-role too)
+  const cookieStore = await cookies();
+  const callerRoleStr = cookieStore.get('userRole')?.value || '';
+  const isMasterCaller = callerRoleStr.includes('MASTER');
+  const isAdminCaller = isMasterCaller || callerRoleStr.includes('ADMIN');
+  const isKaprodiCaller = !isAdminCaller && callerRoleStr.includes('KAPRODI');
+
+  // remove-role shorthand: remove a single role from user's current roles
+  if (action === 'remove-role' && role) {
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!isAdminCaller && !isKaprodiCaller) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const newRoles = targetUser.roles.filter(r => r !== role);
+    const updated = await prisma.user.update({ where: { id }, data: { roles: newRoles } });
+    return NextResponse.json(updated);
+  }
 
   let rolesArray: string[] = [];
   if (passedRoles && Array.isArray(passedRoles)) {
     rolesArray = passedRoles;
   } else if (role) {
-    rolesArray = [role]; 
+    rolesArray = [role];
   } else {
     return NextResponse.json({ error: 'Roles array required.' }, { status: 400 });
   }
@@ -24,12 +41,6 @@ export async function PATCH(
   if (hasInvalidRoles) {
     return NextResponse.json({ error: 'Invalid roles provided.' }, { status: 400 });
   }
-
-  // RBAC checks
-  const cookieStore = await cookies();
-  const callerRoleStr = cookieStore.get('userRole')?.value || '';
-  const isMasterCaller = callerRoleStr.includes('MASTER');
-  const isKaprodiCaller = !isMasterCaller && callerRoleStr.includes('KAPRODI');
 
   const targetUser = await prisma.user.findUnique({ where: { id } });
   if (!targetUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });

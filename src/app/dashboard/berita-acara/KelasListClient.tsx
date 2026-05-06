@@ -8,8 +8,8 @@ import Link from 'next/link';
 interface KelasItem {
   id: string;
   name: string;
-  dosenPaId: string;
-  dosenPa: { id: string; name: string };
+  dosenPaId: string | null;
+  dosenPa: { id: string; name: string } | null;
   _count: { baps: number };
   createdAt: string;
 }
@@ -158,7 +158,7 @@ export default function KelasListClient({ kelasList: initial, dosens, isKaprodi 
                     <div>
                       <p className="font-bold text-gray-800">{kelas.name}</p>
                       <p className="text-xs text-gray-500 flex items-center gap-1">
-                        <Users size={11} /> Dosen PA: {kelas.dosenPa.name}
+                        <Users size={11} /> Dosen PA: {kelas.dosenPa?.name ?? '-'}
                       </p>
                     </div>
                   </div>

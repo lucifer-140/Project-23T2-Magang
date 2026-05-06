@@ -9,7 +9,7 @@ export default async function SemesterMatkulPage({
 }) {
   const { tahunId, semesterId } = await params;
 
-  const [semester, matkuls, dosens, koordinators, katalog] = await Promise.all([
+  const [semester, matkuls, dosens, koordinators, katalog, allKelas] = await Promise.all([
     prisma.semester.findUnique({
       where: { id: semesterId },
       include: { tahunAkademik: true },
@@ -22,7 +22,10 @@ export default async function SemesterMatkulPage({
         koordinators: { select: { id: true, name: true, email: true } },
         classes: {
           orderBy: { name: 'asc' },
-          include: { dosens: { select: { id: true, name: true, email: true } } },
+          include: {
+            dosens: { select: { id: true, name: true, email: true } },
+            kelas: { select: { id: true, name: true } },
+          },
         },
       },
       orderBy: { code: 'asc' },
@@ -41,6 +44,11 @@ export default async function SemesterMatkulPage({
       select: { id: true, code: true, name: true, sks: true },
       orderBy: { name: 'asc' },
     }),
+    prisma.kelas.findMany({
+      where: { isLocked: false },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
   ]);
 
   if (!semester || semester.tahunAkademikId !== tahunId) notFound();
@@ -52,6 +60,7 @@ export default async function SemesterMatkulPage({
       dosens={dosens}
       koordinators={koordinators}
       katalog={katalog}
+      allKelas={allKelas}
     />
   );
 }
