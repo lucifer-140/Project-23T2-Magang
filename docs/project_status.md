@@ -1,12 +1,19 @@
 # Project Status Report
 
 **Last Updated:** 2026-05-06  
-**Current Version:** 1.5.0  
+**Current Version:** 1.5.1  
 **Status:** Production Ready
 
 ---
 
 ## Completed Milestones
+
+### v1.5.1 — Matkul Table UX: Merged Kelas & Pengajar Column (2026-05-06)
+- [x] Merged "Kelas" and "Pengajar" table columns into single "Kelas & Pengajar" column
+- [x] Each class chip paired inline with its assigned dosens (per-MatkulClass dosens)
+- [x] Koordinator shown as amber `K` badge row below class rows
+- [x] Card view updated to match paired layout
+- [x] `page.tsx` + `/api/matkul/mine` updated to fetch per-class dosens via `include`
 
 ### v1.5.0 — Admin Kelas Management + MatkulClass–Kelas Link (2026-05-06)
 - [x] `/dashboard/admin/kelas` — CRUD page for Kelas: create, edit name/Dosen PA, lock/unlock, delete

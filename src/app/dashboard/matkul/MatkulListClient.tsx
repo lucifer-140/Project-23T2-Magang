@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Search, X, BookOpen, Upload, ClipboardCheck, GraduationCap, ChevronRight,
-  Filter, LayoutGrid, List, Users, Calendar, Hash, AlertCircle, Clock,
+  Filter, LayoutGrid, List, Calendar, Hash, AlertCircle, Clock,
   ChevronUp, ChevronDown,
 } from 'lucide-react';
 import useSWR from 'swr';
@@ -28,7 +28,7 @@ interface Matkul {
   userRoles: string[];
   dosens: { id: string; name: string }[];
   koordinators: { id: string; name: string }[];
-  classes: { id: string; name: string }[];
+  classes: { id: string; name: string; dosens: { id: string; name: string }[] }[];
   semester: { id: string; nama: string; isActive: boolean; tahunAkademik: { tahun: string } } | null;
   docCounts?: DocCounts;
 }
@@ -124,29 +124,26 @@ function MatkulCard({ m, onClick }: { m: Matkul & { docCounts: DocCounts }; onCl
             <span>{semLabel}</span>
           </div>
         )}
-        {m.dosens.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <Users size={11} className="text-gray-300 shrink-0" />
-            <span className="truncate">{m.dosens.map(d => d.name).join(', ')}</span>
-          </div>
-        )}
-        {m.koordinators.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <GraduationCap size={11} className="text-gray-300 shrink-0" />
-            <span className="truncate">
-              {m.koordinators.map((k, i) => (
-                <span key={k.id}>{i > 0 && ', '}{k.name} <span className="font-semibold text-amber-600">(K)</span></span>
-              ))}
-            </span>
-          </div>
-        )}
         {m.classes.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <Hash size={11} className="text-gray-300 shrink-0" />
-            <div className="flex flex-wrap gap-1">
+          <div className="flex items-start gap-1.5">
+            <Hash size={11} className="text-gray-300 shrink-0 mt-0.5" />
+            <div className="space-y-1 min-w-0">
               {m.classes.map(c => (
-                <span key={c.id} className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono">{c.name}</span>
+                <div key={c.id} className="flex items-center gap-1.5">
+                  <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono shrink-0">{c.name}</span>
+                  <span className="truncate text-gray-500" title={c.dosens.map(d => d.name).join(', ')}>
+                    {c.dosens.length > 0 ? c.dosens.map(d => d.name).join(', ') : <span className="text-gray-300">—</span>}
+                  </span>
+                </div>
               ))}
+              {m.koordinators.length > 0 && (
+                <div className="flex items-center gap-1.5 pt-0.5 mt-0.5 border-t border-gray-100">
+                  <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-semibold shrink-0">K</span>
+                  <span className="truncate text-amber-600" title={m.koordinators.map(k => k.name).join(', ')}>
+                    {m.koordinators.map(k => k.name).join(', ')}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -361,8 +358,7 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
                 <SortTh col="name" label="Nama Matkul" />
                 <SortTh col="sks" label="SKS" />
                 <SortTh col="semester" label="Semester" />
-                <th className="px-4 py-3 text-left">Kelas</th>
-                <th className="px-4 py-3 text-left">Pengajar</th>
+                <th className="px-4 py-3 text-left">Kelas &amp; Pengajar</th>
                 <th className="px-4 py-3 text-left">Peran</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3" />
@@ -385,30 +381,27 @@ export default function MatkulListClient({ initialMatkuls, initialFilter }: Prop
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
                     {m.semester ? `${m.semester.nama} ${m.semester.tahunAkademik.tahun}` : '—'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3">
                     {m.classes.length > 0 ? (
-                      <div className="flex gap-1">
+                      <div className="space-y-1">
                         {m.classes.map(c => (
-                          <span key={c.id} className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono whitespace-nowrap">{c.name}</span>
+                          <div key={c.id} className="flex items-center gap-2 text-xs">
+                            <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono whitespace-nowrap shrink-0">{c.name}</span>
+                            <span className="text-gray-500 truncate max-w-48" title={c.dosens.map(d => d.name).join(', ')}>
+                              {c.dosens.length > 0 ? c.dosens.map(d => d.name).join(', ') : <span className="text-gray-300">—</span>}
+                            </span>
+                          </div>
                         ))}
+                        {m.koordinators.length > 0 && (
+                          <div className="flex items-center gap-2 text-xs pt-0.5 mt-0.5 border-t border-gray-100">
+                            <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-semibold whitespace-nowrap shrink-0">K</span>
+                            <span className="text-amber-600 truncate max-w-48" title={m.koordinators.map(k => k.name).join(', ')}>
+                              {m.koordinators.map(k => k.name).join(', ')}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    ) : <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                    <div className="space-y-0.5">
-                      {m.dosens.length > 0 && (
-                        <div className="max-w-48 truncate" title={m.dosens.map(d => d.name).join(', ')}>
-                          {m.dosens.map(d => d.name).join(', ')}
-                        </div>
-                      )}
-                      {m.koordinators.length > 0 && (
-                        <div className="max-w-48 truncate text-gray-400" title={m.koordinators.map(k => `${k.name} (K)`).join(', ')}>
-                          {m.koordinators.map((k, i) => (
-                            <span key={k.id}>{i > 0 && ', '}{k.name} <span className="font-semibold text-amber-600">(K)</span></span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    ) : <span className="text-xs text-gray-300">—</span>}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex gap-1">

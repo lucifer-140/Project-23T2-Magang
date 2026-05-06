@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## [1.5.1] - 2026-05-06
+
+### Changed
+- **Matkul table — merged Kelas & Pengajar column** — replaced separate "Kelas" and "Pengajar" columns with a single "Kelas & Pengajar" column; each row shows the class chip paired with its assigned dosens inline; koordinator displayed as amber `K` badge row at the bottom
+- **Per-class dosen data** — `page.tsx` and `/api/matkul/mine` now fetch `dosens` per `MatkulClass` (via `include`) instead of only matkul-level dosens
+- **Card view** updated to match: class chip + dosen name paired rows, koordinator `K` badge row below
+
 ## [1.5.0] - 2026-05-06
 
 ### Added
