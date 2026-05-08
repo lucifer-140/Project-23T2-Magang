@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createNotification } from '@/lib/notifications';
+import { cookies } from 'next/headers';
 
 // POST /api/matkul/[id]/classes/[classId]/assign
 // Body: { dosenId: string, action: 'add' | 'remove' }
@@ -9,6 +10,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string; classId: string }> }
 ) {
   const { id: matkulId, classId } = await params;
+  const cookieStore = await cookies();
+  const callerRoleStr = cookieStore.get('userRole')?.value || '';
+  const callerId = cookieStore.get('userId')?.value;
+  const isAuthorized = callerRoleStr.includes('ADMIN') || callerRoleStr.includes('MASTER') || callerRoleStr.includes('KOORDINATOR');
+  if (!callerId || !isAuthorized) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
   const { dosenId, action } = await req.json();
 
   if (!dosenId || !action) {

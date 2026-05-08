@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { PDFDocument } from 'pdf-lib';
 import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
-import { getUploadDir, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
+import { getUploadDir, buildUploadUrl, normalizePeriod, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
 
 // POST /api/rps/[id]/sign
 // Body: JSON {
@@ -24,6 +24,18 @@ export async function POST(
   const userId = cookieStore.get('userId')?.value;
 
   const { reviewer, sigData, sigX, sigY, sigPage, sigWidth } = await req.json();
+
+  const roleRaw = cookieStore.get('userRole')?.value || '[]';
+  let callerRoles: string[] = [];
+  try { callerRoles = JSON.parse(decodeURIComponent(roleRaw)); } catch { callerRoles = []; }
+
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (reviewer === 'koordinator' && !callerRoles.includes('KOORDINATOR')) {
+    return NextResponse.json({ error: 'Forbidden: KOORDINATOR role required' }, { status: 403 });
+  }
+  if (reviewer === 'kaprodi' && !callerRoles.includes('KAPRODI')) {
+    return NextResponse.json({ error: 'Forbidden: KAPRODI role required' }, { status: 403 });
+  }
 
   if (!reviewer || !sigData || sigX == null || sigY == null || !sigPage || !sigWidth) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -105,32 +117,35 @@ export async function POST(
   let outFileUrl: string;
   let sigImageUrl: string;
 
+  const tahunStr = normalizePeriod(rps.matkul?.semester?.tahunAkademik?.tahun ?? '');
+  const semStr = normalizePeriod(rps.matkul?.semester?.nama ?? '');
+
   if (reviewer === 'koordinator') {
     await unlinkIfExists(rps.koordinatorSigUrl);
     await unlinkIfExists(rps.koordinatorSignedPdfUrl);
-    const sigDir = getUploadDir('rps', 'signatures');
-    const signedDir = getUploadDir('rps', 'signed');
+    const sigDir = getUploadDir('rps', 'signatures', tahunStr, semStr);
+    const signedDir = getUploadDir('rps', 'signed', tahunStr, semStr);
     const sigFileName = `${id}_sig_koordinator.png`;
     await writeFile(path.join(sigDir, sigFileName), sigBuffer);
-    sigImageUrl = `/uploads/rps/signatures/${sigFileName}`;
+    sigImageUrl = buildUploadUrl('rps', 'signatures', sigFileName, tahunStr, semStr);
     const signedFileName = `${id}_signed_koordinator.pdf`;
     await writeFile(path.join(signedDir, signedFileName), stampedBytes);
-    outFileUrl = `/uploads/rps/signed/${signedFileName}`;
+    outFileUrl = buildUploadUrl('rps', 'signed', signedFileName, tahunStr, semStr);
   } else {
     await unlinkIfExists(rps.kaprodiSigUrl);
     await unlinkIfExists(rps.finalPdfUrl);
-    const sigDir = getUploadDir('rps', 'signatures');
-    const finalDir = getUploadDir('rps', 'final');
+    const sigDir = getUploadDir('rps', 'signatures', tahunStr, semStr);
+    const finalDir = getUploadDir('rps', 'final', tahunStr, semStr);
     const sigFileName = `${id}_sig_kaprodi.png`;
     await writeFile(path.join(sigDir, sigFileName), sigBuffer);
-    sigImageUrl = `/uploads/rps/signatures/${sigFileName}`;
+    sigImageUrl = buildUploadUrl('rps', 'signatures', sigFileName, tahunStr, semStr);
     const matkulCode = sanitizeName(rps.matkul?.code ?? 'UNKNOWN');
     const dosenName = sanitizeName(rps.dosen?.name ?? 'Unknown');
-    const tahun = (rps.matkul?.semester?.tahunAkademik?.tahun ?? '').replace('/', '-');
+    const tahunLabel = (rps.matkul?.semester?.tahunAkademik?.tahun ?? '').replace('/', '-');
     const semNama = sanitizeName(rps.matkul?.semester?.nama ?? '');
-    const finalFileName = `RPS_${matkulCode}_${dosenName}_${tahun}_${semNama}.pdf`;
+    const finalFileName = `RPS_${matkulCode}_${dosenName}_${tahunLabel}_${semNama}.pdf`;
     await writeFile(path.join(finalDir, finalFileName), stampedBytes);
-    outFileUrl = `/uploads/rps/final/${finalFileName}`;
+    outFileUrl = buildUploadUrl('rps', 'final', finalFileName, tahunStr, semStr);
   }
 
   // Update database

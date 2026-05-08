@@ -1,12 +1,25 @@
 # Project Status Report
 
-**Last Updated:** 2026-05-06  
-**Current Version:** 1.5.1  
+**Last Updated:** 2026-05-08  
+**Current Version:** 1.6.0  
 **Status:** Production Ready
 
 ---
 
 ## Completed Milestones
+
+### v1.6.0 — Security Hardening + Master Tools (2026-05-08)
+- [x] `src/lib/auth.ts` — centralized auth helpers; all API routes refactored to import from here
+- [x] `src/lib/logger.ts` — structured DB logger (`logInfo/Warn/Debug/Error`) writing to `SystemLog`
+- [x] `src/lib/rate-limit.ts` — in-memory sliding-window rate limiter with IP extraction helpers
+- [x] `SystemLog` Prisma model + `LogLevel` enum; indexed on `(level, createdAt DESC)` and `route`
+- [x] Rate limiting on `POST /api/auth/forgot-password` and reset-password (5 req / 15 min per IP)
+- [x] `GET/DELETE /api/master/uploads` — MASTER file manager API (recursive scan + path-safe delete)
+- [x] `GET /api/master/health` — public health-check endpoint
+- [x] `/dashboard/master/uploads` — Master File Manager page (folder stats, per-file delete, SWR)
+- [x] `/dashboard/master/errors` — Master Error Logs page (SystemLog ERROR entries, stack traces, SWR)
+- [x] DB migrations: indexes + cascade deletes (`20260508010259`), SystemLog table (`20260508022659`)
+- [x] Master dashboard nav cards updated to link to new pages
 
 ### v1.5.1 — Matkul Table UX: Merged Kelas & Pengajar Column (2026-05-06)
 - [x] Merged "Kelas" and "Pengajar" table columns into single "Kelas & Pengajar" column

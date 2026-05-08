@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
+import bcrypt from 'bcrypt';
+import { SESSION_COOKIE_OPTIONS } from '@/lib/auth';
 
 export async function GET() {
   const cookieStore = await cookies();
@@ -40,10 +42,10 @@ export async function PATCH(req: NextRequest) {
     if (!currentPassword) {
       return NextResponse.json({ error: 'Password lama diperlukan.' }, { status: 400 });
     }
-    if (user.password !== currentPassword) {
+    if (!(await bcrypt.compare(currentPassword, user.password))) {
       return NextResponse.json({ error: 'Password lama salah.' }, { status: 400 });
     }
-    updateData.password = newPassword;
+    updateData.password = await bcrypt.hash(newPassword, 12);
   }
 
   if (Object.keys(updateData).length === 0) {
@@ -58,7 +60,7 @@ export async function PATCH(req: NextRequest) {
 
   // Refresh userName cookie if name changed
   if (updateData.name) {
-    cookieStore.set('userName', updateData.name, { path: '/', httpOnly: false, sameSite: 'lax' });
+    cookieStore.set('userName', updateData.name, SESSION_COOKIE_OPTIONS);
   }
 
   return NextResponse.json(updated);

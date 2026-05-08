@@ -17,7 +17,7 @@ const DOC_LABEL: Record<DocType, string> = {
 import path from 'path';
 import { writeFile, readFile, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
-import { docTypeToFolder, getUploadDir, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
+import { docTypeToFolder, getUploadDir, buildUploadUrl, normalizePeriod, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
 
 const GOTENBERG_URL = process.env.GOTENBERG_URL ?? 'http://localhost:3001';
 
@@ -121,14 +121,21 @@ export async function POST(
     return NextResponse.json(doc, { status: 200 });
   }
 
+  const semRecord = await prisma.semester.findUnique({
+    where: { id: semesterId },
+    select: { nama: true, tahunAkademik: { select: { tahun: true } } },
+  });
+  const tahun = normalizePeriod(semRecord?.tahunAkademik?.tahun ?? '');
+  const sem = normalizePeriod(semRecord?.nama ?? '');
+
   const typeFolder = docTypeToFolder(type);
-  const uploadDir = getUploadDir(typeFolder, 'drafts');
+  const uploadDir = getUploadDir(typeFolder, 'drafts', tahun, sem);
   const safeFileName = `${existing ? existing.id + '_' : Date.now() + '_'}${type}_${sanitizeName(file.name)}`;
   const filePath = path.join(uploadDir, safeFileName);
   await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
   let finalFileName = file.name;
-  let fileUrl = `/uploads/${typeFolder}/drafts/${safeFileName}`;
+  let fileUrl = buildUploadUrl(typeFolder, 'drafts', safeFileName, tahun, sem);
 
   const isDocx = /\.(docx?)$/i.test(file.name);
   if (isDocx) {
@@ -136,7 +143,7 @@ export async function POST(
     if (pdfPath) {
       await unlink(filePath).catch(() => {});
       finalFileName = file.name.replace(/\.(docx?)$/i, '.pdf');
-      fileUrl = `/uploads/${typeFolder}/drafts/${path.basename(pdfPath)}`;
+      fileUrl = buildUploadUrl(typeFolder, 'drafts', path.basename(pdfPath), tahun, sem);
     }
   }
 

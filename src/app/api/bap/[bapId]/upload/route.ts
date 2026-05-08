@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import path from 'path';
 import { writeFile } from 'fs/promises';
-import { getUploadDir, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
+import { getUploadDir, buildUploadUrl, normalizePeriod, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
 
 // POST /api/bap/[bapId]/upload
 // FormData: { slot: 'lembarKehadiran' | 'absensi' | 'beritaAcara', file: File }
@@ -16,7 +16,10 @@ export async function POST(
   const userId = cookieStore.get('userId')?.value;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const bap = await prisma.beritaAcaraPerwalian.findUnique({ where: { id: bapId }, include: { kelas: true } });
+  const bap = await prisma.beritaAcaraPerwalian.findUnique({
+    where: { id: bapId },
+    include: { kelas: true, semester: { include: { tahunAkademik: true } } },
+  });
   if (!bap) return NextResponse.json({ error: 'BAP not found' }, { status: 404 });
   if (bap.kelas.dosenPaId !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   if (bap.status === 'APPROVED') return NextResponse.json({ error: 'BAP already approved' }, { status: 409 });
@@ -36,7 +39,9 @@ export async function POST(
     beritaAcara: 'berita-acara',
   };
   const subfolder = slotSubfolder[slot];
-  const uploadDir = getUploadDir('bap', subfolder);
+  const tahun = normalizePeriod(bap.semester?.tahunAkademik?.tahun ?? '');
+  const sem = normalizePeriod(bap.semester?.nama ?? '');
+  const uploadDir = getUploadDir('bap', subfolder, tahun, sem);
 
   // Unlink old file for this slot if it exists
   const oldUrl = bap[`${slot}Url` as keyof typeof bap] as string | null | undefined;
@@ -44,7 +49,7 @@ export async function POST(
 
   const safeFileName = `${bapId}_${slot}_${sanitizeName(file.name)}`;
   await writeFile(path.join(uploadDir, safeFileName), Buffer.from(await file.arrayBuffer()));
-  const fileUrl = `/uploads/bap/${subfolder}/${safeFileName}`;
+  const fileUrl = buildUploadUrl('bap', subfolder, safeFileName, tahun, sem);
 
   const updated = await prisma.beritaAcaraPerwalian.update({
     where: { id: bapId },

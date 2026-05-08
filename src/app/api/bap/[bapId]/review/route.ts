@@ -46,10 +46,12 @@ export async function PATCH(
   const bapLink = `/dashboard/berita-acara/${bapId}`;
   const dosenPaId = bap.kelas.dosenPaId;
 
-  if (action === 'approve') {
-    await createNotification(dosenPaId, `BAP kelas ${kelasName} (${semLabel}) telah disetujui Kaprodi!`, bapLink);
-  } else {
-    await createNotification(dosenPaId, `BAP kelas ${kelasName} (${semLabel}) dikembalikan untuk revisi oleh Kaprodi.`, bapLink);
+  if (dosenPaId) {
+    if (action === 'approve') {
+      await createNotification(dosenPaId, `BAP kelas ${kelasName} (${semLabel}) telah disetujui Kaprodi!`, bapLink);
+    } else {
+      await createNotification(dosenPaId, `BAP kelas ${kelasName} (${semLabel}) dikembalikan untuk revisi oleh Kaprodi.`, bapLink);
+    }
   }
 
   return NextResponse.json(updated);

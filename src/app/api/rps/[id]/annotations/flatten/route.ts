@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { PDFDocument, rgb, LineCapStyle } from 'pdf-lib';
 import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
-import { getUploadDir, unlinkIfExists } from '@/lib/upload-paths';
+import { getUploadDir, buildUploadUrl, normalizePeriod, unlinkIfExists } from '@/lib/upload-paths';
 
 // POST /api/rps/[id]/annotations/flatten
 // Burns all saved annotations into the PDF and stores the result.
@@ -29,7 +29,10 @@ export async function POST(
 
   const rps = await prisma.rPS.findUnique({
     where: { id },
-    include: { annotations: { orderBy: { createdAt: 'asc' } } },
+    include: {
+      annotations: { orderBy: { createdAt: 'asc' } },
+      matkul: { include: { semester: { include: { tahunAkademik: true } } } },
+    },
   });
   if (!rps) return NextResponse.json({ error: 'RPS not found' }, { status: 404 });
 
@@ -143,12 +146,14 @@ export async function POST(
   }
 
   const flatBytes = await pdfDoc.save();
-  const uploadDir = getUploadDir('rps', 'annotated');
+  const tahun = normalizePeriod(rps.matkul?.semester?.tahunAkademik?.tahun ?? '');
+  const sem = normalizePeriod(rps.matkul?.semester?.nama ?? '');
+  const uploadDir = getUploadDir('rps', 'annotated', tahun, sem);
   await unlinkIfExists(rps.annotatedPdfUrl);
   const outFileName = `${id}_annotated.pdf`;
   const outPath = path.join(uploadDir, outFileName);
   await writeFile(outPath, flatBytes);
-  const annotatedPdfUrl = `/uploads/rps/annotated/${outFileName}`;
+  const annotatedPdfUrl = buildUploadUrl('rps', 'annotated', outFileName, tahun, sem);
 
   await prisma.rPS.update({
     where: { id },

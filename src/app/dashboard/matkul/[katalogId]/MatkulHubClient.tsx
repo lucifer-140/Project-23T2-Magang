@@ -25,7 +25,7 @@ const PdfAnnotationViewer = dynamic(
 
 // ---------- constants ----------
 const DOC_TYPES = [
-  'RPS', 'SOAL_UTS', 'SOAL_UAS', 'LPP', 'EPP_UTS', 'EPP_UAS', 'BERITA_ACARA',
+  'RPS', 'SOAL_UTS', 'SOAL_UAS', 'LPP', 'EPP', 'EPP_UTS', 'EPP_UAS', 'BERITA_ACARA',
 ] as const;
 type DocType = typeof DOC_TYPES[number];
 
@@ -34,6 +34,7 @@ const DOC_LABEL: Record<DocType, string> = {
   SOAL_UTS: 'Soal UTS',
   SOAL_UAS: 'Soal UAS',
   LPP: 'Laporan Pelaksanaan Pembelajaran',
+  EPP: 'Evaluasi Pencapaian Program',
   EPP_UTS: 'Evaluasi Pencapaian Program UTS',
   EPP_UAS: 'Evaluasi Pencapaian Program UAS',
   BERITA_ACARA: 'Berita Acara Perwalian',
@@ -116,6 +117,8 @@ interface Props {
 
 // ---------- helpers ----------
 const canUpload = (status: string) => status === 'UNSUBMITTED' || status === 'REVISION';
+const encodeUrl = (url: string | null | undefined) =>
+  url?.split('/').map((s, i) => i === 0 ? s : encodeURIComponent(s)).join('/') ?? undefined;
 
 function StatusBadge({ status, isKoordinatorApproved, isProdiApproved }: { status: string; isKoordinatorApproved?: boolean; isProdiApproved?: boolean }) {
   if (status === 'APPROVED') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700"><CheckCircle size={12} /> Disetujui</span>;
@@ -433,7 +436,7 @@ export default function MatkulHubClient({
               {doc?.koordinatorNotes && <div className="bg-red-50 border border-red-200 rounded-lg p-3"><p className="text-xs font-bold text-red-600 mb-1">Catatan Koordinator:</p><p className="text-sm text-red-700">{doc.koordinatorNotes}</p></div>}
               {doc?.prodiNotes && <div className="bg-red-50 border border-red-200 rounded-lg p-3"><p className="text-xs font-bold text-red-600 mb-1">Catatan PRODI:</p><p className="text-sm text-red-700">{doc.prodiNotes}</p></div>}
               {doc?.kaprodiNotes && <div className="bg-red-50 border border-red-200 rounded-lg p-3"><p className="text-xs font-bold text-red-600 mb-1">Catatan Kaprodi:</p><p className="text-sm text-red-700">{doc.kaprodiNotes}</p></div>}
-              {doc?.annotatedPdfUrl && <a href={doc.annotatedPdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-uph-blue hover:underline"><Eye size={14} /> Lihat Anotasi PDF</a>}
+              {doc?.annotatedPdfUrl && <a href={encodeUrl(doc.annotatedPdfUrl)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-uph-blue hover:underline"><Eye size={14} /> Lihat Anotasi PDF</a>}
             </div>
           )}
           {isEpp && uploadAllowed && (
@@ -645,7 +648,7 @@ export default function MatkulHubClient({
                                       </div>
                                     )}
                                     {doc.annotatedPdfUrl && (
-                                      <a href={doc.annotatedPdfUrl} target="_blank" rel="noopener noreferrer"
+                                      <a href={encodeUrl(doc.annotatedPdfUrl)} target="_blank" rel="noopener noreferrer"
                                         className="inline-flex items-center gap-1.5 text-xs font-semibold text-uph-blue hover:underline">
                                         <Eye size={12} /> Lihat PDF Beranotasi
                                       </a>
@@ -719,13 +722,13 @@ export default function MatkulHubClient({
                   </div>
                   <div className="flex gap-2">
                     {doc.fileUrl && (
-                      <a href={doc.fileUrl} target="_blank" rel="noreferrer"
+                      <a href={encodeUrl(doc.fileUrl)} target="_blank" rel="noreferrer"
                         className="text-xs font-bold px-3 py-1.5 border border-uph-blue text-uph-blue rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1">
                         <Download size={12} /> Original
                       </a>
                     )}
                     {role === 'kaprodi' && doc.koordinatorSignedPdfUrl && (
-                      <a href={doc.koordinatorSignedPdfUrl} target="_blank" rel="noreferrer"
+                      <a href={encodeUrl(doc.koordinatorSignedPdfUrl)} target="_blank" rel="noreferrer"
                         className="text-xs font-bold px-3 py-1.5 bg-uph-blue text-white rounded-lg hover:bg-uph-blue/90 transition-colors flex items-center gap-1">
                         <Download size={12} /> Ditandatangani Koordinator
                       </a>
@@ -1042,13 +1045,15 @@ export default function MatkulHubClient({
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50">
               <span className="font-semibold text-gray-700 text-sm">Pratinjau Dokumen</span>
               <div className="flex items-center gap-2">
-                <a href={pdfPreviewUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-uph-blue text-uph-blue rounded-lg hover:bg-blue-50 transition-colors">
+                <a href={encodeUrl(pdfPreviewUrl)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-uph-blue text-uph-blue rounded-lg hover:bg-blue-50 transition-colors">
                   <Download size={12} /> Buka di Tab Baru
                 </a>
                 <button onClick={() => setPdfPreviewUrl(null)} className="p-2 rounded-lg hover:bg-gray-200 transition-colors"><X size={16} /></button>
               </div>
             </div>
-            <iframe src={pdfPreviewUrl} title="PDF Preview" style={{ width: '100%', height: 'calc(96vh - 53px)', display: 'block' }} />
+            <object data={encodeUrl(pdfPreviewUrl)} type="application/pdf" style={{ width: '100%', height: 'calc(96vh - 53px)', display: 'block' }}>
+              <embed src={encodeUrl(pdfPreviewUrl)} type="application/pdf" style={{ width: '100%', height: '100%' }} />
+            </object>
           </div>
         </div>
       )}

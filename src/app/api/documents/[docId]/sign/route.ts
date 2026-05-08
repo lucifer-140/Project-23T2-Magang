@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
-import { docTypeToFolder, getUploadDir, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
+import { docTypeToFolder, getUploadDir, buildUploadUrl, normalizePeriod, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
 
 // POST /api/documents/[docId]/sign
 // Body: { reviewer: 'koordinator' | 'kaprodi', sigData, sigX, sigY, sigPage, sigWidth }
@@ -17,6 +17,21 @@ export async function POST(
   const userId = cookieStore.get('userId')?.value;
 
   const { reviewer, sigData, sigX, sigY, sigPage, sigWidth, reviewerName } = await req.json();
+
+  const roleRaw = cookieStore.get('userRole')?.value || '[]';
+  let callerRoles: string[] = [];
+  try { callerRoles = JSON.parse(decodeURIComponent(roleRaw)); } catch { callerRoles = []; }
+
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (reviewer === 'koordinator' && !callerRoles.includes('KOORDINATOR')) {
+    return NextResponse.json({ error: 'Forbidden: KOORDINATOR role required' }, { status: 403 });
+  }
+  if (reviewer === 'prodi' && !callerRoles.includes('PRODI')) {
+    return NextResponse.json({ error: 'Forbidden: PRODI role required' }, { status: 403 });
+  }
+  if (reviewer === 'kaprodi' && !callerRoles.includes('KAPRODI')) {
+    return NextResponse.json({ error: 'Forbidden: KAPRODI role required' }, { status: 403 });
+  }
 
   if (!reviewer || !sigData || sigX == null || sigY == null || !sigPage || !sigWidth) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -94,39 +109,42 @@ export async function POST(
   let outFileUrl: string;
   let sigImageUrl: string;
 
+  const tahunStr = normalizePeriod(doc.matkul?.semester?.tahunAkademik?.tahun ?? '');
+  const semStr = normalizePeriod(doc.matkul?.semester?.nama ?? '');
+
   if (reviewer === 'koordinator') {
     await unlinkIfExists(doc.koordinatorSigUrl);
     await unlinkIfExists(doc.koordinatorSignedPdfUrl);
-    const sigDir = getUploadDir(typeFolder, 'signatures');
-    const signedDir = getUploadDir(typeFolder, 'signed');
+    const sigDir = getUploadDir(typeFolder, 'signatures', tahunStr, semStr);
+    const signedDir = getUploadDir(typeFolder, 'signed', tahunStr, semStr);
     const sigFileName = `${docId}_sig_koordinator.png`;
     await writeFile(path.join(sigDir, sigFileName), sigBuffer);
-    sigImageUrl = `/uploads/${typeFolder}/signatures/${sigFileName}`;
+    sigImageUrl = buildUploadUrl(typeFolder, 'signatures', sigFileName, tahunStr, semStr);
     const signedFileName = `${docId}_signed_koordinator.pdf`;
     await writeFile(path.join(signedDir, signedFileName), stampedBytes);
-    outFileUrl = `/uploads/${typeFolder}/signed/${signedFileName}`;
+    outFileUrl = buildUploadUrl(typeFolder, 'signed', signedFileName, tahunStr, semStr);
   } else if (reviewer === 'prodi') {
     await unlinkIfExists(doc.koordinatorSignedPdfUrl);
-    const signedDir = getUploadDir(typeFolder, 'signed');
+    const signedDir = getUploadDir(typeFolder, 'signed', tahunStr, semStr);
     sigImageUrl = '';
     const signedFileName = `${docId}_signed_prodi.pdf`;
     await writeFile(path.join(signedDir, signedFileName), stampedBytes);
-    outFileUrl = `/uploads/${typeFolder}/signed/${signedFileName}`;
+    outFileUrl = buildUploadUrl(typeFolder, 'signed', signedFileName, tahunStr, semStr);
   } else {
     await unlinkIfExists(doc.kaprodiSigUrl);
     await unlinkIfExists(doc.finalPdfUrl);
-    const sigDir = getUploadDir(typeFolder, 'signatures');
-    const finalDir = getUploadDir(typeFolder, 'final');
+    const sigDir = getUploadDir(typeFolder, 'signatures', tahunStr, semStr);
+    const finalDir = getUploadDir(typeFolder, 'final', tahunStr, semStr);
     const sigFileName = `${docId}_sig_kaprodi.png`;
     await writeFile(path.join(sigDir, sigFileName), sigBuffer);
-    sigImageUrl = `/uploads/${typeFolder}/signatures/${sigFileName}`;
+    sigImageUrl = buildUploadUrl(typeFolder, 'signatures', sigFileName, tahunStr, semStr);
     const matkulCode = sanitizeName(doc.matkul?.code ?? 'UNKNOWN');
     const dosenName = sanitizeName(doc.dosen?.name ?? 'Unknown');
-    const tahun = (doc.matkul?.semester?.tahunAkademik?.tahun ?? '').replace('/', '-');
+    const tahunLabel = (doc.matkul?.semester?.tahunAkademik?.tahun ?? '').replace('/', '-');
     const semNama = sanitizeName(doc.matkul?.semester?.nama ?? '');
-    const finalFileName = `${doc.type}_${matkulCode}_${dosenName}_${tahun}_${semNama}.pdf`;
+    const finalFileName = `${doc.type}_${matkulCode}_${dosenName}_${tahunLabel}_${semNama}.pdf`;
     await writeFile(path.join(finalDir, finalFileName), stampedBytes);
-    outFileUrl = `/uploads/${typeFolder}/final/${finalFileName}`;
+    outFileUrl = buildUploadUrl(typeFolder, 'final', finalFileName, tahunStr, semStr);
   }
 
   let updateData: Record<string, unknown>;

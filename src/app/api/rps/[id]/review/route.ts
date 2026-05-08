@@ -14,6 +14,17 @@ export async function PATCH(
 
   const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
+  const roleRaw = cookieStore.get('userRole')?.value || '[]';
+  let callerRoles: string[] = [];
+  try { callerRoles = JSON.parse(decodeURIComponent(roleRaw)); } catch { callerRoles = []; }
+
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (reviewer === 'koordinator' && !callerRoles.includes('KOORDINATOR')) {
+    return NextResponse.json({ error: 'Forbidden: KOORDINATOR role required' }, { status: 403 });
+  }
+  if (reviewer === 'kaprodi' && !callerRoles.includes('KAPRODI')) {
+    return NextResponse.json({ error: 'Forbidden: KAPRODI role required' }, { status: 403 });
+  }
 
   let updateData: Record<string, unknown>;
 

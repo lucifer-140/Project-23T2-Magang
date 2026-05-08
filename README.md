@@ -1,6 +1,6 @@
 # Sistem Administrasi Prodi Informatika Medan
 
-![Version](https://img.shields.io/badge/version-1.4.0-blue)
+![Version](https://img.shields.io/badge/version-1.6.0-blue)
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
 ![Stack](https://img.shields.io/badge/stack-Next.js%2016%20%7C%20Prisma%207%20%7C%20PostgreSQL-informational)
 ![License](https://img.shields.io/badge/license-Proprietary-red)
@@ -28,6 +28,9 @@ Portal administrasi akademik terpadu untuk Dosen dan Kaprodi — mendigitalisasi
 - **Manajemen Matkul:** Hierarki TahunAkademik → Semester → Matkul → Kelas; live catalog dari KatalogMatkul; sortable table columns
 - **Katalog-Centric Hub:** Satu URL per katalog matkul menampilkan semua instansi semester; completion badge per matkul
 - **Historical Data:** 441 dokumen historis (2022–2025) ter-import dan APPROVED; 42 KatalogMatkul dengan kode resmi UPH
+- **Rate Limiting:** Auth endpoints (forgot-password, reset-password) dilindungi per-IP rate limiter (5 req / 15 min, 429 + Retry-After)
+- **Structured Logging:** `SystemLog` model mencatat error server (route, level, stack trace, userId); Master dapat melihat di halaman Error Logs
+- **Master File Manager:** MASTER dapat browse, filter, dan hapus file di `/public/uploads/` langsung dari dashboard; folder stats dan per-file size/date
 
 ---
 

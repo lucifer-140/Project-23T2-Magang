@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
+import { getCurrentUserId, getRoles, unauthorized } from '@/lib/auth';
 import type { RpsApiResponse, MatkulRps } from '@/lib/api-types';
 
 export async function GET(_req: NextRequest) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('userId')?.value ?? '';
-  const roleRaw = cookieStore.get('userRole')?.value;
-
-  let roles: string[] = [];
-  try {
-    if (roleRaw) {
-      const decoded = decodeURIComponent(roleRaw);
-      const parsed = JSON.parse(decoded);
-      roles = Array.isArray(parsed) ? parsed : [parsed];
-    }
-  } catch (e) {
-    roles = roleRaw ? [roleRaw] : [];
-  }
+  const userId = await getCurrentUserId();
+  if (!userId) return unauthorized();
+  const roles = await getRoles();
 
   // ── DOSEN branch ────────────────────────────────────────────────────────────
   // Only return DOSEN view if user is pure DOSEN (no reviewer roles)

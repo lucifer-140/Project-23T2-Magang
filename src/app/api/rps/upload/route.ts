@@ -4,7 +4,7 @@ import { notifyUsers } from '@/lib/notifications';
 import path from 'path';
 import { writeFile, readFile, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
-import { getUploadDir, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
+import { getUploadDir, buildUploadUrl, normalizePeriod, sanitizeName, unlinkIfExists } from '@/lib/upload-paths';
 
 const GOTENBERG_URL = process.env.GOTENBERG_URL ?? 'http://localhost:3001';
 
@@ -127,7 +127,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const uploadDir = getUploadDir('rps', 'drafts');
+  const matkulForPeriod = await prisma.matkul.findUnique({
+    where: { id: matkulId },
+    select: { semester: { include: { tahunAkademik: true } } },
+  });
+  const tahun = normalizePeriod(matkulForPeriod?.semester?.tahunAkademik?.tahun ?? '');
+  const sem = normalizePeriod(matkulForPeriod?.semester?.nama ?? '');
+
+  const uploadDir = getUploadDir('rps', 'drafts', tahun, sem);
   const safeFileName = `${rpsId ? rpsId + '_' : Date.now() + '_'}${sanitizeName(file.name)}`;
   const filePath = path.join(uploadDir, safeFileName);
   const bytes = await file.arrayBuffer();
@@ -135,7 +142,7 @@ export async function POST(req: NextRequest) {
 
   // Convert DOCX to PDF if needed
   let finalFileName = file.name;
-  let fileUrl = `/uploads/rps/drafts/${safeFileName}`;
+  let fileUrl = buildUploadUrl('rps', 'drafts', safeFileName, tahun, sem);
 
   const isDocx = /\.(docx?)$/i.test(file.name);
   if (isDocx) {
@@ -143,7 +150,7 @@ export async function POST(req: NextRequest) {
     if (pdfPath) {
       await unlink(filePath).catch(() => {});
       finalFileName = file.name.replace(/\.(docx?)$/i, '.pdf');
-      fileUrl = `/uploads/rps/drafts/${path.basename(pdfPath)}`;
+      fileUrl = buildUploadUrl('rps', 'drafts', path.basename(pdfPath), tahun, sem);
     }
   }
 

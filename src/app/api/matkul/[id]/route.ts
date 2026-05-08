@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { notifyUsers, notifyRole } from '@/lib/notifications';
+import { unlinkIfExists } from '@/lib/upload-paths';
 
 export async function DELETE(
   req: NextRequest,
@@ -16,6 +17,20 @@ export async function DELETE(
         koordinators: { select: { id: true } },
       },
     });
+
+    // Unlink all files on disk before deleting DB rows
+    const rpsList = await prisma.rPS.findMany({
+      where: { matkulId: id },
+      select: { fileUrl: true, annotatedPdfUrl: true, koordinatorSigUrl: true, koordinatorSignedPdfUrl: true, kaprodiSigUrl: true, finalPdfUrl: true },
+    });
+    const docList = await prisma.academicDocument.findMany({
+      where: { matkulId: id },
+      select: { fileUrl: true, annotatedPdfUrl: true, koordinatorSigUrl: true, koordinatorSignedPdfUrl: true, kaprodiSigUrl: true, finalPdfUrl: true },
+    });
+    const allUrls = [...rpsList, ...docList].flatMap(r => [
+      r.fileUrl, r.annotatedPdfUrl, r.koordinatorSigUrl, r.koordinatorSignedPdfUrl, r.kaprodiSigUrl, r.finalPdfUrl,
+    ]);
+    await Promise.all(allUrls.map(url => unlinkIfExists(url)));
 
     await prisma.rPS.deleteMany({ where: { matkulId: id } });
     await prisma.academicDocument.deleteMany({ where: { matkulId: id } });

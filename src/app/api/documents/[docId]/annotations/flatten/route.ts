@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { PDFDocument, rgb, LineCapStyle } from 'pdf-lib';
 import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
-import { docTypeToFolder, getUploadDir, unlinkIfExists } from '@/lib/upload-paths';
+import { docTypeToFolder, getUploadDir, buildUploadUrl, normalizePeriod, unlinkIfExists } from '@/lib/upload-paths';
 
 // POST /api/documents/[docId]/annotations/flatten
 export async function POST(
@@ -23,7 +23,10 @@ export async function POST(
 
   const doc = await prisma.academicDocument.findUnique({
     where: { id: docId },
-    include: { annotations: { orderBy: { createdAt: 'asc' } } },
+    include: {
+      annotations: { orderBy: { createdAt: 'asc' } },
+      matkul: { include: { semester: { include: { tahunAkademik: true } } } },
+    },
   });
   if (!doc) return NextResponse.json({ error: 'Document not found' }, { status: 404 });
 
@@ -100,11 +103,13 @@ export async function POST(
 
   const flatBytes = await pdfDoc.save();
   const typeFolder = docTypeToFolder(doc.type);
-  const uploadDir = getUploadDir(typeFolder, 'annotated');
+  const tahun = normalizePeriod(doc.matkul?.semester?.tahunAkademik?.tahun ?? '');
+  const sem = normalizePeriod(doc.matkul?.semester?.nama ?? '');
+  const uploadDir = getUploadDir(typeFolder, 'annotated', tahun, sem);
   await unlinkIfExists(doc.annotatedPdfUrl);
   const outFileName = `${docId}_annotated.pdf`;
   await writeFile(path.join(uploadDir, outFileName), flatBytes);
-  const annotatedPdfUrl = `/uploads/${typeFolder}/annotated/${outFileName}`;
+  const annotatedPdfUrl = buildUploadUrl(typeFolder, 'annotated', outFileName, tahun, sem);
 
   await prisma.academicDocument.update({ where: { id: docId }, data: { annotatedPdfUrl } });
 

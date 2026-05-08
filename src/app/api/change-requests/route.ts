@@ -1,26 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
+import { getCurrentUserId, getRoles, unauthorized, forbidden } from '@/lib/auth';
 import type { ChangeRequest } from '@/lib/api-types';
 
 export async function GET(_req: NextRequest) {
-  const cookieStore = await cookies();
-  const roleRaw = cookieStore.get('userRole')?.value;
-
-  let roles: string[] = [];
-  try {
-    if (roleRaw) {
-      const decoded = decodeURIComponent(roleRaw);
-      const parsed = JSON.parse(decoded);
-      roles = Array.isArray(parsed) ? parsed : [parsed];
-    }
-  } catch (e) {
-    roles = roleRaw ? [roleRaw] : [];
-  }
-
-  if (!roles.includes('KAPRODI')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const userId = await getCurrentUserId();
+  if (!userId) return unauthorized();
+  const roles = await getRoles();
+  if (!roles.includes('KAPRODI')) return forbidden();
 
   const rows = await prisma.matkulChangeRequest.findMany({
     include: {

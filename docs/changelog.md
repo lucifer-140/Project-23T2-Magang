@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented here.
 
+## [1.6.0] - 2026-05-08
+
+### Added
+- **`src/lib/auth.ts`** — centralized auth helpers: `getCurrentUserId()`, `getRoles()`, `unauthorized()`, `forbidden()`, `SESSION_COOKIE_OPTIONS`. All API routes now import from here instead of duplicating cookie logic inline.
+- **`src/lib/logger.ts`** — structured DB logger: `logInfo`, `logWarn`, `logDebug`, `logError`. Writes to `SystemLog` table (fire-and-forget, never throws).
+- **`src/lib/rate-limit.ts`** — in-memory sliding-window rate limiter: `checkRateLimit(key, limit, windowMs)`, `getIpFromRequest(req)`, `getIpFromHeaders()`. Auto-prunes expired entries every 10 minutes.
+- **`SystemLog` Prisma model** — structured server error log: `level` (`INFO|WARN|DEBUG|ERROR`), `route`, `message`, `stack?`, `userId?`, `createdAt`. Indexed on `(level, createdAt DESC)` and `route`.
+- **Rate limiting on auth endpoints** — `POST /api/auth/forgot-password`: 5 req / 15 min per IP (429 + `Retry-After`). Reset-password endpoint similarly guarded.
+- **`GET /api/master/uploads`** — MASTER-only: recursively scans `/public/uploads/`, returns file list with `name`, `relativePath`, `folder`, `sizeHuman`, `modifiedAt`, `ext`, `publicUrl`; aggregated stats (`totalFiles`, `totalSizeHuman`, `byFolder`).
+- **`DELETE /api/master/uploads`** — MASTER-only: deletes a single file by `relativePath`; path-traversal-safe (`path.normalize` + strip leading `../`).
+- **`GET /api/master/health`** — public health-check endpoint.
+- **Master "File Manager" page** (`/dashboard/master/uploads`) — `UploadsClient`: lists all uploaded files with folder grouping, file size, last modified; per-folder stats; inline delete with confirmation; SWR polling.
+- **Master "Error Logs" page** (`/dashboard/master/errors`) — `ErrorsClient`: shows `SystemLog` ERROR entries; expandable stack traces; SWR polling.
+- **DB migrations** — `20260508010259_add_indexes_cascade_deletes`: performance indexes and cascade deletes on orphan-prone relations. `20260508022659_add_system_log`: creates `SystemLog` table + `LogLevel` enum.
+
+### Changed
+- **All API routes refactored** to import auth helpers from `src/lib/auth.ts` — no behavioral change, cookie logic now centralized.
+- **Master dashboard** (`/dashboard/master/page.tsx`) — updated nav cards to link to new File Manager and Error Logs pages.
+- **`tsconfig.json`** — minor compiler option update.
+
 ## [1.5.1] - 2026-05-06
 
 ### Changed

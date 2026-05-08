@@ -10,6 +10,8 @@ const DOC_LABEL: Record<DocType, string> = {
   SOAL_UAS: 'Soal UAS',
   LPP: 'Laporan Pelaksanaan Pembelajaran',
   EPP: 'Evaluasi Pencapaian Program',
+  EPP_UTS: 'Evaluasi Pencapaian Program UTS',
+  EPP_UAS: 'Evaluasi Pencapaian Program UAS',
   BERITA_ACARA: 'Berita Acara Perwalian',
 };
 
@@ -24,6 +26,20 @@ export async function PATCH(
 
   const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
+  const roleRaw = cookieStore.get('userRole')?.value || '[]';
+  let callerRoles: string[] = [];
+  try { callerRoles = JSON.parse(decodeURIComponent(roleRaw)); } catch { callerRoles = []; }
+
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (reviewer === 'koordinator' && !callerRoles.includes('KOORDINATOR')) {
+    return NextResponse.json({ error: 'Forbidden: KOORDINATOR role required' }, { status: 403 });
+  }
+  if (reviewer === 'prodi' && !callerRoles.includes('PRODI')) {
+    return NextResponse.json({ error: 'Forbidden: PRODI role required' }, { status: 403 });
+  }
+  if (reviewer === 'kaprodi' && !callerRoles.includes('KAPRODI')) {
+    return NextResponse.json({ error: 'Forbidden: KAPRODI role required' }, { status: 403 });
+  }
 
   const existingDoc = await prisma.academicDocument.findUnique({
     where: { id: docId },

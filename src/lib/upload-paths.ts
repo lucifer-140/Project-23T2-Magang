@@ -15,10 +15,23 @@ export function docTypeToFolder(type: string): string {
   return DOC_TYPE_FOLDER[type] ?? type.toLowerCase().replace(/_/g, '-');
 }
 
-export function getUploadDir(typeFolder: string, sub: string): string {
-  const dir = path.join(process.cwd(), 'public', 'uploads', typeFolder, sub);
+export function normalizePeriod(s: string): string {
+  return s.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+export function getUploadDir(typeFolder: string, sub: string, tahunAkademik?: string, semester?: string): string {
+  const segments = tahunAkademik && semester
+    ? ['public', 'uploads', typeFolder, tahunAkademik, semester, sub]
+    : ['public', 'uploads', typeFolder, sub];
+  const dir = path.join(process.cwd(), ...segments);
   mkdirSync(dir, { recursive: true });
   return dir;
+}
+
+export function buildUploadUrl(typeFolder: string, sub: string, filename: string, tahunAkademik?: string, semester?: string): string {
+  return tahunAkademik && semester
+    ? `/uploads/${typeFolder}/${tahunAkademik}/${semester}/${sub}/${filename}`
+    : `/uploads/${typeFolder}/${sub}/${filename}`;
 }
 
 export function sanitizeName(s: string): string {

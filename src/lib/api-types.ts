@@ -80,6 +80,44 @@ export type LogEntry = {
   message: string;
   actor: string;
   action: string;
+  source?: string;
+  route?: string | null;
+  stack?: string | null;
+};
+
+// GET /api/master/uploads
+export type UploadFile = {
+  name: string;
+  relativePath: string;
+  folder: string;
+  sizeBytes: number;
+  sizeHuman: string;
+  modifiedAt: string;
+  ext: 'pdf' | 'doc' | 'docx' | 'png' | 'other';
+  publicUrl: string;
+};
+
+export type UploadsResponse = {
+  files: UploadFile[];
+  stats: {
+    totalFiles: number;
+    totalSizeBytes: number;
+    totalSizeHuman: string;
+    byFolder: Record<string, { count: number; sizeBytes: number; sizeHuman: string }>;
+  };
+};
+
+// GET /api/master/health
+export type HealthResponse = {
+  db: { ok: boolean; latencyMs: number };
+  process: {
+    memoryMB: number;
+    heapUsedMB: number;
+    heapTotalMB: number;
+    uptimeSeconds: number;
+    nodeVersion: string;
+  };
+  env: string;
 };
 
 // Annotation on a PDF (created by Koordinator or Kaprodi)

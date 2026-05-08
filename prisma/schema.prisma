@@ -54,6 +54,13 @@ enum DocStatus {
   APPROVED
 }
 
+enum LogLevel {
+  INFO
+  WARN
+  DEBUG
+  ERROR
+}
+
 model EmailConfig {
   id        Int      @id @default(1)
   smtpHost  String   @default("")
@@ -213,10 +220,13 @@ model RPS {
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
   dosenId                 String
-  dosen                   User      @relation("DosenRPS", fields: [dosenId], references: [id])
+  dosen                   User      @relation("DosenRPS", fields: [dosenId], references: [id], onDelete: Cascade)
   annotations             RpsAnnotation[]
 
   @@unique([matkulId, dosenId, matkulClassId])
+  @@index([dosenId])
+  @@index([status])
+  @@index([koordinatorId])
 }
 
 model AcademicDocument {
@@ -224,7 +234,7 @@ model AcademicDocument {
   matkulId String
   matkul   Matkul    @relation(fields: [matkulId], references: [id])
   dosenId  String
-  dosen    User      @relation("DosenAcademicDocs", fields: [dosenId], references: [id])
+  dosen    User      @relation("DosenAcademicDocs", fields: [dosenId], references: [id], onDelete: Cascade)
   semesterId String?
   semester   Semester? @relation(fields: [semesterId], references: [id])
 
@@ -275,6 +285,9 @@ model AcademicDocument {
   updatedAt DateTime @updatedAt
 
   @@unique([matkulId, dosenId, semesterId, type, matkulClassId])
+  @@index([dosenId])
+  @@index([status])
+  @@index([koordinatorId])
 }
 
 model Kelas {
@@ -293,7 +306,7 @@ model BeritaAcaraPerwalian {
   kelasId    String
   kelas      Kelas    @relation(fields: [kelasId], references: [id])
   semesterId String
-  semester   Semester @relation(fields: [semesterId], references: [id])
+  semester   Semester @relation(fields: [semesterId], references: [id], onDelete: Restrict)
 
   lembarKehadiranUrl  String?
   lembarKehadiranName String?
@@ -344,6 +357,19 @@ model AcademicDocAnnotation {
   pathData     String?
   reviewerRole String
   createdAt    DateTime @default(now())
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  level     LogLevel
+  route     String
+  message   String
+  userId    String?
+  stack     String?
+  createdAt DateTime @default(now())
+
+  @@index([level, createdAt(sort: Desc)])
+  @@index([route])
 }
 
 model RpsAnnotation {

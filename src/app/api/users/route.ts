@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
+import bcrypt from 'bcrypt';
 
 // GET /api/users - List all users
 // Query params:
@@ -71,9 +72,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Email sudah digunakan.' }, { status: 409 });
   }
 
-  // NOTE: In production, hash the password before storing it.
+  const hashedPassword = await bcrypt.hash(password, 12);
   const user = await prisma.user.create({
-    data: { name, email, password, roles: rolesArray as any },
+    data: { name, email, password: hashedPassword, roles: rolesArray as any },
     select: { id: true, name: true, email: true, roles: true },
   });
 

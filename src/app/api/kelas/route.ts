@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
+import { getCurrentUserId, getRoles, unauthorized, forbidden } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('userId')?.value;
-  const roleRaw = cookieStore.get('userRole')?.value;
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  let roles: string[] = [];
-  try { if (roleRaw) roles = JSON.parse(decodeURIComponent(roleRaw)); } catch { roles = []; }
+  const userId = await getCurrentUserId();
+  if (!userId) return unauthorized();
+  const roles = await getRoles();
 
   const isKaprodi = roles.includes('KAPRODI');
   const isProdi = roles.includes('PRODI');
@@ -35,15 +31,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const roleRaw = cookieStore.get('userRole')?.value;
-  let roles: string[] = [];
-  try { if (roleRaw) roles = JSON.parse(decodeURIComponent(roleRaw)); } catch { roles = []; }
-
-  const canManage = roles.includes('KAPRODI') || roles.includes('ADMIN') || roles.includes('MASTER');
-  if (!canManage) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const userId = await getCurrentUserId();
+  if (!userId) return unauthorized();
+  const roles = await getRoles();
+  if (!roles.includes('KAPRODI') && !roles.includes('ADMIN') && !roles.includes('MASTER')) return forbidden();
 
   const { name, dosenPaId } = await req.json();
   if (!name?.trim()) return NextResponse.json({ error: 'Missing name' }, { status: 400 });

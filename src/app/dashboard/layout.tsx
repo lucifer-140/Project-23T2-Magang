@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
   LayoutDashboard, FileText, BookOpen,
-  Users, Shield, Terminal, UserCheck, Library, BarChart2, Database, Settings, School
+  Users, Shield, Terminal, UserCheck, Library, BarChart2, Database, Settings, School, HardDrive, AlertTriangle
 } from 'lucide-react';
 import DashboardWrapper from '@/components/DashboardWrapper';
 
@@ -45,6 +45,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: '/dashboard/master/users', icon: <Users size={18} />, label: 'Kelola Pengguna' },
         { href: '/dashboard/master/approvals', icon: <UserCheck size={18} />, label: 'Persetujuan Akun' },
         { href: '/dashboard/master/logs', icon: <FileText size={18} />, label: 'Application Logs' },
+        { href: '/dashboard/master/uploads', icon: <HardDrive size={18} />, label: 'File Browser' },
+        { href: '/dashboard/master/errors', icon: <AlertTriangle size={18} />, label: 'Error Logs' },
       ],
     };
   } else if (roles.includes('ADMIN')) {

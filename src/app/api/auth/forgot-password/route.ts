@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendPasswordResetEmail } from '@/lib/email';
+import { checkRateLimit, getIpFromRequest } from '@/lib/rate-limit';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
+  const ip = getIpFromRequest(req);
+  const rl = checkRateLimit(`forgot-password:${ip}`, 5, 15 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: 'Terlalu banyak permintaan. Coba lagi nanti.' }, {
+      status: 429,
+      headers: { 'Retry-After': String(rl.retryAfter) },
+    });
+  }
+
   const { email } = await req.json();
 
   // Always return 200 to prevent email enumeration

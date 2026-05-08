@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getCurrentUserId, getRoles, unauthorized, forbidden } from '@/lib/auth';
 
 const INCLUDE_FULL = {
   semester: { include: { tahunAkademik: true } },
@@ -16,6 +17,11 @@ const INCLUDE_FULL = {
 
 // POST /api/matkul - Create new Matkul
 export async function POST(req: NextRequest) {
+  const userId = await getCurrentUserId();
+  if (!userId) return unauthorized();
+  const roles = await getRoles();
+  if (!roles.includes('ADMIN') && !roles.includes('MASTER')) return forbidden();
+
   try {
     const { code, name, sks, semesterId, katalogMatkulId, classes } = await req.json();
     const matkul = await prisma.matkul.create({
@@ -36,12 +42,15 @@ export async function POST(req: NextRequest) {
     if (e?.code === 'P2002') {
       return NextResponse.json({ error: 'Mata kuliah dengan kode ini sudah ada di term yang sama.' }, { status: 409 });
     }
-    return NextResponse.json({ error: e.message }, { status: 400 });
+    return NextResponse.json({ error: 'Gagal membuat mata kuliah.' }, { status: 400 });
   }
 }
 
 // GET /api/matkul - List all Matkul
 export async function GET() {
+  const userId = await getCurrentUserId();
+  if (!userId) return unauthorized();
+
   const matkuls = await prisma.matkul.findMany({
     include: INCLUDE_FULL,
     orderBy: { code: 'asc' },

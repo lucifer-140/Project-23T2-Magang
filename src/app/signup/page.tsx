@@ -2,7 +2,9 @@ import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { prisma } from '@/lib/db';
+import bcrypt from 'bcrypt';
 import { sendPendingApprovalEmail } from '@/lib/email';
+import { checkRateLimit, getIpFromHeaders } from '@/lib/rate-limit';
 import Link from 'next/link';
 import { UserPlus } from 'lucide-react';
 
@@ -11,6 +13,12 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
 
   async function handleSignup(formData: FormData) {
     "use server"
+    const ip = await getIpFromHeaders();
+    const rl = checkRateLimit(`signup:${ip}`, 5, 60 * 60 * 1000);
+    if (!rl.ok) {
+      redirect('/signup?error=rate_limited');
+    }
+
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
@@ -32,11 +40,12 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       }
 
       // Create new user with base DOSEN role and PENDING status
+      const hashedPassword = await bcrypt.hash(password, 12);
       const newUser = await prisma.user.create({
         data: {
           name,
           email,
-          password,
+          password: hashedPassword,
           roles: ['DOSEN'],
           status: 'PENDING',
         }
@@ -76,6 +85,11 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
 
           <div className="h-[1px] bg-gray-100 mb-6" />
 
+          {error === 'rate_limited' && (
+            <div className="mb-5 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-700 font-medium text-center">
+              Terlalu banyak percobaan pendaftaran. Coba lagi dalam 1 jam.
+            </div>
+          )}
           {error === 'password_mismatch' && (
             <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 font-medium text-center">
               Password tidak sesuai. Silakan coba lagi.

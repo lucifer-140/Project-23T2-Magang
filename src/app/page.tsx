@@ -2,12 +2,21 @@ import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
+import bcrypt from 'bcrypt';
+import { SESSION_COOKIE_OPTIONS } from '@/lib/auth';
+import { checkRateLimit, getIpFromHeaders } from '@/lib/rate-limit';
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
 
   async function handleLogin(formData: FormData) {
     "use server"
+    const ip = await getIpFromHeaders();
+    const rl = checkRateLimit(`login:${ip}`, 10, 15 * 60 * 1000);
+    if (!rl.ok) {
+      redirect('/?error=rate_limited');
+    }
+
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
@@ -15,7 +24,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
     const cookieStore = await cookies();
 
-    if (!user || user.password !== password) {
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       redirect('/?error=invalid');
     }
 
@@ -27,9 +36,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       redirect('/?error=rejected');
     }
 
-    cookieStore.set('userRole', JSON.stringify(user.roles)); // store as JSON array
-    cookieStore.set('userId', user.id);
-    cookieStore.set('userName', user.name);
+    cookieStore.set('userRole', JSON.stringify(user.roles), SESSION_COOKIE_OPTIONS);
+    cookieStore.set('userId', user.id, SESSION_COOKIE_OPTIONS);
+    cookieStore.set('userName', user.name, SESSION_COOKIE_OPTIONS);
 
     if (user.roles.includes('MASTER')) {
       redirect('/dashboard/master');
@@ -71,6 +80,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
           <div className="h-[1px] bg-gray-200 mb-7" />
 
+          {error === 'rate_limited' && (
+            <div className="mb-5 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-700 font-medium text-center">
+              Terlalu banyak percobaan login. Coba lagi dalam 15 menit.
+            </div>
+          )}
           {error === 'invalid' && (
             <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 font-medium text-center">
               Email atau password salah.

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { cookies } from 'next/headers';
+import bcrypt from 'bcrypt';
 
 // PATCH /api/users/[id] - Update user info (name, username, password)
 export async function PATCH(
@@ -7,6 +9,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const cookieStore = await cookies();
+  const callerId = cookieStore.get('userId')?.value;
+  const callerRoleStr = cookieStore.get('userRole')?.value || '';
+  const isAdminCaller = callerRoleStr.includes('ADMIN') || callerRoleStr.includes('MASTER');
+  if (!callerId || (!isAdminCaller && callerId !== id)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
   const { name, email, password } = await req.json();
 
   if (!name && !email && !password) {
@@ -16,7 +25,7 @@ export async function PATCH(
   const data: { name?: string; email?: string; password?: string } = {};
   if (name) data.name = name;
   if (email) data.email = email;
-  if (password) data.password = password; // NOTE: Hash in production
+  if (password) data.password = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.update({
     where: { id },
@@ -38,6 +47,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const cookieStore = await cookies();
+  const callerRoleStr = cookieStore.get('userRole')?.value || '';
+  const callerId = cookieStore.get('userId')?.value;
+  const isAdminCaller = callerRoleStr.includes('ADMIN') || callerRoleStr.includes('MASTER');
+  if (!callerId || !isAdminCaller) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
 
   // Safety: Prevent deleting MASTER accounts via this API
   const target = await prisma.user.findUnique({ where: { id }, select: { roles: true } });
