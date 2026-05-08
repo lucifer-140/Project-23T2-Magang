@@ -107,6 +107,33 @@ export type UploadsResponse = {
   };
 };
 
+// Document Status Matrix
+export type DocCell = { fileName: string | null; fileUrl: string | null };
+
+export type MatrixRow = {
+  matkulClassId:  string;
+  kelasName:      string;
+  matkulId:       string;
+  matkulCode:     string;
+  matkulName:     string;
+  dosenId:        string;
+  dosenName:      string;
+  rpsFileName:    string | null;  rpsFileUrl:    string | null;
+  lppFileName:    string | null;  lppFileUrl:    string | null;
+  utsFileName:    string | null;  utsFileUrl:    string | null;
+  eppUtsFileName: string | null;  eppUtsFileUrl: string | null;
+  uasFileName:    string | null;  uasFileUrl:    string | null;
+  eppUasFileName: string | null;  eppUasFileUrl: string | null;
+};
+
+export type SemesterOption = {
+  id:                string;
+  nama:              string;
+  tahunAkademikId:   string;
+  tahunAkademikNama: string;
+  isActive:          boolean;
+};
+
 // GET /api/master/health
 export type HealthResponse = {
   db: { ok: boolean; latencyMs: number };

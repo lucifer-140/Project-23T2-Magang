@@ -13,11 +13,11 @@ const ALL_ROLES_LABEL = 'SEMUA';
 const ITEMS_PER_PAGE = 12;
 
 const ROLE_COLORS: Record<string, string> = {
-  MASTER: 'bg-purple-100 text-purple-700',
-  ADMIN: 'bg-blue-100 text-uph-blue',
-  KAPRODI: 'bg-red-100 text-red-700',
-  KOORDINATOR: 'bg-teal-100 text-teal-700',
-  DOSEN: 'bg-gray-100 text-gray-700',
+  MASTER:     'bg-purple-900/50 text-purple-400',
+  ADMIN:      'bg-blue-900/50 text-blue-400',
+  KAPRODI:    'bg-red-900/50 text-red-400',
+  KOORDINATOR:'bg-teal-900/50 text-teal-400',
+  DOSEN:      'bg-gray-800 text-gray-400',
 };
 
 type Props = { users: User[] };
@@ -28,12 +28,10 @@ const EMPTY_EDIT = { name: '', email: '', password: '' };
 export function UsersManageClientPage({ users: initialUsers }: Props) {
   const [users, setUsers] = useState(initialUsers);
 
-  // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
 
-  // Form state
   const [addForm, setAddForm] = useState(EMPTY_ADD);
   const [editForm, setEditForm] = useState(EMPTY_EDIT);
   const [addError, setAddError] = useState('');
@@ -43,7 +41,6 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
   const [successMsg, setSuccessMsg] = useState('');
   const [editRoles, setEditRoles] = useState<string[]>([]);
 
-  // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [activeRoleTab, setActiveRoleTab] = useState(ALL_ROLES_LABEL);
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,7 +51,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
   }
 
   function handleToggleAddRole(r: string, checked: boolean) {
-    if (r === 'DOSEN') return; // Cannot change DOSEN base role
+    if (r === 'DOSEN') return;
     setAddForm(prev => ({
       ...prev,
       roles: checked ? [...prev.roles, r] : prev.roles.filter(role => role !== r)
@@ -62,13 +59,12 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
   }
 
   function handleToggleEditRole(r: string, checked: boolean) {
-    if (r === 'DOSEN') return; // Cannot change DOSEN base role
-    setEditRoles(prev => 
+    if (r === 'DOSEN') return;
+    setEditRoles(prev =>
       checked ? [...prev, r] : prev.filter(role => role !== r)
     );
   }
 
-  // ── ADD USER ──────────────────────────────────────────────────────────────
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setAddError('');
@@ -87,7 +83,6 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
     setIsSaving(false);
   }
 
-  // ── EDIT USER ─────────────────────────────────────────────────────────────
   function startEdit(user: User) {
     setEditingUser(user);
     setEditForm({ name: user.name, email: user.email, password: '' });
@@ -100,8 +95,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
     if (!editingUser) return;
     setEditError('');
     setIsSaving(true);
-    
-    // First update roles
+
     const roleRes = await fetch(`/api/users/${editingUser.id}/role`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -109,9 +103,9 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
     });
 
     if (!roleRes.ok) {
-       setEditError('Gagal memperbarui role.'); 
-       setIsSaving(false); 
-       return; 
+      setEditError('Gagal memperbarui role.');
+      setIsSaving(false);
+      return;
     }
 
     const payload: Record<string, string> = {};
@@ -138,7 +132,6 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
     setIsSaving(false);
   }
 
-  // ── DELETE USER ───────────────────────────────────────────────────────────
   async function handleDelete() {
     if (!deletingUser) return;
     setIsDeleting(true);
@@ -151,7 +144,6 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
     setIsDeleting(false);
   }
 
-  // ── FILTERING & PAGINATION ────────────────────────────────────────────────
   const filteredUsers = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return users.filter(u => {
@@ -177,17 +169,20 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
     return counts;
   }, [users]);
 
+  const inputCls = "w-full px-3 py-2.5 bg-gray-800 border border-gray-700 text-gray-200 placeholder-gray-600 rounded-lg text-sm font-mono focus:outline-none focus:border-purple-500";
+  const labelCls = "block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5";
+
   return (
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-playfair font-bold text-uph-blue mb-1">Kelola Semua Pengguna</h1>
-          <p className="text-gray-500">Master panel - tambah, edit, dan hapus akun di seluruh sistem.</p>
+          <h1 className="text-3xl font-playfair font-bold text-gray-100 mb-1">Kelola Semua Pengguna</h1>
+          <p className="text-gray-500 font-mono text-sm">Master panel — tambah, edit, hapus akun di seluruh sistem.</p>
         </div>
         <button
           onClick={() => { setShowAddModal(true); setAddError(''); }}
-          className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm"
+          className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-lg transition-colors"
         >
           <Plus size={16} className="mr-2" /> Tambah Pengguna
         </button>
@@ -195,26 +190,25 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
 
       {/* Success Toast */}
       {successMsg && (
-        <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm font-medium">
-          <Check size={16} className="text-green-600 flex-shrink-0" />
+        <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-green-900/30 border border-green-700 rounded-xl text-green-400 text-sm font-mono">
+          <Check size={16} className="flex-shrink-0" />
           {successMsg}
         </div>
       )}
 
       {/* Role Tabs */}
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex gap-2 mb-4 flex-wrap font-mono">
         {roleTabs.map(tab => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors border ${activeRoleTab === tab
-                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                : 'bg-white text-gray-500 border-gray-200 hover:border-purple-400 hover:text-purple-600'
+                ? 'bg-purple-600 text-white border-purple-600'
+                : 'bg-gray-900 text-gray-500 border-gray-700 hover:border-purple-500 hover:text-purple-400'
               }`}
           >
             {tab}
-            <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${activeRoleTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
-              }`}>
+            <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${activeRoleTab === tab ? 'bg-white/20 text-white' : 'bg-gray-800 text-gray-500'}`}>
               {roleCounts[tab] ?? 0}
             </span>
           </button>
@@ -222,17 +216,17 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
       </div>
 
       {/* Data Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-gray-950 rounded-2xl border border-gray-800 overflow-hidden">
         {/* Search */}
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <div className="px-6 py-4 border-b border-gray-800 bg-gray-900">
           <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" size={16} />
             <input
               type="text"
               placeholder="Cari nama, email, atau role..."
               value={searchQuery}
               onChange={e => handleSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400"
+              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 text-gray-300 placeholder-gray-600 rounded-lg text-sm font-mono focus:outline-none focus:border-purple-500"
             />
           </div>
         </div>
@@ -240,33 +234,33 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nama</th>
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Roles</th>
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Aksi</th>
+              <tr className="bg-gray-900 border-b border-gray-800">
+                <th className="py-3 px-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest font-mono">Nama</th>
+                <th className="py-3 px-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest font-mono">Email</th>
+                <th className="py-3 px-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest font-mono">Roles</th>
+                <th className="py-3 px-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest font-mono text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-800/50">
               {pagedUsers.length > 0 ? pagedUsers.map(user => {
                 const isMaster = user.roles.includes('MASTER');
-                const primaryColor = user.roles[0] ? ROLE_COLORS[user.roles[0]] : 'bg-gray-100 text-gray-600';
+                const primaryColor = user.roles[0] ? ROLE_COLORS[user.roles[0]] : 'bg-gray-800 text-gray-400';
 
                 return (
-                  <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={user.id} className="hover:bg-gray-900/50 transition-colors">
                     <td className="py-3 px-6">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${primaryColor}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 font-mono ${primaryColor}`}>
                           {user.name.charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-semibold text-gray-800">{user.name}</span>
+                        <span className="font-semibold text-gray-200 font-mono text-sm">{user.name}</span>
                       </div>
                     </td>
                     <td className="py-3 px-6 text-sm text-gray-500 font-mono">{user.email}</td>
                     <td className="py-3 px-6">
                       <div className="flex flex-wrap gap-1.5">
                         {user.roles.map(r => (
-                          <span key={r} className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider ${ROLE_COLORS[r] ?? 'bg-gray-100 text-gray-700'}`}>
+                          <span key={r} className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider font-mono ${ROLE_COLORS[r] ?? 'bg-gray-800 text-gray-400'}`}>
                             {r}
                           </span>
                         ))}
@@ -276,19 +270,19 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => startEdit(user)}
-                          className="inline-flex items-center px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition-colors"
+                          className="inline-flex items-center px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold rounded-lg transition-colors font-mono"
                           title="Edit pengguna"
                         >
                           <Edit2 size={12} className="mr-1" /> Edit
                         </button>
                         {isMaster ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-purple-50 text-purple-300 text-xs font-bold rounded-lg cursor-not-allowed" title="Akun Master tidak dapat dihapus">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-purple-900/30 text-purple-600 text-xs font-bold rounded-lg cursor-not-allowed" title="Akun Master tidak dapat dihapus">
                             <Lock size={11} />
                           </span>
                         ) : (
                           <button
                             onClick={() => setDeletingUser(user)}
-                            className="inline-flex items-center px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-lg transition-colors"
+                            className="inline-flex items-center px-2.5 py-1.5 bg-red-900/30 hover:bg-red-900/50 text-red-400 text-xs font-bold rounded-lg transition-colors font-mono"
                             title="Hapus pengguna"
                           >
                             <Trash2 size={12} className="mr-1" /> Hapus
@@ -300,7 +294,7 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
                 );
               }) : (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-gray-400">
+                  <td colSpan={4} className="py-12 text-center text-gray-600 font-mono">
                     Tidak ada pengguna ditemukan.
                   </td>
                 </tr>
@@ -311,20 +305,20 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+          <div className="px-6 py-4 border-t border-gray-800 bg-gray-900 flex items-center justify-between font-mono">
             <span className="text-sm text-gray-500">
               {(safePage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(safePage * ITEMS_PER_PAGE, filteredUsers.length)} dari {filteredUsers.length} pengguna
             </span>
             <div className="flex gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage === 1} className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-40">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage === 1} className="p-1.5 border border-gray-700 bg-gray-800 rounded-lg hover:bg-gray-700 disabled:opacity-40 text-gray-400">
                 <ChevronLeft size={16} />
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                <button key={n} onClick={() => setCurrentPage(n)} className={`w-8 h-8 rounded-lg text-xs font-bold border transition-colors ${n === safePage ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-400'}`}>
+                <button key={n} onClick={() => setCurrentPage(n)} className={`w-8 h-8 rounded-lg text-xs font-bold border transition-colors ${n === safePage ? 'bg-purple-600 text-white border-purple-600' : 'bg-gray-800 text-gray-500 border-gray-700 hover:border-purple-500 hover:text-purple-400'}`}>
                   {n}
                 </button>
               ))}
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-40">
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} className="p-1.5 border border-gray-700 bg-gray-800 rounded-lg hover:bg-gray-700 disabled:opacity-40 text-gray-400">
                 <ChevronRight size={16} />
               </button>
             </div>
@@ -334,54 +328,54 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
 
       {/* ── MODAL: ADD USER ──────────────────────────────────────────────── */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-purple-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-purple-900/20">
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Tambah Pengguna Baru</h2>
-                <p className="text-sm text-purple-600">Buat akun baru di sistem</p>
+                <h2 className="text-lg font-bold text-gray-100 font-mono">Tambah Pengguna Baru</h2>
+                <p className="text-sm text-purple-400 font-mono">Buat akun baru di sistem</p>
               </div>
-              <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-purple-100 rounded-full"><X size={18} /></button>
+              <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-gray-800 rounded-full text-gray-400"><X size={18} /></button>
             </div>
             <form onSubmit={handleAdd} className="p-6 space-y-4">
               {addError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                <div className="flex items-center gap-2 p-3 bg-red-900/30 border border-red-700 rounded-lg text-sm text-red-400 font-mono">
                   <AlertTriangle size={14} className="flex-shrink-0" /> {addError}
                 </div>
               )}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Nama Lengkap</label>
+                <label className={labelCls}>Nama Lengkap</label>
                 <input required value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="Cth: Dr. Budi Santoso" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400" />
+                  placeholder="Cth: Dr. Budi Santoso" className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Email</label>
+                <label className={labelCls}>Email</label>
                 <input required type="email" value={addForm.email} onChange={e => setAddForm(p => ({ ...p, email: e.target.value }))}
-                  placeholder="Cth: dosen@test.com" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400" />
+                  placeholder="Cth: dosen@test.com" className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Password</label>
+                <label className={labelCls}>Password</label>
                 <input required type="password" value={addForm.password} onChange={e => setAddForm(p => ({ ...p, password: e.target.value }))}
-                  placeholder="Min. 6 karakter" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400" />
+                  placeholder="Min. 6 karakter" className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Pilih Roles</label>
+                <label className={labelCls}>Pilih Roles</label>
                 <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-                  <label className="flex items-center gap-3 p-2.5 rounded-xl border bg-gray-50 border-gray-200 cursor-not-allowed opacity-80">
+                  <label className="flex items-center gap-3 p-2.5 rounded-xl border bg-gray-800 border-gray-700 cursor-not-allowed opacity-60">
                     <input type="checkbox" checked={true} readOnly disabled className="accent-purple-600 cursor-not-allowed" />
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${ROLE_COLORS['DOSEN']}`}>DOSEN</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase font-mono ${ROLE_COLORS['DOSEN']}`}>DOSEN</span>
                   </label>
                   {ROLE_OPTIONS.filter(r => r !== 'DOSEN').map(r => (
-                    <label key={r} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer border transition-colors ${addForm.roles.includes(r) ? 'bg-purple-50 border-purple-300' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
-                      <input type="checkbox" checked={addForm.roles.includes(r)} onChange={(e) => handleToggleAddRole(r, e.target.checked)} className="accent-purple-600" />
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${ROLE_COLORS[r]}`}>{r}</span>
+                    <label key={r} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer border transition-colors ${addForm.roles.includes(r) ? 'bg-purple-900/30 border-purple-600' : 'bg-gray-800 border-gray-700 hover:border-gray-600'}`}>
+                      <input type="checkbox" checked={addForm.roles.includes(r)} onChange={(e) => handleToggleAddRole(r, e.target.checked)} className="accent-purple-500" />
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase font-mono ${ROLE_COLORS[r]}`}>{r}</span>
                     </label>
                   ))}
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">Batal</button>
-                <button type="submit" disabled={isSaving} className="flex-1 py-2.5 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">
+                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 border border-gray-700 text-gray-400 text-sm font-bold rounded-lg hover:bg-gray-800 font-mono">Batal</button>
+                <button type="submit" disabled={isSaving} className="flex-1 py-2.5 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50 font-mono">
                   {isSaving ? 'Menyimpan...' : 'Buat Akun'}
                 </button>
               </div>
@@ -392,54 +386,54 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
 
       {/* ── MODAL: EDIT USER ─────────────────────────────────────────────── */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-gray-800/40">
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Edit Pengguna</h2>
-                <p className="text-sm text-gray-500">{editingUser.name} ({editingUser.email})</p>
+                <h2 className="text-lg font-bold text-gray-100 font-mono">Edit Pengguna</h2>
+                <p className="text-sm text-gray-500 font-mono">{editingUser.name} ({editingUser.email})</p>
               </div>
-              <button onClick={() => setEditingUser(null)} className="p-1 hover:bg-gray-200 rounded-full"><X size={18} /></button>
+              <button onClick={() => setEditingUser(null)} className="p-1 hover:bg-gray-700 rounded-full text-gray-400"><X size={18} /></button>
             </div>
             <form onSubmit={handleEdit} className="p-6 space-y-4">
               {editError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                <div className="flex items-center gap-2 p-3 bg-red-900/30 border border-red-700 rounded-lg text-sm text-red-400 font-mono">
                   <AlertTriangle size={14} className="flex-shrink-0" /> {editError}
                 </div>
               )}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Nama Lengkap</label>
+                <label className={labelCls}>Nama Lengkap</label>
                 <input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder={editingUser.name} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
+                  placeholder={editingUser.name} className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Email</label>
+                <label className={labelCls}>Email</label>
                 <input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
-                  placeholder={editingUser.email} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
+                  placeholder={editingUser.email} className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Password Baru <span className="text-gray-400 normal-case font-medium">(kosongkan jika tidak diubah)</span></label>
+                <label className={labelCls}>Password Baru <span className="text-gray-600 normal-case font-normal">(kosongkan jika tidak diubah)</span></label>
                 <input type="password" value={editForm.password} onChange={e => setEditForm(p => ({ ...p, password: e.target.value }))}
-                  placeholder="••••••••" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-uph-blue" />
+                  placeholder="••••••••" className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Edit Roles</label>
+                <label className={labelCls}>Edit Roles</label>
                 <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-                  <label className="flex items-center gap-3 p-2.5 rounded-xl border bg-gray-50 border-gray-200 cursor-not-allowed opacity-80">
-                    <input type="checkbox" checked={true} readOnly disabled className="accent-uph-blue cursor-not-allowed" />
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${ROLE_COLORS['DOSEN']}`}>DOSEN</span>
+                  <label className="flex items-center gap-3 p-2.5 rounded-xl border bg-gray-800 border-gray-700 cursor-not-allowed opacity-60">
+                    <input type="checkbox" checked={true} readOnly disabled className="accent-purple-500 cursor-not-allowed" />
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase font-mono ${ROLE_COLORS['DOSEN']}`}>DOSEN</span>
                   </label>
                   {ROLE_OPTIONS.filter(r => r !== 'DOSEN').map(r => (
-                    <label key={r} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer border transition-colors ${editRoles.includes(r) ? 'bg-uph-blue/10 border-uph-blue' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
-                      <input type="checkbox" checked={editRoles.includes(r)} onChange={(e) => handleToggleEditRole(r, e.target.checked)} className="accent-uph-blue" />
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${ROLE_COLORS[r]}`}>{r}</span>
+                    <label key={r} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer border transition-colors ${editRoles.includes(r) ? 'bg-purple-900/30 border-purple-600' : 'bg-gray-800 border-gray-700 hover:border-gray-600'}`}>
+                      <input type="checkbox" checked={editRoles.includes(r)} onChange={(e) => handleToggleEditRole(r, e.target.checked)} className="accent-purple-500" />
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase font-mono ${ROLE_COLORS[r]}`}>{r}</span>
                     </label>
                   ))}
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setEditingUser(null)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">Batal</button>
-                <button type="submit" disabled={isSaving} className="flex-1 py-2.5 bg-uph-blue text-white text-sm font-bold rounded-lg hover:bg-[#111c33] disabled:opacity-50">
+                <button type="button" onClick={() => setEditingUser(null)} className="flex-1 py-2.5 border border-gray-700 text-gray-400 text-sm font-bold rounded-lg hover:bg-gray-800 font-mono">Batal</button>
+                <button type="submit" disabled={isSaving} className="flex-1 py-2.5 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50 font-mono">
                   {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>
               </div>
@@ -450,31 +444,31 @@ export function UsersManageClientPage({ users: initialUsers }: Props) {
 
       {/* ── MODAL: DELETE CONFIRMATION ───────────────────────────────────── */}
       {deletingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-red-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-red-900/20">
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Hapus Pengguna?</h2>
-                <p className="text-sm text-red-600 font-medium">Tindakan ini tidak dapat dibatalkan</p>
+                <h2 className="text-lg font-bold text-gray-100 font-mono">Hapus Pengguna?</h2>
+                <p className="text-sm text-red-400 font-mono">Tindakan ini tidak dapat dibatalkan</p>
               </div>
-              <button onClick={() => setDeletingUser(null)} className="p-1 hover:bg-red-100 rounded-full"><X size={18} /></button>
+              <button onClick={() => setDeletingUser(null)} className="p-1 hover:bg-gray-800 rounded-full text-gray-400"><X size={18} /></button>
             </div>
             <div className="p-6">
-              <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-100 rounded-xl mb-5">
-                <AlertTriangle size={20} className="text-red-500 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-4 bg-red-900/20 border border-red-900/50 rounded-xl mb-5">
+                <AlertTriangle size={20} className="text-red-400 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-bold text-gray-800">{deletingUser.name}</p>
-                  <p className="text-xs text-gray-500">{deletingUser.email} · {deletingUser.roles[0]}</p>
+                  <p className="text-sm font-bold text-gray-200 font-mono">{deletingUser.name}</p>
+                  <p className="text-xs text-gray-500 font-mono">{deletingUser.email} · {deletingUser.roles[0]}</p>
                 </div>
               </div>
-              <p className="text-sm text-gray-600 mb-5">
+              <p className="text-sm text-gray-500 font-mono mb-5">
                 Akun ini akan dihapus permanen dari sistem. Data RPS yang terkait mungkin terpengaruh.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeletingUser(null)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50">
+                <button onClick={() => setDeletingUser(null)} className="flex-1 py-2.5 border border-gray-700 text-gray-400 text-sm font-bold rounded-lg hover:bg-gray-800 font-mono">
                   Batal
                 </button>
-                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 disabled:opacity-50">
+                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 disabled:opacity-50 font-mono">
                   {isDeleting ? 'Menghapus...' : 'Ya, Hapus'}
                 </button>
               </div>

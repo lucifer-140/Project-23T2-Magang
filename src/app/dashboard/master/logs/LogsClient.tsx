@@ -47,22 +47,22 @@ export function LogsClient({ initialLogs }: Props) {
         <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center">
           <FileText size={20} className="text-green-400" />
         </div>
-        <h1 className="text-3xl font-playfair font-bold text-uph-blue">Application Logs</h1>
+        <h1 className="text-3xl font-playfair font-bold text-gray-100">Application Logs</h1>
       </div>
       <p className="text-gray-500 mb-8">Real-time audit trail — rekam jejak semua perubahan data di sistem.</p>
 
       {/* Log Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {[
-          { label: 'Total', value: logs.length, color: 'border-gray-200 text-gray-700' },
-          { label: 'INFO',  value: logs.filter(l => l.level === 'INFO').length,  color: 'border-green-200 text-green-700' },
-          { label: 'WARN',  value: logs.filter(l => l.level === 'WARN').length,  color: 'border-yellow-200 text-yellow-700' },
-          { label: 'ERROR', value: logs.filter(l => l.level === 'ERROR').length, color: 'border-red-200 text-red-700' },
-          { label: 'DEBUG', value: logs.filter(l => l.level === 'DEBUG').length, color: 'border-gray-200 text-gray-400' },
+          { label: 'Total', value: logs.length, color: 'border-gray-700 text-gray-400' },
+          { label: 'INFO',  value: logs.filter(l => l.level === 'INFO').length,  color: 'border-green-900/50 text-green-400' },
+          { label: 'WARN',  value: logs.filter(l => l.level === 'WARN').length,  color: 'border-yellow-900/50 text-yellow-400' },
+          { label: 'ERROR', value: logs.filter(l => l.level === 'ERROR').length, color: 'border-red-900/50 text-red-400' },
+          { label: 'DEBUG', value: logs.filter(l => l.level === 'DEBUG').length, color: 'border-gray-800 text-gray-500' },
         ].map(stat => (
-          <div key={stat.label} className={`bg-white p-4 rounded-xl border ${stat.color} shadow-sm`}>
-            <p className="text-xs font-bold uppercase tracking-wider opacity-60">{stat.label}</p>
-            <p className={`text-3xl font-playfair font-bold mt-1 ${stat.color.split(' ')[1]}`}>{stat.value}</p>
+          <div key={stat.label} className={`bg-gray-900 p-4 rounded-xl border ${stat.color.split(' ')[0]} font-mono`}>
+            <p className={`text-[10px] font-bold uppercase tracking-widest opacity-70 ${stat.color.split(' ')[1]}`}>{stat.label}</p>
+            <p className={`text-3xl font-bold mt-1 ${stat.color.split(' ')[1]}`}>{stat.value}</p>
           </div>
         ))}
       </div>
@@ -70,15 +70,15 @@ export function LogsClient({ initialLogs }: Props) {
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">
         {/* Level tabs */}
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+        <div className="flex rounded-lg border border-gray-700 overflow-hidden font-mono">
           {LEVELS.map(l => (
             <button
               key={l}
               onClick={() => setLevel(l)}
               className={`px-3 py-1.5 text-xs font-bold transition-colors ${
                 level === l
-                  ? 'bg-gray-800 text-white'
-                  : 'bg-white text-gray-500 hover:bg-gray-50'
+                  ? 'bg-gray-700 text-green-400'
+                  : 'bg-gray-900 text-gray-500 hover:bg-gray-800 hover:text-gray-300'
               }`}
             >
               {l}
@@ -90,7 +90,7 @@ export function LogsClient({ initialLogs }: Props) {
         <select
           value={source}
           onChange={e => setSource(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+          className="bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-700 font-mono"
         >
           {SOURCES.map(s => (
             <option key={s.value} value={s.value}>{s.label}</option>
@@ -102,18 +102,18 @@ export function LogsClient({ initialLogs }: Props) {
           type="datetime-local"
           value={from}
           onChange={e => setFrom(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-gray-300"
+          className="bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-700 font-mono"
         />
         <input
           type="datetime-local"
           value={to}
           onChange={e => setTo(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-gray-300"
+          className="bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-700 font-mono"
         />
         {(from || to) && (
           <button
             onClick={() => { setFrom(''); setTo(''); }}
-            className="text-xs text-gray-400 hover:text-gray-700 px-2"
+            className="text-xs text-gray-500 hover:text-gray-300 px-2 font-mono"
           >
             Reset tanggal
           </button>

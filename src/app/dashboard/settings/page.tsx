@@ -80,10 +80,20 @@ export default function SettingsPage() {
     }
   };
 
+  const dark = profile?.roles.includes('MASTER') ?? false;
+
+  const inputCls = dark
+    ? 'w-full pl-9 pr-4 py-2.5 text-sm bg-gray-800 border border-gray-700 text-gray-200 placeholder-gray-600 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-purple-700 focus:border-purple-500'
+    : 'w-full pl-9 pr-4 py-2.5 text-sm border border-uph-border rounded-lg focus:outline-none focus:ring-2 focus:ring-uph-blue/20 focus:border-uph-blue transition-colors';
+
+  const labelCls = dark
+    ? 'block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono'
+    : 'block text-sm font-semibold text-gray-700 mb-1.5';
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-6 h-6 border-2 border-uph-blue border-t-transparent rounded-full animate-spin" />
+        <div className={`w-6 h-6 border-2 border-t-transparent rounded-full animate-spin ${dark ? 'border-purple-500' : 'border-uph-blue'}`} />
       </div>
     );
   }
@@ -91,14 +101,18 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-playfair font-bold text-uph-blue">Pengaturan Akun</h1>
+        <h1 className={`text-2xl font-playfair font-bold ${dark ? 'text-gray-100' : 'text-uph-blue'}`}>Pengaturan Akun</h1>
         <p className="text-sm text-gray-500 mt-1">Kelola informasi profil dan keamanan akun Anda.</p>
       </div>
 
       {/* Role badge */}
       <div className="mb-6 flex flex-wrap gap-2">
         {profile?.roles.map(r => (
-          <span key={r} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-uph-blue border border-blue-100">
+          <span key={r} className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border font-mono ${
+            dark
+              ? 'bg-purple-900/30 text-purple-400 border-purple-800'
+              : 'bg-blue-50 text-uph-blue border-blue-100'
+          }`}>
             {ROLE_LABELS[r] ?? r}
           </span>
         ))}
@@ -106,84 +120,52 @@ export default function SettingsPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Profile info */}
-        <div className="bg-white rounded-xl border border-uph-border p-6 space-y-4">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">Informasi Profil</h2>
+        <div className={`rounded-xl border p-6 space-y-4 ${dark ? 'bg-gray-900 border-gray-800' : 'bg-white border-uph-border'}`}>
+          <h2 className={`text-xs font-bold uppercase tracking-widest ${dark ? 'text-gray-500 font-mono' : 'text-gray-500'}`}>Informasi Profil</h2>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nama Lengkap</label>
+            <label className={labelCls}>Nama Lengkap</label>
             <div className="relative">
               <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                required
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-uph-border rounded-lg focus:outline-none focus:ring-2 focus:ring-uph-blue/20 focus:border-uph-blue transition-colors"
-                placeholder="Nama lengkap"
-              />
+              <input type="text" value={name} onChange={e => setName(e.target.value)} required className={inputCls} placeholder="Nama lengkap" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
+            <label className={labelCls}>Email</label>
             <div className="relative">
               <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-uph-border rounded-lg focus:outline-none focus:ring-2 focus:ring-uph-blue/20 focus:border-uph-blue transition-colors"
-                placeholder="email@example.com"
-              />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className={inputCls} placeholder="email@example.com" />
             </div>
           </div>
         </div>
 
         {/* Password change */}
-        <div className="bg-white rounded-xl border border-uph-border p-6 space-y-4">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">Ubah Password</h2>
-          <p className="text-xs text-gray-400">Kosongkan jika tidak ingin mengubah password.</p>
+        <div className={`rounded-xl border p-6 space-y-4 ${dark ? 'bg-gray-900 border-gray-800' : 'bg-white border-uph-border'}`}>
+          <h2 className={`text-xs font-bold uppercase tracking-widest ${dark ? 'text-gray-500 font-mono' : 'text-gray-500'}`}>Ubah Password</h2>
+          <p className={`text-xs ${dark ? 'text-gray-600 font-mono' : 'text-gray-400'}`}>Kosongkan jika tidak ingin mengubah password.</p>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password Lama</label>
+            <label className={labelCls}>Password Lama</label>
             <div className="relative">
               <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={e => setCurrentPassword(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-uph-border rounded-lg focus:outline-none focus:ring-2 focus:ring-uph-blue/20 focus:border-uph-blue transition-colors"
-                placeholder="Password saat ini"
-              />
+              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className={inputCls} placeholder="Password saat ini" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password Baru</label>
+            <label className={labelCls}>Password Baru</label>
             <div className="relative">
               <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="password"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-uph-border rounded-lg focus:outline-none focus:ring-2 focus:ring-uph-blue/20 focus:border-uph-blue transition-colors"
-                placeholder="Minimal 6 karakter"
-              />
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className={inputCls} placeholder="Minimal 6 karakter" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Konfirmasi Password Baru</label>
+            <label className={labelCls}>Konfirmasi Password Baru</label>
             <div className="relative">
               <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-uph-border rounded-lg focus:outline-none focus:ring-2 focus:ring-uph-blue/20 focus:border-uph-blue transition-colors"
-                placeholder="Ulangi password baru"
-              />
+              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputCls} placeholder="Ulangi password baru" />
             </div>
           </div>
         </div>
@@ -192,12 +174,10 @@ export default function SettingsPage() {
         {message && (
           <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium ${
             message.type === 'success'
-              ? 'bg-green-50 text-green-700 border border-green-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
+              ? dark ? 'bg-green-900/30 text-green-400 border border-green-700 font-mono' : 'bg-green-50 text-green-700 border border-green-200'
+              : dark ? 'bg-red-900/30 text-red-400 border border-red-700 font-mono' : 'bg-red-50 text-red-700 border border-red-200'
           }`}>
-            {message.type === 'success'
-              ? <CheckCircle size={16} />
-              : <AlertCircle size={16} />}
+            {message.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
             {message.text}
           </div>
         )}
@@ -206,7 +186,9 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-uph-blue text-white text-sm font-semibold rounded-lg hover:bg-uph-blue/90 disabled:opacity-60 transition-colors"
+            className={`flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-lg disabled:opacity-60 transition-colors ${
+              dark ? 'bg-purple-600 hover:bg-purple-700 font-mono' : 'bg-uph-blue hover:bg-uph-blue/90'
+            }`}
           >
             <Save size={16} />
             {saving ? 'Menyimpan...' : 'Simpan Perubahan'}

@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
   LayoutDashboard, FileText, BookOpen,
-  Users, Shield, Terminal, UserCheck, Library, BarChart2, Database, Settings, School, HardDrive, AlertTriangle
+  Users, Shield, Terminal, UserCheck, Library, BarChart2, Database, Settings, School, HardDrive, AlertTriangle, Table2
 } from 'lucide-react';
 import DashboardWrapper from '@/components/DashboardWrapper';
 
@@ -10,8 +10,9 @@ type RoleConfig = {
   label: string;
   subtitle: string;
   basePath: string;
-  navItems: { href: string; icon: React.ReactNode; label: string }[];
+  navItems: { href: string; icon: React.ReactNode; label: string; subItem?: boolean }[];
   accentColor: string;
+  theme?: 'dark';
 };
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -40,12 +41,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
       subtitle: 'System Master',
       basePath: '/dashboard/master',
       accentColor: 'bg-purple-600',
+      theme: 'dark' as const,
       navItems: [
         { href: '/dashboard/master', icon: <Terminal size={18} />, label: 'System Monitor' },
         { href: '/dashboard/master/users', icon: <Users size={18} />, label: 'Kelola Pengguna' },
         { href: '/dashboard/master/approvals', icon: <UserCheck size={18} />, label: 'Persetujuan Akun' },
         { href: '/dashboard/master/logs', icon: <FileText size={18} />, label: 'Application Logs' },
         { href: '/dashboard/master/uploads', icon: <HardDrive size={18} />, label: 'File Browser' },
+        { href: '/dashboard/master/uploads/matrix', icon: <BarChart2 size={18} />, label: 'Matrix Dokumen', subItem: true },
         { href: '/dashboard/master/errors', icon: <AlertTriangle size={18} />, label: 'Error Logs' },
       ],
     };
@@ -72,6 +75,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     if (roles.includes('KAPRODI')) {
       combinedNavItems.push({ href: '/dashboard/kaprodi', icon: <BarChart2 size={18} />, label: 'Analitik Kaprodi' });
+      combinedNavItems.push({ href: '/dashboard/kaprodi/matrix', icon: <Table2 size={18} />, label: 'Matrix Dokumen' });
     }
     if (roles.includes('PRODI')) {
       combinedNavItems.push({ href: '/dashboard/prodi', icon: <Shield size={18} />, label: 'Review Dokumen' });
@@ -98,7 +102,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   config.navItems.push({ href: '/dashboard/settings', icon: <Settings size={18} />, label: 'Pengaturan' });
 
   return (
-    <DashboardWrapper userName={userName} navItems={config.navItems}>
+    <DashboardWrapper userName={userName} navItems={config.navItems} theme={config.theme}>
       {children}
     </DashboardWrapper>
   );

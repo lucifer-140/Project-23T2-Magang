@@ -1,12 +1,25 @@
 # Project Status Report
 
 **Last Updated:** 2026-05-08  
-**Current Version:** 1.6.0  
+**Current Version:** 1.7.0  
 **Status:** Production Ready
 
 ---
 
 ## Completed Milestones
+
+### v1.7.0 — Document Status Matrix + Excel Export (2026-05-08)
+- [x] `src/lib/queries/documentMatrixPivot.ts` — `runDocumentMatrixPivot(semesterId)`: pivot query joining MatkulClass → Matkul → AcademicDocument into `MatrixRow[]` (RPS, LPP, Soal UTS, EPP UTS, Soal UAS, EPP UAS)
+- [x] `GET /api/master/document-matrix` — MASTER + KAPRODI; `?semesterId=` returns `MatrixRow[]`
+- [x] `GET /api/master/document-matrix/export` — ExcelJS `.xlsx` export; file cells as hyperlinks; `?semesterId=` (single sheet) or `?all=true` (one sheet per semester)
+- [x] `/dashboard/kaprodi/matrix` — semester selector + pivot table + Export Excel button
+- [x] `/dashboard/master/uploads/matrix` — same UI accessible from Master dashboard
+- [x] `MatrixRow`, `SemesterOption`, `DocCell` types added to `src/lib/api-types.ts`
+- [x] Master dashboard: "Matrix Dokumen" nav card added
+- [x] Kaprodi sidebar: "Matrix Dokumen" entry (`LayoutGrid` icon)
+- [x] `backup/db-pre-migration.sql` + `backup/uploads-pre-migration/` (1 036 files) snapshot created
+- [x] Removed dev scaffold pages (`src/app/feature/PdfRenderer.tsx`, `src/app/feature/page.tsx`)
+- [x] `exceljs` dependency added
 
 ### v1.6.0 — Security Hardening + Master Tools (2026-05-08)
 - [x] `src/lib/auth.ts` — centralized auth helpers; all API routes refactored to import from here

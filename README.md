@@ -1,6 +1,6 @@
 # Sistem Administrasi Prodi Informatika Medan
 
-![Version](https://img.shields.io/badge/version-1.6.0-blue)
+![Version](https://img.shields.io/badge/version-1.7.0-blue)
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
 ![Stack](https://img.shields.io/badge/stack-Next.js%2016%20%7C%20Prisma%207%20%7C%20PostgreSQL-informational)
 ![License](https://img.shields.io/badge/license-Proprietary-red)
@@ -31,6 +31,7 @@ Portal administrasi akademik terpadu untuk Dosen dan Kaprodi — mendigitalisasi
 - **Rate Limiting:** Auth endpoints (forgot-password, reset-password) dilindungi per-IP rate limiter (5 req / 15 min, 429 + Retry-After)
 - **Structured Logging:** `SystemLog` model mencatat error server (route, level, stack trace, userId); Master dapat melihat di halaman Error Logs
 - **Master File Manager:** MASTER dapat browse, filter, dan hapus file di `/public/uploads/` langsung dari dashboard; folder stats dan per-file size/date
+- **Document Status Matrix:** Tabel pivot (Kelas × Matkul × Dosen × Tipe Dokumen) per semester dengan hyperlink ke file; export ke Excel (.xlsx) multi-sheet via ExcelJS — tersedia untuk KAPRODI dan MASTER
 
 ---
 
@@ -314,6 +315,60 @@ docker compose down           # Stop Postgres
 
 ---
 
+## Backup & Restore
+
+### Membuat Backup
+
+```bash
+# 1. Dump database PostgreSQL (dari dalam container)
+docker exec -t <container_name> pg_dump -U postgres uph_admin > backup/db-$(date +%Y%m%d).sql
+
+# 2. Salin folder uploads
+cp -r public/uploads backup/uploads-$(date +%Y%m%d)
+```
+
+> Ganti `<container_name>` dengan nama container Postgres kamu — cek dengan `docker ps`.
+> Simpan kedua file backup di lokasi yang aman (luar server, mis. external drive atau cloud storage).
+
+### Restore dari Backup
+
+**Restore database:**
+
+```bash
+# 1. Pastikan container Postgres berjalan
+docker compose up -d
+
+# 2. Drop dan buat ulang database (HATI-HATI: menghapus semua data)
+docker exec -i <container_name> psql -U postgres -c "DROP DATABASE IF EXISTS uph_admin;"
+docker exec -i <container_name> psql -U postgres -c "CREATE DATABASE uph_admin;"
+
+# 3. Import dump
+docker exec -i <container_name> psql -U postgres uph_admin < backup/db-YYYYMMDD.sql
+
+# 4. Regenerate Prisma client (schema mungkin berubah)
+npx prisma generate
+```
+
+**Restore file uploads:**
+
+```bash
+# Salin kembali folder backup ke public/uploads
+cp -r backup/uploads-YYYYMMDD/. public/uploads/
+```
+
+**Verifikasi setelah restore:**
+
+```bash
+# Cek koneksi dan jumlah record
+npx prisma studio
+# atau jalankan aplikasi dan login
+npm run dev
+```
+
+> **Catatan:** Jika restore ke versi skema yang berbeda dari backup, jalankan `npx prisma migrate deploy` setelah import untuk menerapkan migrasi yang belum ada.
+
+---
+
 ## Known Limitations
 
 - **Passwords plain text** — intentional for development; hash dengan bcrypt/argon2 sebelum produksi
@@ -342,6 +397,9 @@ docker compose down           # Stop Postgres
 
 | Versi | Tanggal | Perubahan |
 |---|---|---|
+| **1.7.0** | 2026-05-08 | Document Status Matrix (pivot table + Excel export), backup snapshot |
+| **1.6.0** | 2026-05-08 | Security hardening, centralized auth, rate limiting, structured logging, Master File Manager + Error Logs |
+| **1.5.0** | 2026-05-06 | Admin Kelas management, MatkulClass–Kelas FK, merged Kelas & Pengajar column |
 | **1.4.0** | 2026-04-30 | Email system: SMTP config UI, forgot password, reset password, signup/approval notifications |
 | **1.3.0** | 2026-04-30 | Collapsible sidebar, user menu dropdown, settings page, logout API |
 | **1.2.1** | 2026-04-29 | Sortable table columns, delete TahunAkademik, login cleanup, bug fixes |

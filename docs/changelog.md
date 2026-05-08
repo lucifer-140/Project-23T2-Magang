@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented here.
 
+## [1.7.0] - 2026-05-08
+
+### Added
+- **Document Status Matrix** — pivot table showing all (Kelas × Matkul × Dosen × DocType) cells for a given semester; each cell links directly to the uploaded file.
+  - **`src/lib/queries/documentMatrixPivot.ts`** — `runDocumentMatrixPivot(semesterId)` raw query: joins `MatkulClass → Matkul → AcademicDocument` and pivots RPS, LPP, Soal UTS, EPP UTS, Soal UAS, EPP UAS into a single `MatrixRow[]`.
+  - **`GET /api/master/document-matrix`** — MASTER + KAPRODI; accepts `?semesterId=` query param; returns `MatrixRow[]`.
+  - **`GET /api/master/document-matrix/export`** — Excel (.xlsx) export via ExcelJS; file cells rendered as clickable hyperlinks; supports `?semesterId=` (single sheet) or `?all=true` (one sheet per semester, ordered tahun desc). Auth: MASTER + KAPRODI.
+  - **`/dashboard/kaprodi/matrix`** — Kaprodi matrix page: semester selector, pivot table, "Export Excel" button.
+  - **`/dashboard/master/uploads/matrix`** — Master matrix page: same UI, accessible from Master dashboard.
+- **`MatrixRow` + `SemesterOption` types** exported from `src/lib/api-types.ts`.
+- **Backup snapshot** — `backup/db-pre-migration.sql` (full PostgreSQL dump) + `backup/uploads-pre-migration/` (1 036 files) created before migration.
+
+### Changed
+- **Master dashboard** — "Matrix Dokumen" nav card added; live disk-usage stats and DB health shown inline.
+- **Kaprodi sidebar** — "Matrix Dokumen" nav entry (`LayoutGrid` icon, `/dashboard/kaprodi/matrix`).
+- **`src/lib/api-types.ts`** — added `DocCell`, `MatrixRow`, `SemesterOption` types.
+- **Removed** `src/app/feature/PdfRenderer.tsx` and `src/app/feature/page.tsx` (dev scaffold pages).
+- Dashboard client components — minor UX polish and type fixes (`ApprovalsClient`, `DashboardWrapper`, `SidebarNav`, `ErrorsClient`, `LogsClient`, `UploadsClient`, `UsersManageClientPage`, `settings/page.tsx`).
+
+### Dependencies
+- `exceljs` added for server-side `.xlsx` generation.
+
 ## [1.6.0] - 2026-05-08
 
 ### Added

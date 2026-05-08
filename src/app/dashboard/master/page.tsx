@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { Terminal, Database, Users, BookOpen, FileText, Activity, Server, HardDrive, Zap } from 'lucide-react';
+import { Terminal, Users, BookOpen, FileText, Activity, Server, HardDrive, Zap, Database } from 'lucide-react';
 import AutoRefresh from '@/components/AutoRefresh';
 import path from 'path';
 import fs from 'fs/promises';
@@ -51,6 +51,13 @@ function humanSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const LOG_LEVEL_COLOR: Record<string, string> = {
+  INFO:  'text-green-400',
+  WARN:  'text-yellow-400',
+  ERROR: 'text-red-400',
+  DEBUG: 'text-gray-500',
+};
+
 export default async function MasterDashboard() {
   const [userCount, matkulCount, rpsCount, changeReqCount, errorCount] = await Promise.all([
     prisma.user.count(),
@@ -60,13 +67,14 @@ export default async function MasterDashboard() {
     prisma.systemLog.count({ where: { level: 'ERROR' } }),
   ]);
 
-  const [rpsStats, allUsers, recentActivity, diskStats, dbHealth] = await Promise.all([
-    prisma.rPS.groupBy({ by: ['status'], _count: { status: true } }),
+  const [annotationCount, logCount, allUsers, recentLogs, diskStats, dbHealth] = await Promise.all([
+    prisma.rpsAnnotation.count(),
+    prisma.systemLog.count(),
     prisma.user.findMany({ select: { roles: true } }),
-    prisma.rPS.findMany({
-      include: { matkul: { select: { name: true } }, dosen: { select: { name: true } } },
-      orderBy: { updatedAt: 'desc' },
+    prisma.systemLog.findMany({
+      orderBy: { id: 'desc' },
       take: 10,
+      select: { id: true, level: true, message: true, userId: true, route: true },
     }),
     getDiskStats(),
     getDbHealth(),
@@ -87,31 +95,40 @@ export default async function MasterDashboard() {
 
   const maxFolderBytes = Math.max(...Object.values(diskStats.byFolder).map(f => f.sizeBytes), 1);
 
+  const dbTables = [
+    { table: 'users',           count: userCount,      color: 'text-purple-400' },
+    { table: 'matkul',          count: matkulCount,    color: 'text-blue-400' },
+    { table: 'rps',             count: rpsCount,       color: 'text-green-400' },
+    { table: 'change_requests', count: changeReqCount, color: 'text-yellow-400' },
+    { table: 'rps_annotations', count: annotationCount,color: 'text-cyan-400' },
+    { table: 'system_logs',     count: logCount,       color: 'text-gray-400' },
+  ];
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-2">
         <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center">
           <Terminal size={20} className="text-white" />
         </div>
-        <h1 className="text-3xl font-playfair font-bold text-uph-blue">System Monitor</h1>
+        <h1 className="text-3xl font-playfair font-bold text-gray-100">System Monitor</h1>
       </div>
       <p className="text-gray-500 mb-8">Developer dashboard — real-time system health & database overview.</p>
 
       {/* DB Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         {[
-          { label: 'Users', value: userCount, icon: <Users size={18} />, color: 'bg-purple-50 text-purple-600 border-purple-200' },
-          { label: 'Matkul', value: matkulCount, icon: <BookOpen size={18} />, color: 'bg-blue-50 text-uph-blue border-blue-200' },
-          { label: 'RPS', value: rpsCount, icon: <FileText size={18} />, color: 'bg-green-50 text-green-600 border-green-200' },
-          { label: 'Change Requests', value: changeReqCount, icon: <Activity size={18} />, color: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
-          { label: 'Errors Logged', value: errorCount, icon: <Zap size={18} />, color: errorCount > 0 ? 'bg-red-50 text-red-600 border-red-200' : 'bg-gray-50 text-gray-500 border-gray-200' },
+          { label: 'Users',          value: userCount,      icon: <Users size={18} />,    color: 'text-purple-400 border-purple-900/50' },
+          { label: 'Matkul',         value: matkulCount,    icon: <BookOpen size={18} />, color: 'text-blue-400 border-blue-900/50' },
+          { label: 'RPS',            value: rpsCount,       icon: <FileText size={18} />, color: 'text-green-400 border-green-900/50' },
+          { label: 'Change Requests',value: changeReqCount, icon: <Activity size={18} />, color: 'text-yellow-400 border-yellow-900/50' },
+          { label: 'Errors Logged',  value: errorCount,     icon: <Zap size={18} />,      color: errorCount > 0 ? 'text-red-400 border-red-900/50' : 'text-gray-500 border-gray-800' },
         ].map(stat => (
-          <div key={stat.label} className={`bg-white p-5 rounded-xl border ${stat.color} shadow-sm`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider opacity-70">{stat.label}</span>
+          <div key={stat.label} className={`bg-gray-900 p-5 rounded-xl border ${stat.color.split(' ')[1]} font-mono`}>
+            <div className={`flex items-center justify-between mb-2 ${stat.color.split(' ')[0]}`}>
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">{stat.label}</span>
               {stat.icon}
             </div>
-            <p className="text-3xl font-playfair font-bold">{stat.value}</p>
+            <p className={`text-3xl font-bold ${stat.color.split(' ')[0]}`}>{stat.value}</p>
           </div>
         ))}
       </div>
@@ -119,7 +136,7 @@ export default async function MasterDashboard() {
       {/* Health + Disk row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* DB + Process Health */}
-        <div className="bg-gray-900 rounded-2xl p-6 font-mono text-sm">
+        <div className="bg-gray-900 rounded-2xl p-6 font-mono text-sm border border-gray-800">
           <div className="text-purple-400 mb-4 font-bold flex items-center gap-2">
             <Server size={14} /> System Health
           </div>
@@ -160,25 +177,25 @@ export default async function MasterDashboard() {
         </div>
 
         {/* Disk Usage */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-2">
+        <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 font-mono">
+          <div className="text-purple-400 mb-1 font-bold flex items-center gap-2 text-sm">
             <HardDrive size={14} /> Upload Storage
-          </h2>
-          <p className="text-xs text-gray-400 mb-4">
+          </div>
+          <p className="text-[11px] text-gray-500 mb-4">
             {diskStats.totalFiles} files · {humanSize(diskStats.totalBytes)} total
           </p>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {Object.entries(diskStats.byFolder)
               .sort((a, b) => b[1].sizeBytes - a[1].sizeBytes)
               .map(([folder, info]) => (
                 <div key={folder}>
-                  <div className="flex justify-between text-xs mb-0.5">
-                    <span className="font-mono text-gray-600">{folder}</span>
-                    <span className="text-gray-400">{info.count} files · {humanSize(info.sizeBytes)}</span>
+                  <div className="flex justify-between text-[11px] mb-1">
+                    <span className="text-green-400">{folder}/</span>
+                    <span className="text-gray-500">{info.count} files · {humanSize(info.sizeBytes)}</span>
                   </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-purple-400 rounded-full"
+                      className="h-full bg-purple-500 rounded-full"
                       style={{ width: `${Math.round((info.sizeBytes / maxFolderBytes) * 100)}%` }}
                     />
                   </div>
@@ -189,61 +206,67 @@ export default async function MasterDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* RPS Status Breakdown */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Database size={14} /> RPS Status Breakdown
-          </h2>
-          <div className="space-y-2">
-            {rpsStats.map(stat => (
-              <div key={stat.status} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                <span className="text-sm font-mono text-gray-600">{stat.status}</span>
-                <span className="text-sm font-bold bg-gray-100 px-2 py-0.5 rounded">{stat._count.status}</span>
+        {/* DB Table Overview */}
+        <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 font-mono">
+          <div className="text-purple-400 mb-4 font-bold flex items-center gap-2 text-sm">
+            <Database size={14} /> DB Table Overview
+          </div>
+          <div className="space-y-1">
+            {dbTables.map(({ table, count, color }) => (
+              <div key={table} className="flex items-center justify-between py-1.5 border-b border-gray-800/60 last:border-0">
+                <span className={`text-xs font-mono ${color}`}>{table}</span>
+                <span className="text-xs font-bold text-gray-300 bg-gray-800 px-2 py-0.5 rounded">{count}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* User Role Breakdown */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+        {/* Users by Role */}
+        <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 font-mono">
+          <div className="text-purple-400 mb-4 font-bold flex items-center gap-2 text-sm">
             <Users size={14} /> Users by Role
-          </h2>
-          <div className="space-y-2">
+          </div>
+          <div className="space-y-1">
             {userStats.map(stat => (
-              <div key={stat.role} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                <span className="text-sm font-mono text-gray-600">{stat.role}</span>
-                <span className="text-sm font-bold bg-gray-100 px-2 py-0.5 rounded">{stat.count}</span>
+              <div key={stat.role} className="flex items-center justify-between py-1.5 border-b border-gray-800/60 last:border-0">
+                <span className="text-xs font-mono text-green-400">{stat.role}</span>
+                <span className="text-xs font-bold text-gray-300 bg-gray-800 px-2 py-0.5 rounded">{stat.count}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Recent Activity Log */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-          <Activity size={16} className="text-purple-500" />
-          <h2 className="text-sm font-bold text-gray-700">Recent RPS Activity (last 10)</h2>
+      {/* Recent System Events */}
+      <div className="bg-gray-950 rounded-2xl border border-gray-800 overflow-hidden">
+        <div className="px-6 py-3 bg-gray-900 border-b border-gray-800 flex items-center gap-3">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-500" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+            <div className="w-3 h-3 rounded-full bg-green-500" />
+          </div>
+          <Activity size={13} className="text-gray-500" />
+          <span className="text-xs font-mono text-gray-400">system.log — last 10 events</span>
         </div>
-        <div className="divide-y divide-gray-50">
-          {recentActivity.map(rps => (
-            <div key={rps.id} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50/50">
-              <div>
-                <span className="text-sm font-semibold text-gray-800">{rps.matkul.name}</span>
-                <span className="text-xs text-gray-400 ml-2">— {rps.dosen.name}</span>
+        <div className="divide-y divide-gray-900">
+          {recentLogs.length === 0 ? (
+            <div className="px-6 py-10 text-center text-gray-600 font-mono text-sm">No events.</div>
+          ) : (
+            recentLogs.map(log => (
+              <div key={log.id} className="px-6 py-2.5 flex items-center justify-between hover:bg-gray-900/40 font-mono text-xs">
+                <div className="flex items-center gap-4 min-w-0">
+                  <span className={`font-bold w-12 flex-shrink-0 uppercase ${LOG_LEVEL_COLOR[log.level] ?? 'text-gray-500'}`}>
+                    {log.level}
+                  </span>
+                  <span className="text-gray-300 truncate">{log.message}</span>
+                  {log.route && (
+                    <span className="text-[10px] text-purple-400 bg-purple-900/30 px-1.5 py-0.5 rounded flex-shrink-0">{log.route}</span>
+                  )}
+                </div>
+                {log.userId && <span className="text-green-400 flex-shrink-0 ml-4 text-[10px]">uid:{log.userId.slice(0,8)}</span>}
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-gray-400">{rps.updatedAt.toISOString().substring(0, 10)}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                  rps.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                  rps.status === 'REVISION'  ? 'bg-orange-100 text-orange-700' :
-                  rps.status === 'SUBMITTED' ? 'bg-blue-100 text-blue-700' :
-                  'bg-gray-100 text-gray-500'
-                }`}>{rps.status}</span>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 

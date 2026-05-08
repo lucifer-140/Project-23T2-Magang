@@ -71,25 +71,25 @@ export function ErrorsClient({ initialLogs }: Props) {
         <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center">
           <AlertTriangle size={20} className="text-white" />
         </div>
-        <h1 className="text-3xl font-playfair font-bold text-uph-blue">Error Logs</h1>
+        <h1 className="text-3xl font-playfair font-bold text-gray-100">Error Logs</h1>
       </div>
       <p className="text-gray-500 mb-8">API errors captured from system routes. Auto-refreshes every 10s.</p>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-xl border border-red-200 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-red-400">Total Errors</p>
-          <p className="text-3xl font-playfair font-bold text-red-600 mt-1">{logs.length}</p>
+        <div className="bg-gray-900 p-4 rounded-xl border border-red-900/50 font-mono">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 opacity-70">Total Errors</p>
+          <p className="text-3xl font-bold text-red-400 mt-1">{logs.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Unique Routes</p>
-          <p className="text-3xl font-playfair font-bold mt-1">
+        <div className="bg-gray-900 p-4 rounded-xl border border-gray-800 font-mono">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 opacity-70">Unique Routes</p>
+          <p className="text-3xl font-bold text-gray-300 mt-1">
             {new Set(logs.map(l => l.route).filter(Boolean)).size}
           </p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-400">With Stack Trace</p>
-          <p className="text-3xl font-playfair font-bold mt-1">
+        <div className="bg-gray-900 p-4 rounded-xl border border-gray-800 font-mono">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 opacity-70">With Stack Trace</p>
+          <p className="text-3xl font-bold text-gray-300 mt-1">
             {logs.filter(l => l.stack).length}
           </p>
         </div>
@@ -100,7 +100,7 @@ export function ErrorsClient({ initialLogs }: Props) {
         <select
           value={route}
           onChange={e => setRoute(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+          className="bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-900"
         >
           <option value="">Semua route</option>
           {routes.map(r => <option key={r} value={r}>{r}</option>)}
