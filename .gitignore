@@ -50,3 +50,6 @@ matkul.xlsx
 
 # Uploaded user files
 /public/uploads/
+
+# Generated screenshots
+/screenshots/

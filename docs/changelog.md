@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented here.
 
+## [1.8.0] - 2026-06-09
+
+### Added
+- **Session management** — `Session` table in Prisma schema; `prisma/migrations/20260508071513_add_session_table/` migration.
+- **Heartbeat API** — `src/app/api/auth/heartbeat/` keeps sessions alive on active clients.
+- **Error logging API** — `src/app/api/log-error/` for client-side error capture.
+- **`SessionGuard` component** — `src/components/SessionGuard.tsx` wraps dashboard layout; redirects on session expiry.
+- **Global error boundary** — `src/app/error.tsx` catches unhandled React errors.
+- **Custom 404 page** — `src/app/not-found.tsx`.
+- **Deployment documentation** — `docs/deployment-idcloudhost.md` with full VPS setup guide.
+
+### Changed
+- `src/lib/auth.ts` — session cookie helpers extended with heartbeat/expiry logic.
+- `src/app/dashboard/layout.tsx` — wraps children in `SessionGuard`.
+- `src/app/page.tsx` — root page redirect improvements.
+- `src/app/api/auth/logout/route.ts` — clears session from DB on logout.
+
 ## [1.7.0] - 2026-05-08
 
 ### Added
@@ -613,7 +630,7 @@ All notable changes to this project are documented here.
 - All buttons, tables, modals, and spacing use same design tokens
 - Consistent status badge colors and typography across both pages
 
-## [0.5.0] - 2026-02-15
+## [0.5.0] - 2026-04-06
 
 ### Initial Release
 - Core dashboard infrastructure (Admin, Kaprodi, Dosen, Master)

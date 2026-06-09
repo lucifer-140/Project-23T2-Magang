@@ -39,6 +39,7 @@
     "swr": "^2.4.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/node": "^22.19.15",
     "@types/pg": "^8.20.0",
     "@types/react": "^18",

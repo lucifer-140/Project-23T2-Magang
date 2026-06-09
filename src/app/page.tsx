@@ -36,6 +36,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       redirect('/?error=rejected');
     }
 
+    const session = await prisma.session.create({ data: { userId: user.id } });
+
+    cookieStore.set('sessionId', session.id, SESSION_COOKIE_OPTIONS);
     cookieStore.set('userRole', JSON.stringify(user.roles), SESSION_COOKIE_OPTIONS);
     cookieStore.set('userId', user.id, SESSION_COOKIE_OPTIONS);
     cookieStore.set('userName', user.name, SESSION_COOKIE_OPTIONS);
@@ -80,6 +83,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
           <div className="h-[1px] bg-gray-200 mb-7" />
 
+          {error === 'session_expired' && (
+            <div className="mb-5 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700 font-medium text-center">
+              Sesi Anda telah berakhir. Silakan masuk kembali.
+            </div>
+          )}
           {error === 'rate_limited' && (
             <div className="mb-5 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-700 font-medium text-center">
               Terlalu banyak percobaan login. Coba lagi dalam 15 menit.

@@ -1,5 +1,10 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+
+export const IDLE_TIMEOUT_MS = 60 * 60 * 1000;       // 60 minutes
+export const ABSOLUTE_TIMEOUT_MS = 12 * 60 * 60 * 1000; // 12 hours
+export const WARNING_BEFORE_MS = 2 * 60 * 1000;       // warn at 58-min mark
 
 export async function getCurrentUserId(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -19,6 +24,26 @@ export async function getRoles(): Promise<string[]> {
   }
 }
 
+export async function validateSession(): Promise<{ userId: string; sessionId: string } | null> {
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get('sessionId')?.value;
+  if (!sessionId) return null;
+
+  const session = await prisma.session.findUnique({ where: { id: sessionId } });
+  if (!session) return null;
+
+  const now = Date.now();
+  const idle = now - session.lastActivityAt.getTime();
+  const age = now - session.createdAt.getTime();
+
+  if (idle > IDLE_TIMEOUT_MS || age > ABSOLUTE_TIMEOUT_MS) {
+    await prisma.session.delete({ where: { id: sessionId } }).catch(() => {});
+    return null;
+  }
+
+  return { userId: session.userId, sessionId };
+}
+
 export function unauthorized() {
   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 }
@@ -31,4 +56,5 @@ export const SESSION_COOKIE_OPTIONS = {
   path: '/',
   httpOnly: true,
   sameSite: 'lax' as const,
+  secure: process.env.NODE_ENV === 'production',
 };

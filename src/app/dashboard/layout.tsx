@@ -5,6 +5,9 @@ import {
   Users, Shield, Terminal, UserCheck, Library, BarChart2, Database, Settings, School, HardDrive, AlertTriangle, Table2
 } from 'lucide-react';
 import DashboardWrapper from '@/components/DashboardWrapper';
+import SessionGuard from '@/components/SessionGuard';
+import AutoRefresh from '@/components/AutoRefresh';
+import { validateSession } from '@/lib/auth';
 
 type RoleConfig = {
   label: string;
@@ -16,6 +19,9 @@ type RoleConfig = {
 };
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const session = await validateSession();
+  if (!session) redirect('/?error=session_expired');
+
   const cookieStore = await cookies();
   const roleStr = cookieStore.get('userRole')?.value;
   const userName = cookieStore.get('userName')?.value ?? 'User';
@@ -102,8 +108,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   config.navItems.push({ href: '/dashboard/settings', icon: <Settings size={18} />, label: 'Pengaturan' });
 
   return (
-    <DashboardWrapper userName={userName} navItems={config.navItems} theme={config.theme}>
-      {children}
-    </DashboardWrapper>
+    <>
+      <DashboardWrapper userName={userName} navItems={config.navItems} theme={config.theme}>
+        {children}
+      </DashboardWrapper>
+      <SessionGuard />
+      <AutoRefresh />
+    </>
   );
 }

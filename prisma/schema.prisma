@@ -83,6 +83,16 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 }
 
+model Session {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+
+  @@index([userId])
+}
+
 model User {
   id                  String     @id @default(cuid())
   email               String     @unique
@@ -104,6 +114,7 @@ model User {
   prodiBAPReviews           BeritaAcaraPerwalian[] @relation("ProdiBAP")
   notifications             Notification[]
   changeRequests            MatkulChangeRequest[]
+  sessions                  Session[]
 }
 
 model TahunAkademik {
