@@ -56,5 +56,5 @@ export const SESSION_COOKIE_OPTIONS = {
   path: '/',
   httpOnly: true,
   sameSite: 'lax' as const,
-  secure: process.env.NODE_ENV === 'production',
+  secure: process.env.SECURE_COOKIES !== 'false' && process.env.NODE_ENV === 'production',
 };
