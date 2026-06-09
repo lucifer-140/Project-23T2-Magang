@@ -1,4 +1,5 @@
 import pg from 'pg';
+import bcrypt from 'bcrypt';
 import 'dotenv/config';
 
 const { Client } = pg;
@@ -8,18 +9,25 @@ async function main() {
   await client.connect();
   console.log('🌱 Seeding test accounts...');
 
-  await client.query(`
-    INSERT INTO "User" (id, email, password, roles, name, status)
-    VALUES
-      (gen_random_uuid()::text, 'master@test.com',       'master123',       ARRAY['MASTER']::"Role"[],                'System Developer',      'ACTIVE'::"UserStatus"),
-      (gen_random_uuid()::text, 'admin@test.com',        'admin123',        ARRAY['ADMIN']::"Role"[],                 'Admin Akademik',         'ACTIVE'::"UserStatus"),
-      (gen_random_uuid()::text, 'kaprodi@test.com',      'kaprodi123',      ARRAY['KAPRODI', 'DOSEN']::"Role"[],      'Dr. Kaprodi Utama',      'ACTIVE'::"UserStatus"),
-      (gen_random_uuid()::text, 'koordinator@test.com',  'koordinator123',  ARRAY['KOORDINATOR', 'DOSEN']::"Role"[],  'Koordinator Prodi',      'ACTIVE'::"UserStatus"),
-      (gen_random_uuid()::text, 'dosen@test.com',        'dosen123',        ARRAY['DOSEN']::"Role"[],                 'Dr. Budi Santoso',       'ACTIVE'::"UserStatus"),
-      (gen_random_uuid()::text, 'dosen2@test.com',       'dosen123',        ARRAY['DOSEN']::"Role"[],                 'Siti Aminah, M.Kom',     'ACTIVE'::"UserStatus"),
-      (gen_random_uuid()::text, 'prodi@test.com',        'prodi123',        ARRAY['DOSEN', 'PRODI']::"Role"[],        'Dr. Reviewer Prodi',     'ACTIVE'::"UserStatus")
-    ON CONFLICT (email) DO NOTHING
-  `);
+  const accounts = [
+    { email: 'master@test.com',       password: 'master123',       roles: ['MASTER'],                name: 'System Developer' },
+    { email: 'admin@test.com',        password: 'admin123',        roles: ['ADMIN'],                 name: 'Admin Akademik' },
+    { email: 'kaprodi@test.com',      password: 'kaprodi123',      roles: ['KAPRODI', 'DOSEN'],      name: 'Dr. Kaprodi Utama' },
+    { email: 'koordinator@test.com',  password: 'koordinator123',  roles: ['KOORDINATOR', 'DOSEN'],  name: 'Koordinator Prodi' },
+    { email: 'dosen@test.com',        password: 'dosen123',        roles: ['DOSEN'],                 name: 'Dr. Budi Santoso' },
+    { email: 'dosen2@test.com',       password: 'dosen123',        roles: ['DOSEN'],                 name: 'Siti Aminah, M.Kom' },
+    { email: 'prodi@test.com',        password: 'prodi123',        roles: ['DOSEN', 'PRODI'],        name: 'Dr. Reviewer Prodi' },
+  ];
+
+  for (const account of accounts) {
+    const hash = await bcrypt.hash(account.password, 12);
+    await client.query(
+      `INSERT INTO "User" (id, email, password, roles, name, status)
+       VALUES (gen_random_uuid()::text, $1, $2, $3::"Role"[], $4, 'ACTIVE'::"UserStatus")
+       ON CONFLICT (email) DO UPDATE SET password = EXCLUDED.password`,
+      [account.email, hash, account.roles, account.name]
+    );
+  }
   console.log('✅ Users seeded');
 
   console.log('\n🎉 Seed complete!');
