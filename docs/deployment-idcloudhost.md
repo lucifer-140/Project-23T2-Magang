@@ -1,5 +1,22 @@
 # Deployment Plan: IDCloudHost VPS
 
+## Current Production State (2026-06-11)
+
+| Key | Value |
+|-----|-------|
+| VPS IP | `103.49.238.80` |
+| Hostname | `UphMedanSystem` |
+| OS | Ubuntu 24.04 LTS |
+| Domain | `https://portal-uphmedan.web.id` |
+| SSL | Let's Encrypt (Certbot), expires 2026-09-09, auto-renews |
+| Nginx config | `/etc/nginx/sites-enabled/uph-admin` |
+| App port | `3000` (Next.js via PM2) |
+| Database | PostgreSQL via Docker on `localhost:5432` |
+| Uploads | `/data/uph-uploads/` |
+| SSH user | `UphMedanSystem` |
+
+---
+
 ## What to Buy on IDCloudHost
 
 ### 1. VPS

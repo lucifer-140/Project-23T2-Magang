@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## [1.9.0] - 2026-06-11
+
+### Deployment
+- Domain `portal-uphmedan.web.id` registered on IDCloudHost; DNS A record → `103.49.238.80`
+- Nginx `server_name` updated to include domain alongside VPS IP (`/etc/nginx/sites-enabled/uph-admin`)
+- Let's Encrypt SSL certificate issued via Certbot; HTTPS live at `https://portal-uphmedan.web.id`; auto-renewal enabled (expires 2026-09-09)
+
 ## [1.8.0] - 2026-06-09
 
 ### Added

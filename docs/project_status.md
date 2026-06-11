@@ -1,8 +1,8 @@
 # Project Status Report
 
-**Last Updated:** 2026-05-08  
-**Current Version:** 1.7.0  
-**Status:** Production Ready
+**Last Updated:** 2026-06-11  
+**Current Version:** 1.9.0  
+**Status:** Production (Live)
 
 ---
 
@@ -528,29 +528,27 @@ model AcademicDocument {
 
 ## Deployment Notes
 
-**Current Environment**: Development (Docker-based local PostgreSQL)
+**Current Environment**: Production (IDCloudHost VPS)
 
-**Planned Local Server Environment (2026-04-15):**
-- **Hardware**: MacBook Intel (repurposed as local server)
-- **OS**: Ubuntu Server 24.04 LTS (headless)
-- **Runtime**: Node.js 22 LTS via NVM + PM2 (process manager, auto-restart on reboot)
-- **Database**: PostgreSQL via Docker Compose (existing setup, unchanged)
-- **Access**: LAN access via `http://<server-ip>:3000`; SSH for remote management
-- **Optional**: Nginx reverse proxy for clean local domain (e.g. `http://uph.local`)
-
-Setup notes:
-- MacBook broadcom WiFi may need `bcmwl-kernel-source` driver; use Ethernet during initial install
-- Boot from USB: hold **Option** key on startup to select boot device
-- Enable OpenSSH during Ubuntu install for headless management
+**Live Production State (2026-06-11):**
+- **VPS IP**: `103.49.238.80` (IDCloudHost)
+- **Hostname**: `UphMedanSystem`
+- **OS**: Ubuntu 24.04 LTS
+- **Domain**: `https://portal-uphmedan.web.id`
+- **SSL**: Let's Encrypt via Certbot — expires 2026-09-09, auto-renews
+- **Nginx config**: `/etc/nginx/sites-enabled/uph-admin` — proxies to `localhost:3000`
+- **App**: Next.js on port 3000, managed by PM2
+- **Database**: PostgreSQL via Docker Compose on `localhost:5432`
+- **Uploads**: persisted at `/data/uph-uploads/`
 
 **Production Checklist**:
-- [ ] Environment variables configured (.env.production)
+- [x] Environment variables configured (.env.production)
 - [ ] Database backups enabled
-- [ ] HTTPS enforced
+- [x] HTTPS enforced
 - [ ] CORS properly configured
-- [ ] Rate limiting implemented
+- [x] Rate limiting implemented
 - [ ] Monitoring & alerting setup
-- [ ] User session timeout configured
+- [x] User session timeout configured
 - [ ] File upload security hardened
 
 ---
