@@ -197,17 +197,38 @@ npx tsx prisma/seed-katalog.ts
 
 ## Redeployment (future updates)
 
+> **Run as `UphMedanSystem` via sudo** — `su - uphapp` requires uphapp's password which is not set. Use `sudo -u uphapp` instead.
+
 ```bash
-su - uphapp
-cd /home/uphapp/uph-admin
-git pull
-npm ci
-npx prisma migrate deploy
-npm run build
-pm2 restart uph-admin
+# 1. Pull latest code
+sudo -u uphapp bash -c "cd /home/uphapp/uph-admin && git pull"
+
+# 2. Install dependencies
+sudo -u uphapp bash -c "cd /home/uphapp/uph-admin && npm ci --legacy-peer-deps"
+
+# 3. Run pending DB migrations + regenerate Prisma client
+sudo -u uphapp bash -c "cd /home/uphapp/uph-admin && set -a && . .env.production && set +a && npx prisma migrate deploy && npx prisma generate"
+
+# 4. Temporarily remove symlink so Turbopack doesn't panic on out-of-root path
+sudo -u uphapp bash -c "cd /home/uphapp/uph-admin && unlink public/uploads && mkdir public/uploads"
+
+# 5. Build
+sudo -u uphapp bash -c "cd /home/uphapp/uph-admin && set -a && . .env.production && set +a && npm run build"
+
+# 6. Restore symlink
+sudo -u uphapp bash -c "cd /home/uphapp/uph-admin && rmdir public/uploads && ln -s /data/uph-uploads public/uploads"
+
+# 7. Restart app
+sudo -u uphapp bash -c "pm2 restart uph-admin && pm2 logs uph-admin --lines 10 --nostream"
 ```
 
-Files in `/data/uph-uploads/` are untouched — symlink preserves them across deploys.
+> **Why `--legacy-peer-deps`:** `eslint-config-next@16` requires `eslint>=9` but the project pins `eslint@^8`. Flag bypasses the conflict without changing deps.
+>
+> **Why the symlink dance (steps 4–6):** `public/uploads` is a symlink to `/data/uph-uploads/` (outside the project root). Turbopack follows symlinks during the module graph build and panics when a resolved path escapes the project root. Replacing it with an empty dir during build avoids this. `next.config.mjs` also sets `outputFileTracingExcludes` for future-proofing — but the symlink swap is still required for Turbopack itself.
+>
+> **Why `set -a && . .env.production`:** Prisma CLI only auto-loads `.env`, not `.env.production`. Sourcing with `set -a` exports all vars (including `DATABASE_URL`) into the subshell.
+
+Files in `/data/uph-uploads/` are untouched — Docker volume and the symlink target are never modified during deploy.
 
 ---
 

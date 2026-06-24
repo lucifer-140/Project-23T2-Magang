@@ -1,12 +1,20 @@
 # Project Status Report
 
-**Last Updated:** 2026-06-11  
-**Current Version:** 1.9.0  
+**Last Updated:** 2026-06-24  
+**Current Version:** 1.9.1  
 **Status:** Production (Live)
 
 ---
 
 ## Completed Milestones
+
+### v1.9.1 — Matkul Hub Table-Row Layout (2026-06-24)
+- [x] Replaced card grid with compact `divide-y` table-row layout in `MatkulHubClient.tsx`
+- [x] Dosen view: `[Doc Label | Status | Action]` horizontal rows; EPP rows expand inline via chevron toggle
+- [x] Reviewer view: flat table — doc label (first dosen only, `↳` for subsequent) + dosen name + status+notes + actions
+- [x] `StatusBadge` resized to `text-[10px]`; "Menunggu Koordinator" → "Menunggu Koord."
+- [x] `border-l border-gray-200` separator between status and action columns in both views
+- [x] `next.config.mjs` — `outputFileTracingExcludes` for `./public/uploads/**` (fixes Turbopack symlink panic on VPS builds)
 
 ### v1.7.0 — Document Status Matrix + Excel Export (2026-05-08)
 - [x] `src/lib/queries/documentMatrixPivot.ts` — `runDocumentMatrixPivot(semesterId)`: pivot query joining MatkulClass → Matkul → AcademicDocument into `MatrixRow[]` (RPS, LPP, Soal UTS, EPP UTS, Soal UAS, EPP UAS)

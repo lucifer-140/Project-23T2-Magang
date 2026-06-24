@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## [1.9.1] - 2026-06-24
+
+### Changed
+- **Matkul Hub upload page** (`src/app/dashboard/matkul/[katalogId]/MatkulHubClient.tsx`) — replaced 2-column card grid with compact table-row layout for both Dosen and Reviewer views.
+  - Dosen view: each doc type is a horizontal row (`[Doc Label | Status | Action]`); EPP rows have inline expand toggle for data fields.
+  - Reviewer view: flat `divide-y` table — doc label in col 1 (first dosen only, `↳` for subsequent), dosen name in col 2, status+notes in col 3, actions in col 4.
+  - `StatusBadge` made smaller (`text-[10px]`, icon size 10, `px-1.5`); "Menunggu Koordinator" shortened to "Menunggu Koord."
+  - Thin `border-l border-gray-200` separator between status and action columns.
+
+### Fixed
+- **`next.config.mjs`** — added `outputFileTracingExcludes` for `./public/uploads/**` to prevent Turbopack from panicking on the `public/uploads → /data/uph-uploads` symlink during production builds.
+
 ## [1.9.0] - 2026-06-11
 
 ### Deployment
