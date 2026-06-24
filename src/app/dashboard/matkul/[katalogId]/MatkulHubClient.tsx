@@ -121,14 +121,15 @@ const encodeUrl = (url: string | null | undefined) =>
   url?.split('/').map((s, i) => i === 0 ? s : encodeURIComponent(s)).join('/') ?? undefined;
 
 function StatusBadge({ status, isKoordinatorApproved, isProdiApproved }: { status: string; isKoordinatorApproved?: boolean; isProdiApproved?: boolean }) {
-  if (status === 'APPROVED') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700"><CheckCircle size={12} /> Disetujui</span>;
-  if (status === 'REVISION') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700"><AlertCircle size={12} /> Revisi</span>;
+  const base = "inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full";
+  if (status === 'APPROVED') return <span className={`${base} bg-green-100 text-green-700`}><CheckCircle size={10} /> Disetujui</span>;
+  if (status === 'REVISION') return <span className={`${base} bg-red-100 text-red-700`}><AlertCircle size={10} /> Revisi</span>;
   if (status === 'PENGECEKAN') {
-    if (isProdiApproved) return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><Clock size={12} /> Menunggu Kaprodi</span>;
-    return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700"><Clock size={12} /> Menunggu PRODI</span>;
+    if (isProdiApproved) return <span className={`${base} bg-purple-100 text-purple-700`}><Clock size={10} /> Menunggu Kaprodi</span>;
+    return <span className={`${base} bg-indigo-100 text-indigo-700`}><Clock size={10} /> Menunggu PRODI</span>;
   }
-  if (status === 'SUBMITTED') return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700"><Clock size={12} /> Menunggu Koordinator</span>;
-  return <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500"><XCircle size={12} /> Belum Upload</span>;
+  if (status === 'SUBMITTED') return <span className={`${base} bg-amber-100 text-amber-700`}><Clock size={10} /> Menunggu Koord.</span>;
+  return <span className={`${base} bg-gray-100 text-gray-500`}><XCircle size={10} /> Belum Upload</span>;
 }
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -171,6 +172,7 @@ export default function MatkulHubClient({
     setReviewModal(null);
     setSignatureDataUrl(null);
     setCollapsedClasses(new Set());
+    setExpandedEppRows(new Set());
   }, [semesterId]);
 
   // Flatten classSections into docs array for lookups
@@ -196,6 +198,9 @@ export default function MatkulHubClient({
     isReviewer ? 'reviewer' : 'dosen'
   );
   const [collapsedClasses, setCollapsedClasses] = useState<Set<string>>(new Set());
+  const [expandedEppRows, setExpandedEppRows] = useState<Set<string>>(new Set());
+  const toggleEppRow = (key: string) =>
+    setExpandedEppRows(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
 
   // Upload state
   const [uploading, setUploading] = useState<string | null>(null);
@@ -399,7 +404,7 @@ export default function MatkulHubClient({
   };
 
   // ---------- Dosen view ----------
-  const renderDocCard = (type: DocType, classId: string) => {
+  const renderDocRow = (type: DocType, classId: string) => {
     const doc = getDoc(type, classId);
     const uploadKey = `${classId}_${type}`;
     const isUploading = uploading === uploadKey;
@@ -410,99 +415,139 @@ export default function MatkulHubClient({
     const fields = getEppFields(classId, type);
     const isSavingEpp = savingEppKey === eppKey;
     const isEppSaved = savedEppKeys.has(eppKey);
+    const isEppExpanded = expandedEppRows.has(eppKey);
 
-    const borderClass =
-      status === 'APPROVED' ? 'border-green-200' :
-      status === 'REVISION' ? 'border-red-200' :
-      (status === 'SUBMITTED' || status === 'PENGECEKAN') ? 'border-amber-200' :
-      'border-uph-border';
+    const rowBg =
+      status === 'APPROVED' ? 'bg-green-50/30' :
+      status === 'REVISION' ? 'bg-red-50/20' :
+      (status === 'SUBMITTED' || status === 'PENGECEKAN') ? 'bg-amber-50/20' :
+      '';
+
+    const revisionNotes = [
+      doc?.koordinatorNotes ? { label: 'Koordinator', note: doc.koordinatorNotes } : null,
+      doc?.prodiNotes ? { label: 'PRODI', note: doc.prodiNotes } : null,
+      doc?.kaprodiNotes ? { label: 'Kaprodi', note: doc.kaprodiNotes } : null,
+    ].filter(Boolean) as { label: string; note: string }[];
 
     return (
-      <div key={type} className={`bg-white border ${borderClass} rounded-xl flex flex-col`}>
-        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-          <span className="font-semibold text-gray-800">{DOC_LABEL[type]}</span>
-          <StatusBadge status={status} isKoordinatorApproved={doc?.isKoordinatorApproved} isProdiApproved={doc?.isProdiApproved} />
-        </div>
-        <div className="px-5 py-4 flex-1 space-y-3">
-          {status === 'UNSUBMITTED' && !isEpp && <p className="text-sm text-gray-400">Belum ada dokumen yang diunggah.</p>}
-          {(status === 'SUBMITTED' || status === 'PENGECEKAN') && (
-            <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-              <Lock size={13} className="flex-shrink-0" /> Dokumen sedang dalam proses review.
+      <div key={type}>
+        <div className={`flex items-center gap-4 px-5 py-3 transition-colors ${rowBg} hover:bg-uph-grayBg`}>
+          {/* Left: doc label */}
+          <div className="w-44 shrink-0 flex items-center gap-1">
+            <span className="text-sm font-semibold text-gray-800">{DOC_LABEL[type]}</span>
+            {isEpp && uploadAllowed && (
+              <button
+                onClick={() => toggleEppRow(eppKey)}
+                className="p-0.5 rounded text-gray-400 hover:text-uph-blue transition-colors"
+                title={isEppExpanded ? 'Tutup data EPP' : 'Isi data EPP'}
+              >
+                {isEppExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            )}
+          </div>
+
+          {/* Middle: status + notes */}
+          <div className="flex-1 min-w-0 flex flex-col gap-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatusBadge status={status} isKoordinatorApproved={doc?.isKoordinatorApproved} isProdiApproved={doc?.isProdiApproved} />
+              {(status === 'SUBMITTED' || status === 'PENGECEKAN') && (
+                <span className="text-xs text-amber-600 flex items-center gap-1"><Lock size={11} /> Dalam review</span>
+              )}
             </div>
-          )}
-          {status === 'APPROVED' && <p className="text-sm text-green-700 font-semibold">Dokumen telah disetujui.</p>}
-          {status === 'REVISION' && (
-            <div className="space-y-2">
-              {doc?.koordinatorNotes && <div className="bg-red-50 border border-red-200 rounded-lg p-3"><p className="text-xs font-bold text-red-600 mb-1">Catatan Koordinator:</p><p className="text-sm text-red-700">{doc.koordinatorNotes}</p></div>}
-              {doc?.prodiNotes && <div className="bg-red-50 border border-red-200 rounded-lg p-3"><p className="text-xs font-bold text-red-600 mb-1">Catatan PRODI:</p><p className="text-sm text-red-700">{doc.prodiNotes}</p></div>}
-              {doc?.kaprodiNotes && <div className="bg-red-50 border border-red-200 rounded-lg p-3"><p className="text-xs font-bold text-red-600 mb-1">Catatan Kaprodi:</p><p className="text-sm text-red-700">{doc.kaprodiNotes}</p></div>}
-              {doc?.annotatedPdfUrl && <a href={encodeUrl(doc.annotatedPdfUrl)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-uph-blue hover:underline"><Eye size={14} /> Lihat Anotasi PDF</a>}
-            </div>
-          )}
-          {isEpp && uploadAllowed && (
-            <div className="border border-uph-border rounded-xl p-4 space-y-3 bg-blue-50/30">
-              <p className="text-xs font-bold text-uph-blue uppercase tracking-wide">Data EPP</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {([
-                  { key: 'eppPersentaseMateri' as keyof EppFieldState, label: 'Kesesuaian materi dari RPS' },
-                  { key: 'eppPersentaseCpmk' as keyof EppFieldState, label: 'Kesesuaian CPMK dengan Sub CPMK' },
-                  { key: 'eppPersentaseKehadiran' as keyof EppFieldState, label: 'Rata-rata kehadiran mahasiswa' },
-                  { key: 'eppPersentaseNilaiB' as keyof EppFieldState, label: 'Mahasiswa mendapat nilai ≥ B' },
-                  { key: 'eppPersentaseKkmToB' as keyof EppFieldState, label: 'Mahasiswa KKM ≤ Nilai < B' },
-                ]).map(({ key, label }) => (
-                  <div key={key}>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">{label} (%)</label>
-                    <input type="text" inputMode="decimal" value={fields[key]}
-                      onKeyDown={e => { if (['e','E','+','-',' '].includes(e.key) || (e.key.length === 1 && !/[\d.]/.test(e.key))) e.preventDefault(); }}
-                      onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) { const n = parseFloat(v); if (v === '' || (n >= 0 && n <= 100)) setEppField(classId, type, key, v); } }}
-                      className="w-full border border-uph-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-uph-blue/30"
-                      placeholder="0–100"
-                    />
-                  </div>
+            {status === 'REVISION' && revisionNotes.length > 0 && (
+              <div className="space-y-0.5">
+                {revisionNotes.map(({ label, note }) => (
+                  <p key={label} className="text-xs text-red-600 italic truncate" title={note}>
+                    <span className="font-semibold not-italic">{label}:</span> &ldquo;{note}&rdquo;
+                  </p>
                 ))}
+                {doc?.annotatedPdfUrl && (
+                  <a href={encodeUrl(doc.annotatedPdfUrl)} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-uph-blue hover:underline">
+                    <Eye size={11} /> Lihat anotasi
+                  </a>
+                )}
               </div>
-              <div className="flex items-center gap-3">
-                <button onClick={() => handleSaveEpp(type, classId)} disabled={isSavingEpp}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-uph-blue text-white rounded-lg text-xs font-bold hover:bg-uph-blue/90 disabled:opacity-50 transition-colors">
-                  {isSavingEpp ? <Loader2 size={12} className="animate-spin" /> : null} Simpan Data EPP
-                </button>
-                {isEppSaved && <span className="flex items-center gap-1 text-xs font-semibold text-green-600"><CheckCircle size={13} /> Data tersimpan</span>}
-              </div>
-            </div>
-          )}
-          {isEpp && !uploadAllowed && doc && (doc.eppPersentaseMateri != null || doc.eppPersentaseCpmk != null) && (
-            <div className="border border-gray-200 rounded-xl p-3 space-y-1.5 bg-gray-50/50">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Data EPP</p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            )}
+            {isEpp && !uploadAllowed && doc && (doc.eppPersentaseMateri != null || doc.eppPersentaseCpmk != null) && (
+              <div className="flex flex-wrap gap-x-3 gap-y-0">
                 {([
-                  { key: 'eppPersentaseMateri' as keyof Doc, label: 'Kesesuaian materi' },
-                  { key: 'eppPersentaseCpmk' as keyof Doc, label: 'Kesesuaian CPMK' },
-                  { key: 'eppPersentaseKehadiran' as keyof Doc, label: 'Kehadiran mahasiswa' },
-                  { key: 'eppPersentaseNilaiB' as keyof Doc, label: 'Nilai ≥ B' },
-                  { key: 'eppPersentaseKkmToB' as keyof Doc, label: 'KKM ≤ Nilai < B' },
+                  { key: 'eppPersentaseMateri' as keyof Doc, label: 'Materi' },
+                  { key: 'eppPersentaseCpmk' as keyof Doc, label: 'CPMK' },
+                  { key: 'eppPersentaseKehadiran' as keyof Doc, label: 'Kehadiran' },
+                  { key: 'eppPersentaseNilaiB' as keyof Doc, label: '≥B' },
+                  { key: 'eppPersentaseKkmToB' as keyof Doc, label: 'KKM→B' },
                 ]).map(({ key, label }) => {
                   const val = doc[key]; if (val == null) return null;
-                  return <div key={key} className="flex justify-between text-xs"><span className="text-gray-500">{label}</span><span className="font-bold text-gray-700">{String(val)}%</span></div>;
+                  return <span key={key} className="text-xs text-gray-500">{label}: <span className="font-bold text-gray-700">{String(val)}%</span></span>;
                 })}
               </div>
+            )}
+          </div>
+
+          {/* Right: action */}
+          <div className="shrink-0 pl-3 border-l border-gray-200">
+            {uploadAllowed ? (
+              <button
+                onClick={() => handleUploadClick(type, classId)}
+                disabled={isUploading || (isEpp && !isEppSaved)}
+                title={isEpp && !isEppSaved ? 'Simpan Data EPP terlebih dahulu' : undefined}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-uph-blue text-white rounded-lg text-xs font-semibold hover:bg-uph-blue/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              >
+                {isUploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                {status === 'UNSUBMITTED' ? 'Upload' : 'Upload Ulang'}
+              </button>
+            ) : status === 'APPROVED' ? (
+              (() => {
+                const url = doc?.finalPdfUrl ?? doc?.koordinatorSignedPdfUrl ?? doc?.fileUrl;
+                return url ? (
+                  <button onClick={() => setPdfPreviewUrl(url)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-uph-blue border border-uph-blue px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
+                    <Download size={12} /> Lihat PDF
+                  </button>
+                ) : null;
+              })()
+            ) : (
+              <span className="flex items-center gap-1 text-xs text-gray-400">
+                <Lock size={11} /> Terkunci
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* EPP expand panel */}
+        {isEpp && uploadAllowed && isEppExpanded && (
+          <div className="px-5 py-4 bg-blue-50/40 border-t border-uph-border">
+            <p className="text-xs font-bold text-uph-blue uppercase tracking-wide mb-3">Data EPP</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+              {([
+                { key: 'eppPersentaseMateri' as keyof EppFieldState, label: 'Kesesuaian materi dari RPS' },
+                { key: 'eppPersentaseCpmk' as keyof EppFieldState, label: 'Kesesuaian CPMK dengan Sub CPMK' },
+                { key: 'eppPersentaseKehadiran' as keyof EppFieldState, label: 'Rata-rata kehadiran mahasiswa' },
+                { key: 'eppPersentaseNilaiB' as keyof EppFieldState, label: 'Mahasiswa mendapat nilai ≥ B' },
+                { key: 'eppPersentaseKkmToB' as keyof EppFieldState, label: 'Mahasiswa KKM ≤ Nilai < B' },
+              ]).map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">{label} (%)</label>
+                  <input
+                    type="text" inputMode="decimal" value={fields[key]}
+                    onKeyDown={e => { if (['e','E','+','-',' '].includes(e.key) || (e.key.length === 1 && !/[\d.]/.test(e.key))) e.preventDefault(); }}
+                    onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) { const n = parseFloat(v); if (v === '' || (n >= 0 && n <= 100)) setEppField(classId, type, key, v); } }}
+                    className="w-full border border-uph-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-uph-blue/30"
+                    placeholder="0–100"
+                  />
+                </div>
+              ))}
             </div>
-          )}
-        </div>
-        <div className="px-5 pb-4 flex items-center gap-2">
-          {uploadAllowed ? (
-            <button onClick={() => handleUploadClick(type, classId)}
-              disabled={isUploading || (isEpp && !isEppSaved)}
-              title={isEpp && !isEppSaved ? 'Simpan Data EPP terlebih dahulu' : undefined}
-              className="flex items-center gap-2 px-4 py-2 bg-uph-blue text-white rounded-lg text-sm font-semibold hover:bg-uph-blue/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
-              {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              {status === 'UNSUBMITTED' ? 'Upload Dokumen' : 'Upload Ulang'}
-            </button>
-          ) : status === 'APPROVED' ? (
-            (() => { const url = doc?.finalPdfUrl ?? doc?.koordinatorSignedPdfUrl ?? doc?.fileUrl; return url ? <button onClick={() => setPdfPreviewUrl(url)} className="flex items-center gap-2 text-sm font-semibold text-uph-blue border border-uph-blue px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"><Download size={14} /> PDF Disetujui</button> : null; })()
-          ) : (
-            <span className="flex items-center gap-1.5 text-xs text-gray-400"><Lock size={12} /> Upload terkunci selama review</span>
-          )}
-        </div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => handleSaveEpp(type, classId)} disabled={isSavingEpp}
+                className="flex items-center gap-2 px-3 py-1.5 bg-uph-blue text-white rounded-lg text-xs font-bold hover:bg-uph-blue/90 disabled:opacity-50 transition-colors">
+                {isSavingEpp ? <Loader2 size={12} className="animate-spin" /> : null} Simpan Data EPP
+              </button>
+              {isEppSaved && <span className="flex items-center gap-1 text-xs font-semibold text-green-600"><CheckCircle size={13} /> Data tersimpan</span>}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -541,8 +586,8 @@ export default function MatkulHubClient({
                 {isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
               </button>
               {isOpen && (
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-uph-grayBg border-t border-uph-border">
-                  {DISPLAY_DOC_TYPES.map(type => renderDocCard(type, cls.classId))}
+                <div className="bg-white border-t border-uph-border divide-y divide-gray-100">
+                  {DISPLAY_DOC_TYPES.map(type => renderDocRow(type, cls.classId))}
                 </div>
               )}
             </div>
@@ -577,93 +622,103 @@ export default function MatkulHubClient({
                 {isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
               </button>
               {isOpen && (
-                <div className="p-4 space-y-6 bg-uph-grayBg border-t border-uph-border">
-                  {DISPLAY_DOC_TYPES.map(type => {
+                <div className="bg-white border-t border-uph-border divide-y divide-gray-100">
+                  {DISPLAY_DOC_TYPES.flatMap(type => {
                     const typeDocs: Doc[] = (cls.sections.find(s => s.type === type)?.docs ?? []) as Doc[];
-                    const pendingCount = typeDocs.filter(d => reviewerCanReview(d)).length;
-                    const allApproved = typeDocs.length > 0 && typeDocs.every(d => d.status === 'APPROVED');
 
-                    return (
-                      <div key={type}>
-                        <div className="flex items-center gap-2.5 mb-2.5">
-                          <h4 className="text-sm font-bold text-gray-700">{DOC_LABEL[type]}</h4>
-                          {pendingCount > 0 && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-uph-red text-white">{pendingCount} perlu review</span>}
-                          {allApproved && <span className="text-xs font-semibold text-green-600 flex items-center gap-1"><CheckCircle size={12} /> Semua disetujui</span>}
+                    if (typeDocs.length === 0) {
+                      return [(
+                        <div key={type} className="flex items-center gap-4 px-5 py-3 hover:bg-uph-grayBg transition-colors">
+                          <div className="w-44 shrink-0">
+                            <span className="text-sm font-semibold text-gray-800">{DOC_LABEL[type]}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs text-gray-400 italic">Belum ada dosen di kelas ini</span>
+                          </div>
                         </div>
-                        <div className="bg-white border border-uph-border rounded-xl divide-y divide-gray-100 overflow-hidden">
-                          {typeDocs.map(doc => {
-                            const dosenName = doc.dosen?.name ?? dosens.find(d => d.id === doc.dosenId)?.name ?? doc.dosenId;
-                            const relevantNote = userRoles.includes('kaprodi')
-                              ? (doc.kaprodiNotes ?? doc.prodiNotes ?? doc.koordinatorNotes)
-                              : userRoles.includes('prodi')
-                                ? (doc.prodiNotes ?? doc.koordinatorNotes)
-                                : doc.koordinatorNotes;
-                            const rejectedBy = doc.prodiNotes ? 'PRODI' : doc.kaprodiNotes ? 'Kaprodi' : doc.koordinatorNotes ? 'Koordinator' : null;
-                            const showRevisionDetail = doc.status === 'REVISION' && (relevantNote || doc.annotatedPdfUrl);
-                            const isPending = reviewerCanReview(doc);
-                            return (
-                              <div key={`${doc.dosenId}_${type}`}
-                                className={`px-5 py-3.5 transition-colors ${isPending ? 'bg-amber-50/40' : showRevisionDetail ? 'bg-red-50/30' : 'hover:bg-gray-50/60'}`}>
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <span className="font-medium text-gray-800 truncate text-sm">{dosenName}</span>
-                                    <StatusBadge status={doc.status} isKoordinatorApproved={doc.isKoordinatorApproved} isProdiApproved={doc.isProdiApproved} />
-                                  </div>
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    {doc.id && doc.status !== 'UNSUBMITTED' && (
-                                      <button
-                                        onClick={() => { const url = doc.finalPdfUrl ?? doc.koordinatorSignedPdfUrl ?? doc.fileUrl; if (url) setPdfPreviewUrl(url); }}
-                                        className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 text-gray-500 border border-gray-200 rounded-lg hover:text-uph-blue hover:border-uph-blue transition-colors">
-                                        <Eye size={12} /> Lihat
-                                      </button>
-                                    )}
-                                    {isPending && (
-                                      <button onClick={() => openReview(doc)}
-                                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-uph-blue text-white rounded-lg hover:bg-uph-blue/90 transition-colors">
-                                        <PenLine size={12} /> Review & Tanda Tangan
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                                {isEppType(type) && doc.id && (doc.eppPersentaseMateri != null || doc.eppPersentaseCpmk != null) && (
-                                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5">
-                                    {([
-                                      { key: 'eppPersentaseMateri' as keyof Doc, label: 'Materi' },
-                                      { key: 'eppPersentaseCpmk' as keyof Doc, label: 'CPMK' },
-                                      { key: 'eppPersentaseKehadiran' as keyof Doc, label: 'Kehadiran' },
-                                      { key: 'eppPersentaseNilaiB' as keyof Doc, label: '≥B' },
-                                      { key: 'eppPersentaseKkmToB' as keyof Doc, label: 'KKM→B' },
-                                    ] as const).map(({ key, label }) => {
-                                      const val = doc[key]; if (val == null) return null;
-                                      return <span key={key} className="text-xs text-gray-500">{label}: <span className="font-bold text-gray-700">{String(val)}%</span></span>;
-                                    })}
-                                  </div>
+                      )];
+                    }
+
+                    return typeDocs.map((doc, idx) => {
+                      const dosenName = doc.dosen?.name ?? dosens.find(d => d.id === doc.dosenId)?.name ?? doc.dosenId;
+                      const relevantNote = userRoles.includes('kaprodi')
+                        ? (doc.kaprodiNotes ?? doc.prodiNotes ?? doc.koordinatorNotes)
+                        : userRoles.includes('prodi')
+                          ? (doc.prodiNotes ?? doc.koordinatorNotes)
+                          : doc.koordinatorNotes;
+                      const rejectedBy = doc.prodiNotes ? 'PRODI' : doc.kaprodiNotes ? 'Kaprodi' : doc.koordinatorNotes ? 'Koordinator' : null;
+                      const showRevisionDetail = doc.status === 'REVISION' && (relevantNote || doc.annotatedPdfUrl);
+                      const isPending = reviewerCanReview(doc);
+                      const rowBg =
+                        isPending ? 'bg-amber-50/20' :
+                        showRevisionDetail ? 'bg-red-50/20' : '';
+
+                      return (
+                        <div key={`${doc.dosenId}_${type}`}
+                          className={`flex items-center gap-4 px-5 py-3 transition-colors ${rowBg} hover:bg-uph-grayBg`}>
+                          {/* Col 1: Doc label — same w-44 as dosen view; blank for subsequent dosens */}
+                          <div className="w-44 shrink-0">
+                            {idx === 0
+                              ? <span className="text-sm font-semibold text-gray-800">{DOC_LABEL[type]}</span>
+                              : <span className="text-xs text-gray-300 pl-2">↳</span>
+                            }
+                          </div>
+                          {/* Col 2: Dosen name */}
+                          <div className="w-36 shrink-0 min-w-0">
+                            <span className="text-sm text-gray-700 truncate block">{dosenName}</span>
+                          </div>
+                          {/* Col 3: Status + notes */}
+                          <div className="flex-1 min-w-0 flex flex-col gap-1">
+                            <StatusBadge status={doc.status} isKoordinatorApproved={doc.isKoordinatorApproved} isProdiApproved={doc.isProdiApproved} />
+                            {isEppType(type) && doc.id && (doc.eppPersentaseMateri != null || doc.eppPersentaseCpmk != null) && (
+                              <div className="flex flex-wrap gap-x-3 gap-y-0">
+                                {([
+                                  { key: 'eppPersentaseMateri' as keyof Doc, label: 'Materi' },
+                                  { key: 'eppPersentaseCpmk' as keyof Doc, label: 'CPMK' },
+                                  { key: 'eppPersentaseKehadiran' as keyof Doc, label: 'Kehadiran' },
+                                  { key: 'eppPersentaseNilaiB' as keyof Doc, label: '≥B' },
+                                  { key: 'eppPersentaseKkmToB' as keyof Doc, label: 'KKM→B' },
+                                ] as const).map(({ key, label }) => {
+                                  const val = doc[key]; if (val == null) return null;
+                                  return <span key={key} className="text-xs text-gray-500">{label}: <span className="font-bold text-gray-700">{String(val)}%</span></span>;
+                                })}
+                              </div>
+                            )}
+                            {showRevisionDetail && (
+                              <div className="space-y-0.5">
+                                {relevantNote && (
+                                  <p className="text-xs text-red-600 italic truncate" title={relevantNote}>
+                                    <span className="font-semibold not-italic">{rejectedBy}:</span> &ldquo;{relevantNote}&rdquo;
+                                  </p>
                                 )}
-                                {showRevisionDetail && (
-                                  <div className="mt-2 space-y-1.5">
-                                    {relevantNote && (
-                                      <div className="bg-white border border-red-200 rounded-lg px-3 py-2">
-                                        <p className="text-xs font-bold text-red-500 mb-0.5">Ditolak oleh {rejectedBy}:</p>
-                                        <p className="text-xs text-red-700 italic">&ldquo;{relevantNote}&rdquo;</p>
-                                      </div>
-                                    )}
-                                    {doc.annotatedPdfUrl && (
-                                      <a href={encodeUrl(doc.annotatedPdfUrl)} target="_blank" rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-uph-blue hover:underline">
-                                        <Eye size={12} /> Lihat PDF Beranotasi
-                                      </a>
-                                    )}
-                                  </div>
+                                {doc.annotatedPdfUrl && (
+                                  <a href={encodeUrl(doc.annotatedPdfUrl)} target="_blank" rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs font-semibold text-uph-blue hover:underline">
+                                    <Eye size={11} /> Lihat anotasi
+                                  </a>
                                 )}
                               </div>
-                            );
-                          })}
-                          {typeDocs.length === 0 && (
-                            <div className="px-5 py-4 text-sm text-gray-400 italic">Belum ada dosen di kelas ini.</div>
-                          )}
+                            )}
+                          </div>
+                          {/* Col 4: Actions */}
+                          <div className="flex items-center gap-2 shrink-0 pl-3 border-l border-gray-200">
+                            {doc.id && doc.status !== 'UNSUBMITTED' && (
+                              <button
+                                onClick={() => { const url = doc.finalPdfUrl ?? doc.koordinatorSignedPdfUrl ?? doc.fileUrl; if (url) setPdfPreviewUrl(url); }}
+                                className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 text-gray-500 border border-gray-200 rounded-lg hover:text-uph-blue hover:border-uph-blue transition-colors">
+                                <Eye size={12} /> Lihat
+                              </button>
+                            )}
+                            {isPending && (
+                              <button onClick={() => openReview(doc)}
+                                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-uph-blue text-white rounded-lg hover:bg-uph-blue/90 transition-colors">
+                                <PenLine size={12} /> Review
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
+                      );
+                    });
                   })}
                 </div>
               )}
